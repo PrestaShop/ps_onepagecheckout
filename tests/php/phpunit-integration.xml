@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+  bootstrap="bootstrap-integration.php"
+  cacheResult="false"
+  colors="true"
+  failOnDeprecation="false"
+  failOnWarning="false"
+>
+  <testsuites>
+    <testsuite name="ps_onepagecheckout_integration">
+      <directory suffix="Test.php">Integration</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>

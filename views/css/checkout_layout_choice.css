@@ -1,0 +1,196 @@
+/*
+ * Checkout layout selector styles owned by ps_onepagecheckout module.
+ * This stylesheet is intentionally self-contained so it works in both
+ * legacy ModuleAdminController and Symfony BO pages.
+ */
+
+.psopc-configuration {
+  display: block;
+  width: 100%;
+}
+
+.psopc-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  border: 1px solid #dbe6e9;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.psopc-card-body {
+  padding: 1rem;
+}
+
+.psopc-layout-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.psopc-layout-description {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #576c7b;
+}
+
+.psopc-form {
+  margin: 0;
+}
+
+.psopc-choices {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.psopc-choice {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid #dbe6e9;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.psopc-choice-radio {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-right: 0.75rem;
+}
+
+.psopc-choice-radio input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.psopc-choice-dot {
+  box-sizing: border-box;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1px solid #8a9ba8;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.psopc-choice-radio input:checked + .psopc-choice-dot {
+  border-color: #25b9d7;
+  box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 8px #25b9d7;
+}
+
+.psopc-choice-content {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.psopc-choice-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.psopc-choice-label {
+  margin-right: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.psopc-choice-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  color: #23374a;
+  background-color: #dff1ff;
+  border-radius: 44px;
+}
+
+.psopc-choice-body {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.psopc-choice-text {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.psopc-choice-description,
+.psopc-choice-features {
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  color: #576c7b;
+}
+
+.psopc-choice-description {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.psopc-choice-features {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.psopc-choice-features li {
+  margin-bottom: 0.25rem;
+}
+
+.psopc-choice-illustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 152px;
+  height: 137px;
+  margin-left: 0.75rem;
+}
+
+.psopc-choice-illustration img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.psopc-actions {
+  margin-top: 1rem;
+  text-align: right;
+}
+
+.psopc-save-button {
+  min-width: 6rem;
+}
+
+@media (max-width: 991.98px) {
+  .psopc-choice-illustration {
+    display: none;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .psopc-choices {
+    flex-direction: column;
+  }
+}

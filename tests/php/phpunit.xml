@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+  bootstrap="bootstrap-unit.php"
+  cacheResult="false"
+  colors="true"
+  failOnDeprecation="false"
+  failOnWarning="false"
+>
+  <testsuites>
+    <testsuite name="ps_onepagecheckout_unit">
+      <directory suffix="Test.php">Unit</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>

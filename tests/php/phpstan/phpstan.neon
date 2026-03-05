@@ -1,0 +1,10 @@
+includes:
+	- %currentWorkingDirectory%/vendor/prestashop/php-dev-tools/phpstan/ps-module-extension.neon
+
+parameters:
+  paths:
+    - ../../ps_onepagecheckout.php
+    - ../../controllers/
+    - ../../src/
+    - ../../upgrade/
+  level: 5

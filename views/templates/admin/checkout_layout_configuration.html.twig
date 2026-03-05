@@ -1,0 +1,66 @@
+{#
+  Copyright since 2007 PrestaShop SA and Contributors
+  PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+#}
+
+{% if checkout_layout_css_url is defined and checkout_layout_css_url is not empty %}
+  <link rel="stylesheet" href="{{ checkout_layout_css_url }}">
+{% endif %}
+
+<div class="psopc-configuration">
+  <div class="psopc-card">
+    <div class="psopc-card-body">
+      <h3 class="psopc-layout-title">{{ checkout_layout_title }}</h3>
+      <p class="psopc-layout-description">{{ checkout_layout_description }}</p>
+
+      <form action="{{ configuration_form_action }}" method="post" class="psopc-form">
+        <div id="{{ configuration_key }}" class="psopc-choices">
+          {% for choice in choices %}
+            <label class="psopc-choice" for="{{ choice.id }}">
+              <span class="psopc-choice-radio">
+                <input
+                  type="radio"
+                  id="{{ choice.id }}"
+                  name="{{ configuration_key }}"
+                  value="{{ choice.value }}"
+                  {% if choice.checked %}checked="checked"{% endif %}
+                  required="required"
+                >
+                <span class="psopc-choice-dot" aria-hidden="true"></span>
+              </span>
+
+              <span class="psopc-choice-content">
+                <span class="psopc-choice-header">
+                  <span class="psopc-choice-label">{{ choice.label }}</span>
+                  {% if choice.badge is not empty %}
+                    <span class="psopc-choice-badge">{{ choice.badge }}</span>
+                  {% endif %}
+                </span>
+
+                <span class="psopc-choice-body">
+                  <span class="psopc-choice-text">
+                    <span class="psopc-choice-description">{{ choice.description }}</span>
+                    <ul class="psopc-choice-features">
+                      {% for feature in choice.features %}
+                        <li>{{ feature }}</li>
+                      {% endfor %}
+                    </ul>
+                  </span>
+                  <span class="psopc-choice-illustration" aria-hidden="true">
+                    <img src="{{ choice.illustration }}" alt="{{ choice.label }}">
+                  </span>
+                </span>
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="psopc-actions">
+          <button type="submit" name="{{ form_submit_action }}" class="btn btn-primary psopc-save-button">
+            {{ save_button_label }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

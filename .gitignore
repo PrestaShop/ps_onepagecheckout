@@ -1,0 +1,9 @@
+/config_*.xml
+/translations/*.php
+/node_modules
+/vendor
+/views/node_modules
+/views/public/*.bundle.js
+/views/public/*.bundle.js.LICENSE.txt
+/.php_cs.cache
+.php-cs-fixer.cache
