@@ -1425,9 +1425,9 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
      * @param array<int, string> $updateEmails
      *
      * @return array{
-     *   0: array<int, array<string, mixed>>,
-     *   1: array<int, array<string, mixed>>
-     * }
+     *                0: array<int, array<string, mixed>>,
+     *                1: array<int, array<string, mixed>>
+     *                }
      */
     private function runMixedConcurrentGuestInitAndEmailUpdateWorkers(
         int $cartId,
@@ -1580,11 +1580,11 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
     /**
      * @return array{
-     *   process: resource,
-     *   stdout: resource,
-     *   stderr: resource,
-     *   command: string
-     * }
+     *                process: resource,
+     *                stdout: resource,
+     *                stderr: resource,
+     *                command: string
+     *                }
      */
     private function launchConcurrentWorkerProcess(string $workerScriptPath, array $arguments): array
     {
@@ -1618,11 +1618,11 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
     /**
      * @return array{
-     *   process: resource,
-     *   stdout: resource,
-     *   stderr: resource,
-     *   command: string
-     * }
+     *                process: resource,
+     *                stdout: resource,
+     *                stderr: resource,
+     *                command: string
+     *                }
      */
     private function launchConcurrentWorker(
         int $cartId,
@@ -1648,11 +1648,11 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
     /**
      * @return array{
-     *   process: resource,
-     *   stdout: resource,
-     *   stderr: resource,
-     *   command: string
-     * }
+     *                process: resource,
+     *                stdout: resource,
+     *                stderr: resource,
+     *                command: string
+     *                }
      */
     private function launchConcurrentEmailUpdateWorker(
         int $cartId,
@@ -1678,11 +1678,11 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
     /**
      * @return array{
-     *   process: resource,
-     *   stdout: resource,
-     *   stderr: resource,
-     *   command: string
-     * }
+     *                process: resource,
+     *                stdout: resource,
+     *                stderr: resource,
+     *                command: string
+     *                }
      */
     private function launchConcurrentRealSubmitGuestInitWorker(
         int $cartId,
@@ -1706,11 +1706,11 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
     /**
      * @return array{
-     *   process: resource,
-     *   stdout: resource,
-     *   stderr: resource,
-     *   command: string
-     * }
+     *                process: resource,
+     *                stdout: resource,
+     *                stderr: resource,
+     *                command: string
+     *                }
      */
     private function launchConcurrentRealSubmitGuestInitDiagnosticWorker(
         int $cartId,
@@ -1734,11 +1734,11 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
     /**
      * @return array{
-     *   process: resource,
-     *   stdout: resource,
-     *   stderr: resource,
-     *   command: string
-     * }
+     *                process: resource,
+     *                stdout: resource,
+     *                stderr: resource,
+     *                command: string
+     *                }
      */
     private function launchConcurrentEmailUpdateDiagnosticWorker(
         int $cartId,
