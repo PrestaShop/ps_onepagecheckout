@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -9,17 +10,12 @@ namespace PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax;
 use Cart;
 use Configuration;
 use Context;
-use Country;
 use Customer;
-use CustomerPersister;
 use Db;
-use Hook;
 use PrestaShop\Module\PsOnepagecheckout\Checkout\ExistingCustomerState;
 use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
 use PrestaShop\PrestaShop\Core\Util\InternationalizedDomainNameConverter;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Tools;
-use Validate;
 
 /**
  * @phpstan-type GuestInitResponse array{
@@ -59,7 +55,7 @@ class OpcGuestInitHandler
     ];
 
     /**
-     * @var Context
+     * @var \Context
      */
     private $context;
 
@@ -74,7 +70,7 @@ class OpcGuestInitHandler
     private $translator;
 
     /**
-     * @var CustomerPersister
+     * @var \CustomerPersister
      */
     private $customerPersister;
 
@@ -89,18 +85,18 @@ class OpcGuestInitHandler
     private $idnConverter;
 
     /**
-     * @param Context $context
+     * @param \Context $context
      * @param OnePageCheckoutForm $opcForm
      * @param TranslatorInterface $translator
-     * @param CustomerPersister $customerPersister
+     * @param \CustomerPersister $customerPersister
      * @param bool $isOnePageCheckoutEnabled
      */
     public function __construct(
-        Context $context,
+        \Context $context,
         OnePageCheckoutForm $opcForm,
         TranslatorInterface $translator,
-        CustomerPersister $customerPersister,
-        bool $isOnePageCheckoutEnabled
+        \CustomerPersister $customerPersister,
+        bool $isOnePageCheckoutEnabled,
     ) {
         $this->context = $context;
         $this->opcForm = $opcForm;
@@ -190,17 +186,17 @@ class OpcGuestInitHandler
      */
     protected function isGuestCheckoutEnabled(): bool
     {
-        return (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED');
+        return (bool) \Configuration::get('PS_GUEST_CHECKOUT_ENABLED');
     }
 
     /**
      * @param int $customerId
      *
-     * @return Customer
+     * @return \Customer
      */
-    protected function loadCustomerById(int $customerId): Customer
+    protected function loadCustomerById(int $customerId): \Customer
     {
-        return new Customer($customerId);
+        return new \Customer($customerId);
     }
 
     /**
@@ -212,7 +208,7 @@ class OpcGuestInitHandler
      */
     protected function findCustomerByEmail(string $email): int
     {
-        return (int) Customer::customerExists($email, true, false);
+        return (int) \Customer::customerExists($email, true, false);
     }
 
     /**
@@ -222,17 +218,17 @@ class OpcGuestInitHandler
      */
     protected function getExpectedToken(): string
     {
-        return (string) Tools::getToken(false);
+        return (string) \Tools::getToken(false);
     }
 
     /**
      * @param int $cartId
      *
-     * @return Cart
+     * @return \Cart
      */
-    protected function loadCartById(int $cartId): Cart
+    protected function loadCartById(int $cartId): \Cart
     {
-        return new Cart($cartId);
+        return new \Cart($cartId);
     }
 
     /**
@@ -255,7 +251,7 @@ class OpcGuestInitHandler
             $expectedCustomerId
         );
 
-        $db = Db::getInstance();
+        $db = \Db::getInstance();
         if (!$db->execute($query)) {
             return self::CART_UPDATE_FAILED;
         }
@@ -278,7 +274,7 @@ class OpcGuestInitHandler
 
         $customer = $this->loadCustomerById($customerId);
 
-        return Validate::isLoadedObject($customer);
+        return \Validate::isLoadedObject($customer);
     }
 
     /**
@@ -289,7 +285,7 @@ class OpcGuestInitHandler
     private function resolveExistingCustomerId(): int
     {
         $contextCustomerId = (int) $this->context->customer->id;
-        if (!Validate::isLoadedObject($this->context->cart)) {
+        if (!\Validate::isLoadedObject($this->context->cart)) {
             return $contextCustomerId;
         }
 
@@ -319,7 +315,7 @@ class OpcGuestInitHandler
      */
     private function getFreshCartCustomerId(): int
     {
-        if (!Validate::isLoadedObject($this->context->cart)) {
+        if (!\Validate::isLoadedObject($this->context->cart)) {
             return self::CUSTOMER_ID_NONE;
         }
 
@@ -329,7 +325,7 @@ class OpcGuestInitHandler
         }
 
         // Read cart ownership directly from DB to avoid stale in-memory cart state.
-        $customerId = Db::getInstance()->getValue(sprintf(
+        $customerId = \Db::getInstance()->getValue(sprintf(
             'SELECT `id_customer` FROM `%scart` WHERE `id_cart` = %d',
             _DB_PREFIX_,
             $cartId
@@ -348,7 +344,7 @@ class OpcGuestInitHandler
      */
     private function hasEligibleCart(): bool
     {
-        if (!Validate::isLoadedObject($this->context->cart)) {
+        if (!\Validate::isLoadedObject($this->context->cart)) {
             return false;
         }
 
@@ -386,7 +382,7 @@ class OpcGuestInitHandler
         }
 
         $existingCustomer = $this->loadCustomerById($existingCustomerId);
-        if (!Validate::isLoadedObject($existingCustomer)) {
+        if (!\Validate::isLoadedObject($existingCustomer)) {
             // Stale owner id: continue as if no customer was attached.
             return ExistingCustomerState::empty();
         }
@@ -444,7 +440,7 @@ class OpcGuestInitHandler
         $existingCustomerId = $existingCustomerState->getId();
         $existingCustomer = $existingCustomerState->getCustomer();
 
-        if ($submittedEmail === '' || !Validate::isEmail($submittedEmail)) {
+        if ($submittedEmail === '' || !\Validate::isEmail($submittedEmail)) {
             return null;
         }
 
@@ -525,7 +521,7 @@ class OpcGuestInitHandler
      */
     private function persistCartCustomerId(int $customerId): int
     {
-        if ($customerId <= 0 || !Validate::isLoadedObject($this->context->cart)) {
+        if ($customerId <= 0 || !\Validate::isLoadedObject($this->context->cart)) {
             return $customerId;
         }
 
@@ -549,11 +545,11 @@ class OpcGuestInitHandler
     /**
      * Ensure context customer matches the guest being updated so persistence targets the right account.
      *
-     * @param Customer $customer
+     * @param \Customer $customer
      *
      * @return void
      */
-    private function ensureContextCustomerMatches(Customer $customer): void
+    private function ensureContextCustomerMatches(\Customer $customer): void
     {
         if ((int) $this->context->customer->id === (int) $customer->id) {
             return;
@@ -577,7 +573,7 @@ class OpcGuestInitHandler
         }
 
         $customer = $this->loadCustomerById($customerId);
-        if (!Validate::isLoadedObject($customer)) {
+        if (!\Validate::isLoadedObject($customer)) {
             return;
         }
 

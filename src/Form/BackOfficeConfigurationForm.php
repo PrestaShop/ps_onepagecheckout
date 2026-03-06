@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -26,24 +27,20 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\PsOnepagecheckout\Form;
+namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
-use Configuration;
-use Context;
-use Module;
-use Shop;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Tools;
 use Twig\Environment;
 
 class BackOfficeConfigurationForm
 {
     private const FORM_SUBMIT_ACTION = 'submitPsOnePageCheckoutConfiguration';
+    private const SUCCESS_FLASH_COOKIE_KEY = 'psopc_bo_configuration_saved';
 
-    private Module $module;
+    private \Module $module;
     private string $configurationKey;
 
-    public function __construct(Module $module, string $configurationKey)
+    public function __construct(\Module $module, string $configurationKey)
     {
         $this->module = $module;
         $this->configurationKey = $configurationKey;
@@ -53,9 +50,16 @@ class BackOfficeConfigurationForm
     {
         $output = '';
 
-        if (Tools::isSubmit(self::FORM_SUBMIT_ACTION)) {
-            $isEnabled = (int) Tools::getValue($this->configurationKey, 0) === 1;
+        if (\Tools::isSubmit(self::FORM_SUBMIT_ACTION)) {
+            $isEnabled = (int) \Tools::getValue($this->configurationKey, 0) === 1;
             $this->persistConfigurationValue((int) $isEnabled);
+            $this->storeSuccessFlash();
+            $this->redirectToConfigurationForm();
+
+            return '';
+        }
+
+        if ($this->consumeSuccessFlash()) {
             $output .= $this->module->displayConfirmation(
                 $this->trans('Settings updated.', 'Admin.Notifications.Success')
             );
@@ -70,21 +74,13 @@ class BackOfficeConfigurationForm
         $templateVariables = $this->buildTemplateVariables();
         $twig = $this->resolveTwigEnvironment();
 
-        if ($twig instanceof Environment) {
-            return $twig->render(
-                '@Modules/ps_onepagecheckout/views/templates/admin/checkout_layout_configuration.html.twig',
-                $templateVariables
-            );
+        if (!$twig instanceof Environment) {
+            throw new \RuntimeException('Twig environment is required to render ps_onepagecheckout back office configuration.');
         }
 
-        // Safety fallback for contexts where Twig is unavailable.
-        $context = Context::getContext();
-        if (null !== $context->smarty) {
-            $context->smarty->assign($templateVariables);
-        }
-
-        return (string) $this->module->fetch(
-            'module:' . $this->module->name . '/views/templates/admin/checkout_layout_configuration.tpl'
+        return $twig->render(
+            '@Modules/ps_onepagecheckout/views/templates/admin/checkout_layout_configuration.html.twig',
+            $templateVariables
         );
     }
 
@@ -102,9 +98,14 @@ class BackOfficeConfigurationForm
             'configuration_form_action' => $this->getConfigurationFormAction(),
             'form_submit_action' => self::FORM_SUBMIT_ACTION,
             'checkout_layout_css_url' => $this->module->getPathUri() . 'views/css/checkout_layout_choice.css',
+            'is_single_shop_context' => $this->isSingleShopContext(),
+            'single_shop_context_warning' => $this->trans(
+                'Note that this page is available in a single shop context only. Switch context to work on it.',
+                'Admin.Notifications.Info'
+            ),
             'checkout_layout_title' => $this->trans('Checkout layout', 'Admin.Design.Feature'),
             'checkout_layout_description' => $this->trans(
-                'Allow faster checkout with Paypal for higher conversion and spontaneous purchases.',
+                'Allow faster checkout for higher conversion and spontaneous purchases.',
                 'Admin.Design.Feature'
             ),
             'save_button_label' => $this->trans('Save', 'Admin.Actions'),
@@ -155,7 +156,7 @@ class BackOfficeConfigurationForm
 
     private function getConfigurationFormAction(): string
     {
-        $link = Context::getContext()->link;
+        $link = \Context::getContext()->link;
         if (null === $link) {
             return '';
         }
@@ -169,7 +170,7 @@ class BackOfficeConfigurationForm
 
     private function registerBackOfficeAssets(): void
     {
-        $context = Context::getContext();
+        $context = \Context::getContext();
         if (!isset($context->controller)) {
             return;
         }
@@ -179,9 +180,9 @@ class BackOfficeConfigurationForm
         );
     }
 
-    private function trans(string $message, string $domain = 'Modules.Psonepagecheckout.Admin'): string
+    private function trans(string $message, string $domain = 'Modules.PsOnePageCheckout.Admin'): string
     {
-        $translator = Context::getContext()->getTranslator();
+        $translator = \Context::getContext()->getTranslator();
         if (!$translator instanceof TranslatorInterface) {
             return $message;
         }
@@ -191,83 +192,77 @@ class BackOfficeConfigurationForm
 
     private function isAdminPsOnePageCheckoutContext(): bool
     {
-        $controllerName = (string) Tools::getValue('controller');
-        if ($controllerName === 'AdminPsOnePageCheckout' || $controllerName === 'AdminPsOnepagecheckout') {
+        $controllerName = (string) \Tools::getValue('controller');
+        if ($controllerName === 'AdminPsOnePageCheckout') {
             return true;
         }
 
-        $context = Context::getContext();
+        $context = \Context::getContext();
 
         return isset($context->controller)
             && in_array(
                 get_class($context->controller),
-                ['AdminPsOnePageCheckoutController', 'AdminPsOnepagecheckoutController'],
+                ['AdminPsOnePageCheckoutController'],
                 true
             );
     }
 
     private function resolveTwigEnvironment(): ?Environment
     {
-        $twig = $this->module->getTwig();
-        if ($twig instanceof Environment) {
-            return $twig;
-        }
+        return $this->module->getTwig();
+    }
 
-        try {
-            $container = $this->module->getContainer();
-            if ($container->has('twig')) {
-                $twigService = $container->get('twig');
-                if ($twigService instanceof Environment) {
-                    return $twigService;
-                }
-            }
-        } catch (\Throwable) {
-            return null;
-        }
-
-        return null;
+    private function isSingleShopContext(): bool
+    {
+        return \Shop::getContext() === \Shop::CONTEXT_SHOP;
     }
 
     protected function persistConfigurationValue(int $value): void
     {
-        [$idShopGroup, $idShop] = $this->resolveConfigurationScope();
-        $this->updateConfigurationValue($value, $idShopGroup, $idShop);
+        $this->updateConfigurationValue($value);
     }
 
     protected function getCurrentConfigurationValue(): int
     {
-        [$idShopGroup, $idShop] = $this->resolveConfigurationScope();
-
-        return $this->readConfigurationValue($idShopGroup, $idShop);
+        return $this->readConfigurationValue();
     }
 
-    /**
-     * @return array{0: int|null, 1: int|null}
-     */
-    protected function resolveConfigurationScope(): array
+    protected function updateConfigurationValue(int $value): void
     {
-        if (!Shop::isFeatureActive()) {
-            return [null, null];
-        }
-
-        if (Shop::getContext() === Shop::CONTEXT_SHOP) {
-            return [Shop::getContextShopGroupID(true), Shop::getContextShopID(true)];
-        }
-
-        if (Shop::getContext() === Shop::CONTEXT_GROUP) {
-            return [Shop::getContextShopGroupID(true), null];
-        }
-
-        return [null, null];
+        \Configuration::updateValue($this->configurationKey, $value, false);
     }
 
-    protected function updateConfigurationValue(int $value, ?int $idShopGroup, ?int $idShop): void
+    protected function readConfigurationValue(): int
     {
-        Configuration::updateValue($this->configurationKey, $value, false, $idShopGroup, $idShop);
+        return (int) \Configuration::get($this->configurationKey);
     }
 
-    protected function readConfigurationValue(?int $idShopGroup, ?int $idShop): int
+    protected function redirectToConfigurationForm(): void
     {
-        return (int) Configuration::get($this->configurationKey, null, $idShopGroup, $idShop);
+        \Tools::redirectAdmin($this->getConfigurationFormAction());
+    }
+
+    protected function storeSuccessFlash(): void
+    {
+        $context = \Context::getContext();
+        if (!isset($context->cookie)) {
+            return;
+        }
+
+        $context->cookie->{self::SUCCESS_FLASH_COOKIE_KEY} = '1';
+        $context->cookie->write();
+    }
+
+    protected function consumeSuccessFlash(): bool
+    {
+        $context = \Context::getContext();
+        if (!isset($context->cookie) || !isset($context->cookie->{self::SUCCESS_FLASH_COOKIE_KEY})) {
+            return false;
+        }
+
+        unset($context->cookie->{self::SUCCESS_FLASH_COOKIE_KEY});
+        $context->cookie->write();
+
+        return true;
     }
 }

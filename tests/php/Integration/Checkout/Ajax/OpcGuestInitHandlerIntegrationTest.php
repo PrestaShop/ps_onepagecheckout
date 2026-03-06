@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -9,19 +10,14 @@ declare(strict_types=1);
 namespace Tests\Integration\Checkout\Ajax;
 
 use Cart;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcGuestInitHandler;
-use Configuration;
-use Customer;
-use CustomerPersister;
-use Db;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcGuestInitHandler;
+use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
 use PrestaShop\PrestaShop\Core\Crypto\Hashing;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Tests\Integration\Utility\ContextMockerTrait;
 use Tests\Resources\DatabaseDump;
-use Tools;
 
 class OpcGuestInitHandlerIntegrationTest extends TestCase
 {
@@ -40,8 +36,8 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
 
         self::mockContext();
         self::resetTables();
-        Configuration::loadConfiguration();
-        Configuration::updateValue('PS_GUEST_CHECKOUT_ENABLED', true);
+        \Configuration::loadConfiguration();
+        \Configuration::updateValue('PS_GUEST_CHECKOUT_ENABLED', true);
 
         $this->translator = $this->createMock(TranslatorInterface::class);
         $this->translator
@@ -63,7 +59,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItRejectsInvalidTokenBeforeAnyMutation(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -87,7 +83,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItRejectsMissingTokenBeforeAnyMutation(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -110,7 +106,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItRejectsRequestWhenTokenIsInvalidEvenIfStaticTokenIsValid(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -135,7 +131,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsErrorWhenOpcIsDisabled(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -158,9 +154,9 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
 
     public function testItReturnsNoopWhenGuestCheckoutIsDisabled(): void
     {
-        Configuration::updateValue('PS_GUEST_CHECKOUT_ENABLED', false);
+        \Configuration::updateValue('PS_GUEST_CHECKOUT_ENABLED', false);
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -188,7 +184,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         $cart->id = 0;
         $cart->productsCount = 1;
         self::getContext()->cart = $cart;
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -211,7 +207,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsNoopWhenCartIsEmpty(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
         self::getContext()->cart->productsCount = 0;
 
         $opcForm = $this->buildOpcFormMock();
@@ -285,12 +281,12 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     {
         $winner = $this->createCustomer($this->uniqueEmail('fresh-cart-owner'), false);
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::assertTrue(Db::getInstance()->update(
+        self::assertTrue(\Db::getInstance()->update(
             'cart',
             ['id_customer' => (int) $winner->id],
             '`id_cart` = ' . (int) $persistedCart->id
         ));
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
         self::getContext()->cart->id_customer = 0;
 
         $opcForm = $this->buildOpcFormMock();
@@ -315,11 +311,11 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     {
         $winner = $this->createCustomer($this->uniqueEmail('missing-row-owner'), false);
         $persistedCart = $this->prepareEligibleCartContext((int) $winner->id);
-        self::assertTrue(Db::getInstance()->delete(
+        self::assertTrue(\Db::getInstance()->delete(
             'cart',
             '`id_cart` = ' . (int) $persistedCart->id
         ));
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -343,7 +339,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     {
         $registered = $this->createCustomer($this->uniqueEmail('existing-no-guest-linked'), false);
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -366,7 +362,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItCreatesGuestAndClaimsUnassignedCart(): void
     {
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $createdGuest = $this->createCustomer($this->uniqueEmail('created-guest'), true);
 
@@ -400,10 +396,10 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         $persistedCart = $this->prepareEligibleCartContext(0);
 
         $context = self::getContext();
-        $context->customer = new Customer();
+        $context->customer = new \Customer();
         unset($context->cookie->id_customer, $context->cookie->email, $context->cookie->is_guest);
 
-        $customerPersister = new CustomerPersister(
+        $customerPersister = new \CustomerPersister(
             $context,
             new Hashing(),
             $this->translator,
@@ -423,7 +419,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
                 $persistedCart,
                 &$createdGuestId
             ): bool {
-                $createdGuest = new Customer();
+                $createdGuest = new \Customer();
                 $createdGuest->firstname = 'Guest';
                 $createdGuest->lastname = 'Guest';
                 $createdGuest->email = $createdGuestEmail;
@@ -434,7 +430,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
                 self::assertGreaterThan(0, $createdGuestId);
 
                 // Simulate a concurrent request claiming cart ownership before CAS.
-                self::assertTrue(Db::getInstance()->update(
+                self::assertTrue(\Db::getInstance()->update(
                     'cart',
                     ['id_customer' => (int) $winner->id],
                     '`id_cart` = ' . (int) $persistedCart->id
@@ -466,7 +462,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsFormErrorsWhenSubmitGuestInitFails(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -515,7 +511,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
             'token' => self::EXPECTED_TOKEN,
         ]);
 
-        $freshGuest = new Customer((int) $guest->id);
+        $freshGuest = new \Customer((int) $guest->id);
 
         self::assertTrue($response['success']);
         self::assertFalse($response['customer_created']);
@@ -549,8 +545,8 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
             'token' => self::EXPECTED_TOKEN,
         ]);
 
-        $freshOwner = new Customer((int) $guestOwner->id);
-        $freshForeignGuest = new Customer((int) $foreignGuest->id);
+        $freshOwner = new \Customer((int) $guestOwner->id);
+        $freshForeignGuest = new \Customer((int) $foreignGuest->id);
 
         self::assertTrue($response['success']);
         self::assertFalse($response['customer_created']);
@@ -594,7 +590,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         $this->prepareEligibleCartContext((int) $guest->id);
         self::getContext()->customer = $guest;
 
-        $customerPersister = $this->getMockBuilder(CustomerPersister::class)
+        $customerPersister = $this->getMockBuilder(\CustomerPersister::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['save'])
             ->getMock()
@@ -682,7 +678,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     {
         $winner = $this->createCustomer($this->uniqueEmail('winner'), true);
         $this->prepareEligibleCartContext((int) $winner->id);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
@@ -705,7 +701,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsErrorWhenCartClaimUpdateFails(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $createdGuest = $this->createCustomer($this->uniqueEmail('created-claim-fail'), true);
 
@@ -772,7 +768,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         self::assertSame((int) $guest->id, (int) $firstResponse['id_customer']);
         self::assertSame((int) $guest->id, (int) $secondResponse['id_customer']);
 
-        $freshGuest = new Customer((int) $guest->id);
+        $freshGuest = new \Customer((int) $guest->id);
         self::assertContains((string) $freshGuest->email, [$firstEmail, $secondEmail]);
         self::assertSame((int) $guest->id, $this->getPersistedCartCustomerId((int) $persistedCart->id));
     }
@@ -780,7 +776,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsSingleWinnerWhenThreeConcurrentGuestCreationsCompete(): void
     {
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $firstCreatedGuest = $this->createCustomer($this->uniqueEmail('created-first-three'), true);
         $secondCreatedGuest = $this->createCustomer($this->uniqueEmail('created-second-three'), true);
@@ -844,7 +840,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
             self::assertSame((int) $guest->id, (int) $response['id_customer']);
         }
 
-        $freshGuest = new Customer((int) $guest->id);
+        $freshGuest = new \Customer((int) $guest->id);
         self::assertContains((string) $freshGuest->email, $emails);
         self::assertSame((int) $guest->id, $this->getPersistedCartCustomerId((int) $persistedCart->id));
     }
@@ -853,7 +849,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     {
         $owner = $this->createCustomer($this->uniqueEmail('concurrent-claimed-owner'), false);
         $persistedCart = $this->prepareEligibleCartContext((int) $owner->id);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $firstCreatedGuest = $this->createCustomer($this->uniqueEmail('concurrent-claimed-created-first'), true);
         $secondCreatedGuest = $this->createCustomer($this->uniqueEmail('concurrent-claimed-created-second'), true);
@@ -881,7 +877,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsSingleWinnerWhenTenConcurrentGuestCreationsCompete(): void
     {
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $createdCustomerIds = [];
         for ($i = 0; $i < 10; ++$i) {
@@ -913,7 +909,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItResolvesWinnerWhenCreationAndGuestEmailUpdateRaceTogether(): void
     {
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $guestUpdater = $this->createCustomer($this->uniqueEmail('mixed-existing-guest'), true);
         $guestUpdaterOriginalEmail = (string) $guestUpdater->email;
@@ -963,7 +959,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
             self::assertFalse((bool) $response['customer_created']);
         }
 
-        $freshGuestUpdater = new Customer((int) $guestUpdater->id);
+        $freshGuestUpdater = new \Customer((int) $guestUpdater->id);
         self::assertContains(
             (string) $freshGuestUpdater->email,
             array_merge([$guestUpdaterOriginalEmail], $updateEmails)
@@ -973,7 +969,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItHandlesFiveConcurrentRequestsUsingRealSubmitGuestInitFlow(): void
     {
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $emails = [];
         for ($i = 0; $i < 5; ++$i) {
@@ -1001,7 +997,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         self::assertSame($winnerId, $this->getPersistedCartCustomerId((int) $persistedCart->id));
         self::assertSame(1, $createdCount);
 
-        $winner = new Customer($winnerId);
+        $winner = new \Customer($winnerId);
         self::assertTrue((bool) $winner->id);
         self::assertTrue((bool) $winner->is_guest);
     }
@@ -1009,7 +1005,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItKeepsCookieAndContextAlignedWithResolvedOwnerDuringRealConcurrentGuestInit(): void
     {
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $emails = [
             $this->uniqueEmail('real-submit-diagnostic-a'),
@@ -1062,7 +1058,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         $foreignContextGuest = $this->createCustomer($this->uniqueEmail('diag-foreign-guest'), true);
         $foreignContextGuestOriginalEmail = (string) $foreignContextGuest->email;
         $persistedCart = $this->prepareEligibleCartContext((int) $cartOwnerGuest->id);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $emailsByContext = [
             (int) $cartOwnerGuest->id => $this->uniqueEmail('diag-email-owner'),
@@ -1108,19 +1104,19 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
 
         self::assertSame((int) $cartOwnerGuest->id, $this->getPersistedCartCustomerId((int) $persistedCart->id));
         self::assertContains(
-            (string) (new Customer((int) $cartOwnerGuest->id))->email,
+            (string) (new \Customer((int) $cartOwnerGuest->id))->email,
             array_values($emailsByContext)
         );
         self::assertSame(
             $foreignContextGuestOriginalEmail,
-            (string) (new Customer((int) $foreignContextGuest->id))->email
+            (string) (new \Customer((int) $foreignContextGuest->id))->email
         );
     }
 
     public function testItReturnsConcurrentWinnerWhenCartIsClaimedDuringGuestCreation(): void
     {
         $persistedCart = $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $firstCreatedGuest = $this->createCustomer($this->uniqueEmail('created-first'), true);
         $secondCreatedGuest = $this->createCustomer($this->uniqueEmail('created-second'), true);
@@ -1164,7 +1160,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsErrorWhenRaceHasNoResolvableWinner(): void
     {
         $this->prepareEligibleCartContext(0);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $createdGuest = $this->createCustomer($this->uniqueEmail('created-no-winner'), true);
 
@@ -1194,7 +1190,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     public function testItReturnsErrorWhenCartOwnerReferenceIsStaleDuringGuestCreation(): void
     {
         $this->prepareEligibleCartContext(999999);
-        self::getContext()->customer = new Customer();
+        self::getContext()->customer = new \Customer();
 
         $createdGuest = $this->createCustomer($this->uniqueEmail('created-stale-owner'), true);
 
@@ -1251,7 +1247,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
 
     private function getPersistedCartCustomerId(int $cartId): int
     {
-        return (int) Db::getInstance()->getValue(sprintf(
+        return (int) \Db::getInstance()->getValue(sprintf(
             'SELECT `id_customer` FROM `%scart` WHERE `id_cart` = %d',
             _DB_PREFIX_,
             $cartId
@@ -1264,7 +1260,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     private function runConcurrentGuestInitWorkers(
         int $cartId,
         int $firstCreatedCustomerId,
-        int $secondCreatedCustomerId
+        int $secondCreatedCustomerId,
     ): array {
         $responses = $this->runConcurrentGuestInitWorkersBatch(
             $cartId,
@@ -1281,7 +1277,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
      */
     private function runConcurrentGuestInitWorkersBatch(
         int $cartId,
-        array $createdCustomerIds
+        array $createdCustomerIds,
     ): array {
         $workerCount = count($createdCustomerIds);
         self::assertGreaterThanOrEqual(2, $workerCount);
@@ -1323,7 +1319,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         int $cartId,
         int $guestId,
         string $firstEmail,
-        string $secondEmail
+        string $secondEmail,
     ): array {
         $responses = $this->runConcurrentGuestEmailUpdateWorkersBatch(
             $cartId,
@@ -1342,7 +1338,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     private function runConcurrentGuestEmailUpdateWorkersBatch(
         int $cartId,
         int $guestId,
-        array $emails
+        array $emails,
     ): array {
         $workerCount = count($emails);
         self::assertGreaterThanOrEqual(2, $workerCount);
@@ -1384,7 +1380,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     private function runConcurrentGuestEmailUpdateDiagnosticWorkersBatch(
         int $cartId,
         int $cartOwnerGuestId,
-        array $requests
+        array $requests,
     ): array {
         $workerCount = count($requests);
         self::assertGreaterThanOrEqual(2, $workerCount);
@@ -1437,7 +1433,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         int $cartId,
         array $createdCustomerIds,
         int $guestId,
-        array $updateEmails
+        array $updateEmails,
     ): array {
         $createWorkerCount = count($createdCustomerIds);
         $updateWorkerCount = count($updateEmails);
@@ -1509,7 +1505,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
      */
     private function runConcurrentRealSubmitGuestInitWorkersBatch(
         int $cartId,
-        array $emails
+        array $emails,
     ): array {
         $workerCount = count($emails);
         self::assertGreaterThanOrEqual(2, $workerCount);
@@ -1549,7 +1545,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
      */
     private function runConcurrentRealSubmitGuestInitDiagnosticWorkersBatch(
         int $cartId,
-        array $emails
+        array $emails,
     ): array {
         $workerCount = count($emails);
         self::assertGreaterThanOrEqual(2, $workerCount);
@@ -1596,7 +1592,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         string $email,
         string $workerId,
         string $barrierId,
-        int $workersCount
+        int $workersCount,
     ): array {
         $workerScriptPath = __DIR__ . '/fixtures/CheckoutGuestInitConcurrentWorker.php';
         $command = sprintf(
@@ -1644,7 +1640,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         string $email,
         string $workerId,
         string $barrierId,
-        int $workersCount
+        int $workersCount,
     ): array {
         $workerScriptPath = __DIR__ . '/fixtures/CheckoutGuestEmailUpdateConcurrentWorker.php';
         $command = sprintf(
@@ -1691,7 +1687,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         string $email,
         string $workerId,
         string $barrierId,
-        int $workersCount
+        int $workersCount,
     ): array {
         $workerScriptPath = __DIR__ . '/fixtures/CheckoutGuestInitRealSubmitConcurrentWorker.php';
         $command = sprintf(
@@ -1737,7 +1733,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         string $email,
         string $workerId,
         string $barrierId,
-        int $workersCount
+        int $workersCount,
     ): array {
         $workerScriptPath = __DIR__ . '/fixtures/CheckoutGuestInitRealSubmitDiagnosticConcurrentWorker.php';
         $command = sprintf(
@@ -1785,7 +1781,7 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         string $email,
         string $workerId,
         string $barrierId,
-        int $workersCount
+        int $workersCount,
     ): array {
         $workerScriptPath = __DIR__ . '/fixtures/CheckoutGuestEmailUpdateDiagnosticConcurrentWorker.php';
         $command = sprintf(
@@ -1925,10 +1921,10 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
     private function buildHandler(
         OnePageCheckoutForm $opcForm,
         bool $isOpcEnabled = true,
-        ?CustomerPersister $customerPersister = null
+        ?\CustomerPersister $customerPersister = null,
     ): IntegrationCheckoutGuestInitHandler {
         if ($customerPersister === null) {
-            $customerPersister = new CustomerPersister(
+            $customerPersister = new \CustomerPersister(
                 self::getContext(),
                 new Hashing(),
                 $this->translator,
@@ -1948,25 +1944,25 @@ class OpcGuestInitHandlerIntegrationTest extends TestCase
         return $handler;
     }
 
-    private function createCustomer(string $email, bool $isGuest): Customer
+    private function createCustomer(string $email, bool $isGuest): \Customer
     {
-        $customer = new Customer();
+        $customer = new \Customer();
         $customer->firstname = 'Integration';
         $customer->lastname = 'Customer';
         $customer->email = $email;
         $customer->is_guest = $isGuest;
-        $customer->passwd = Tools::hash('integration-password');
+        $customer->passwd = \Tools::hash('integration-password');
 
         self::assertTrue($customer->save());
 
         return $customer;
     }
 
-    private function prepareEligibleCartContext(int $ownerCustomerId): Cart
+    private function prepareEligibleCartContext(int $ownerCustomerId): \Cart
     {
         $context = self::getContext();
 
-        $persistedCart = new Cart();
+        $persistedCart = new \Cart();
         $persistedCart->id_customer = $ownerCustomerId;
         $persistedCart->id_currency = (int) $context->currency->id;
         $persistedCart->id_lang = (int) $context->language->id;
@@ -2023,7 +2019,7 @@ class IntegrationCheckoutGuestInitHandler extends OpcGuestInitHandler
     }
 }
 
-class IntegrationEligibleCart extends Cart
+class IntegrationEligibleCart extends \Cart
 {
     public int $productsCount = 0;
 

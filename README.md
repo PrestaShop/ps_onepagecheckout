@@ -1,30 +1,54 @@
-# One-page checkout (ps_onepagecheckout)
+# One-page checkout (`ps_onepagecheckout`)
 
 ## About
 
-`ps_onepagecheckout` migrates the native one-page checkout logic from Core to a dedicated native module.
+`ps_onepagecheckout` is the native PrestaShop module that provides the one-page checkout experience.
 
 ## Compatibility
 
 PrestaShop: `9.0.0` or later.
 
-## What this module provides in MVP
+## What the module owns
 
-- checkout process injection through `actionCheckoutBuildProcessBefore`,
-- guest initialization endpoint with parity contract,
-- OPC address form refresh endpoint with parity contract,
-- one-step checkout toggle based on `PS_ONE_PAGE_CHECKOUT_ENABLED`.
+- checkout process injection through `actionCheckoutBuildProcess`,
+- front office AJAX endpoints for guest initialization and address form refresh,
+- back office configuration for enabling or disabling one-page checkout,
+- checkout layout configuration assets and templates shipped by the module,
+- checkout runtime flag exposure for the order page.
 
-## Back office behavior
+## Code map
 
-- `Configure` from Module Manager edits `PS_ONE_PAGE_CHECKOUT_ENABLED`.
-- dedicated BO tab (`AdminPsOnePageCheckout`) renders the same module-owned configuration flow.
-- layout selector UI keeps parity with the historical Core checkout layout experience (recommended badge, feature list, illustrations), fully owned by module templates/assets.
-- disable/uninstall forces `PS_ONE_PAGE_CHECKOUT_ENABLED=0` (4-step checkout).
+- [`ps_onepagecheckout.php`](./ps_onepagecheckout.php): module entry point, hook registration, runtime wiring.
+- [`src/Checkout`](./src/Checkout): checkout process, availability checks, AJAX handlers.
+- [`src/Form`](./src/Form): back office configuration form and checkout form helpers.
+- [`controllers/front`](./controllers/front): FO endpoints used by the one-page checkout runtime.
+- [`controllers/admin`](./controllers/admin): BO entry point for module configuration.
+- [`views/js`](./views/js): checkout client-side behavior.
+- [`views/templates`](./views/templates): BO templates and module-owned checkout assets.
+- [`tests/php`](./tests/php): unit and integration coverage for the module.
 
-## JS Development
+## Contributing
 
-From `modules/ps_onepagecheckout/views`:
+Before opening a PR:
+
+1. Regenerate the module autoload when PHP classes move or are added.
+2. Rebuild front assets when changing files under `views/js`.
+3. Run the relevant PHP tests for the area you touched.
+4. Use the decision log and implementation rules as the source of truth for sensitive changes.
+
+## Local development
+
+### PHP autoload
+
+From the repository root:
+
+```bash
+composer dump-autoload -d
+```
+
+### Front assets
+
+From `ps_onepagecheckout/views`:
 
 ```bash
 npm install
@@ -32,10 +56,24 @@ npm run watch
 npm run build
 ```
 
-## Decision tracking
+## Testing
 
-- implementation rules: [docs/RULES.md](./docs/RULES.md)
-- decision log: [docs/DECISIONS.md](./docs/DECISIONS.md)
+PHP test configuration lives in [`tests/php`](./tests/php):
+
+- unit suite: `modules/ps_onepagecheckout/tests/php/phpunit.xml`
+- integration suite: `modules/ps_onepagecheckout/tests/php/phpunit-integration.xml`
+- static analysis helpers: `modules/ps_onepagecheckout/tests/php/phpstan.sh`
+
+For end-to-end checks, use the dedicated runbook:
+
+- [`docs/E2E_RUNBOOK.md`](./docs/E2E_RUNBOOK.md)
+
+## Project references
+
+- implementation rules: [`docs/RULES.md`](./docs/RULES.md)
+- architectural decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
+- MVP product + technical documentation: [`docs/MVP_DOCUMENTATION.md`](./docs/MVP_DOCUMENTATION.md)
+- contributors: [`CONTRIBUTORS.md`](./CONTRIBUTORS.md)
 
 ## License
 

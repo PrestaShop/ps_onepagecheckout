@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -8,83 +9,51 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Form;
 
-use Module;
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Form\BackOfficeConfigurationForm;
+use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
 
 class BackOfficeConfigurationFormTest extends TestCase
 {
-    public function testItPersistsConfigurationWithResolvedShopScope(): void
+    public function testItPersistsConfigurationValueWhenEnabled(): void
     {
-        $form = new SpyBackOfficeConfigurationForm($this->createMock(Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
-        $form->setResolvedScope(2, 9);
+        $form = new SpyBackOfficeConfigurationForm($this->createMock(\Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
 
         $form->callPersistConfigurationValue(1);
 
-        self::assertSame([
-            [
-                'value' => 1,
-                'id_shop_group' => 2,
-                'id_shop' => 9,
-            ],
-        ], $form->updatedConfiguration);
+        self::assertSame([1], $form->updatedConfigurationValues);
     }
 
-    public function testItPersistsConfigurationWithResolvedGroupScope(): void
+    public function testItPersistsConfigurationValueWhenDisabled(): void
     {
-        $form = new SpyBackOfficeConfigurationForm($this->createMock(Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
-        $form->setResolvedScope(3, null);
+        $form = new SpyBackOfficeConfigurationForm($this->createMock(\Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
 
         $form->callPersistConfigurationValue(0);
 
-        self::assertSame([
-            [
-                'value' => 0,
-                'id_shop_group' => 3,
-                'id_shop' => null,
-            ],
-        ], $form->updatedConfiguration);
+        self::assertSame([0], $form->updatedConfigurationValues);
     }
 
-    public function testItLoadsConfigurationWithResolvedScope(): void
+    public function testItLoadsCurrentConfigurationValue(): void
     {
-        $form = new SpyBackOfficeConfigurationForm($this->createMock(Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
-        $form->setResolvedScope(null, null);
+        $form = new SpyBackOfficeConfigurationForm($this->createMock(\Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
         $form->setNextReadValue(1);
 
         $value = $form->callGetCurrentConfigurationValue();
 
         self::assertSame(1, $value);
-        self::assertSame([
-            [
-                'id_shop_group' => null,
-                'id_shop' => null,
-            ],
-        ], $form->readConfiguration);
+        self::assertSame(1, $form->readConfigurationCalls);
     }
 }
 
 class SpyBackOfficeConfigurationForm extends BackOfficeConfigurationForm
 {
     /**
-     * @var array<int, array{value: int, id_shop_group: int|null, id_shop: int|null}>
+     * @var int[]
      */
-    public array $updatedConfiguration = [];
+    public array $updatedConfigurationValues = [];
 
-    /**
-     * @var array<int, array{id_shop_group: int|null, id_shop: int|null}>
-     */
-    public array $readConfiguration = [];
+    public int $readConfigurationCalls = 0;
 
-    private ?int $resolvedShopGroup = null;
-    private ?int $resolvedShop = null;
     private int $nextReadValue = 0;
-
-    public function setResolvedScope(?int $idShopGroup, ?int $idShop): void
-    {
-        $this->resolvedShopGroup = $idShopGroup;
-        $this->resolvedShop = $idShop;
-    }
 
     public function setNextReadValue(int $value): void
     {
@@ -101,26 +70,14 @@ class SpyBackOfficeConfigurationForm extends BackOfficeConfigurationForm
         return $this->getCurrentConfigurationValue();
     }
 
-    protected function resolveConfigurationScope(): array
+    protected function updateConfigurationValue(int $value): void
     {
-        return [$this->resolvedShopGroup, $this->resolvedShop];
+        $this->updatedConfigurationValues[] = $value;
     }
 
-    protected function updateConfigurationValue(int $value, ?int $idShopGroup, ?int $idShop): void
+    protected function readConfigurationValue(): int
     {
-        $this->updatedConfiguration[] = [
-            'value' => $value,
-            'id_shop_group' => $idShopGroup,
-            'id_shop' => $idShop,
-        ];
-    }
-
-    protected function readConfigurationValue(?int $idShopGroup, ?int $idShop): int
-    {
-        $this->readConfiguration[] = [
-            'id_shop_group' => $idShopGroup,
-            'id_shop' => $idShop,
-        ];
+        ++$this->readConfigurationCalls;
 
         return $this->nextReadValue;
     }

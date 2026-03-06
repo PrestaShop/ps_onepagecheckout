@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -8,16 +9,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Checkout;
 
-use Cart;
-use CheckoutSession;
-use Context;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\CheckoutOnePageStep;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\OnePageCheckoutAvailability;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\OpcCheckoutProcessBuilder;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormFactory;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\CheckoutOnePageStep;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OpcCheckoutProcessBuilderTest extends TestCase
@@ -43,7 +40,7 @@ class OpcCheckoutProcessBuilderTest extends TestCase
         );
 
         $process = $builder->build(
-            $this->getMockBuilder(CheckoutSession::class)->disableOriginalConstructor()->getMock(),
+            $this->getMockBuilder(\CheckoutSession::class)->disableOriginalConstructor()->getMock(),
             $this->createMock(TranslatorInterface::class)
         );
 
@@ -74,21 +71,21 @@ class OpcCheckoutProcessBuilderTest extends TestCase
         );
 
         $builder->build(
-            $this->getMockBuilder(CheckoutSession::class)->disableOriginalConstructor()->getMock(),
+            $this->getMockBuilder(\CheckoutSession::class)->disableOriginalConstructor()->getMock(),
             $this->createMock(TranslatorInterface::class)
         );
 
         self::assertSame(1, $builder->deliveryConfigurationCalls);
     }
 
-    private function createContextWithCart(bool $isVirtual): Context
+    private function createContextWithCart(bool $isVirtual): \Context
     {
-        $context = new class() extends Context {
+        $context = new class extends \Context {
             public function __construct()
             {
             }
         };
-        $context->cart = new class($isVirtual) extends Cart {
+        $context->cart = new class($isVirtual) extends \Cart {
             private bool $isVirtual;
 
             public function __construct(bool $isVirtual)
@@ -106,7 +103,7 @@ class OpcCheckoutProcessBuilderTest extends TestCase
     }
 }
 
-class SpyOpcCheckoutProcessBuilder extends OpcCheckoutProcessBuilder
+class SpyOpcCheckoutProcessBuilder extends OnePageCheckoutProcessBuilder
 {
     public int $deliveryConfigurationCalls = 0;
 

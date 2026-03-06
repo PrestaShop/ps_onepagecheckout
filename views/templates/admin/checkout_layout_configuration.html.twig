@@ -8,59 +8,77 @@
 {% endif %}
 
 <div class="psopc-configuration">
-  <div class="psopc-card">
-    <div class="psopc-card-body">
-      <h3 class="psopc-layout-title">{{ checkout_layout_title }}</h3>
-      <p class="psopc-layout-description">{{ checkout_layout_description }}</p>
-
-      <form action="{{ configuration_form_action }}" method="post" class="psopc-form">
-        <div id="{{ configuration_key }}" class="psopc-choices">
-          {% for choice in choices %}
-            <label class="psopc-choice" for="{{ choice.id }}">
-              <span class="psopc-choice-radio">
-                <input
-                  type="radio"
-                  id="{{ choice.id }}"
-                  name="{{ configuration_key }}"
-                  value="{{ choice.value }}"
-                  {% if choice.checked %}checked="checked"{% endif %}
-                  required="required"
-                >
-                <span class="psopc-choice-dot" aria-hidden="true"></span>
-              </span>
-
-              <span class="psopc-choice-content">
-                <span class="psopc-choice-header">
-                  <span class="psopc-choice-label">{{ choice.label }}</span>
-                  {% if choice.badge is not empty %}
-                    <span class="psopc-choice-badge">{{ choice.badge }}</span>
-                  {% endif %}
-                </span>
-
-                <span class="psopc-choice-body">
-                  <span class="psopc-choice-text">
-                    <span class="psopc-choice-description">{{ choice.description }}</span>
-                    <ul class="psopc-choice-features">
-                      {% for feature in choice.features %}
-                        <li>{{ feature }}</li>
-                      {% endfor %}
-                    </ul>
-                  </span>
-                  <span class="psopc-choice-illustration" aria-hidden="true">
-                    <img src="{{ choice.illustration }}" alt="{{ choice.label }}">
-                  </span>
-                </span>
-              </span>
-            </label>
-          {% endfor %}
-        </div>
-
-        <div class="psopc-actions">
-          <button type="submit" name="{{ form_submit_action }}" class="btn btn-primary psopc-save-button">
-            {{ save_button_label }}
-          </button>
-        </div>
-      </form>
+  {% if not is_single_shop_context %}
+    <div class="alert alert-warning" role="alert">
+      <p class="alert-text">{{ single_shop_context_warning }}</p>
     </div>
-  </div>
+  {% else %}
+    <form action="{{ configuration_form_action }}" method="post">
+      <div class="d-flex justify-content-center w-100">
+        <div class="card">
+          <div class="card-body">
+            <div class="checkout-layout-header">
+              <h3 class="checkout-layout-title">{{ checkout_layout_title }}</h3>
+              <p class="checkout-layout-description">{{ checkout_layout_description }}</p>
+            </div>
+
+            <div class="form-wrapper">
+              <div id="{{ configuration_key }}" class="d-flex flex-row enriched-choice">
+                  {% for choice in choices %}
+                    <label class="form-check-radio form-check-label d-flex flex-row align-items-start p-3 m-0" for="{{ choice.id }}">
+                      <div class="d-flex align-items-start shrink-0 mr-3">
+                        <input
+                          type="radio"
+                          id="{{ choice.id }}"
+                          name="{{ configuration_key }}"
+                          value="{{ choice.value }}"
+                          {% if choice.checked %}checked="checked"{% endif %}
+                          required="required"
+                        >
+                        <i class="form-check-round"></i>
+                      </div>
+
+                      <div class="grow">
+                        <div class="enriched-choice-title d-flex flex-row align-items-center">
+                          <span class="enriched-choice-label">{{ choice.label }}</span>
+                          {% if choice.badge is not empty %}
+                            <span class="enriched-choice-badge">{{ choice.badge }}</span>
+                          {% endif %}
+                        </div>
+
+                        <div class="enriched-choice-body d-flex flex-row align-items-start">
+                          <div class="enriched-choice-text">
+                            {% if choice.description is not empty %}
+                              <p class="enriched-choice-description">{{ choice.description }}</p>
+                            {% endif %}
+                            {% if choice.features is not empty %}
+                              <ul class="enriched-choice-features">
+                                {% for feature in choice.features %}
+                                  <li>{{ feature }}</li>
+                                {% endfor %}
+                              </ul>
+                            {% endif %}
+                          </div>
+                          {% if choice.illustration is not empty %}
+                            <div class="enriched-choice-illustration d-flex justify-content-center align-items-start shrink-0 ml-3">
+                              <img src="{{ choice.illustration }}" alt="{{ choice.label }}">
+                            </div>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </label>
+                  {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="psopc-actions text-right">
+        <button type="submit" name="{{ form_submit_action }}" class="btn btn-primary">
+          {{ save_button_label }}
+        </button>
+      </div>
+    </form>
+  {% endif %}
 </div>

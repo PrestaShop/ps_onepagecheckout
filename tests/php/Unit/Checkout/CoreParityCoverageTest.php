@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -51,7 +52,7 @@ class CoreParityCoverageTest extends TestCase
     /**
      * @return iterable<string, array{0: string, 1: string}>
      */
-    public function provideMirroredCheckoutTestSuites(): iterable
+    public static function provideMirroredCheckoutTestSuites(): iterable
     {
         yield 'unit form guest-init contract' => [
             _PS_ROOT_DIR_ . '/tests/Unit/Classes/form/OnePageCheckoutFormTest.php',
@@ -61,16 +62,6 @@ class CoreParityCoverageTest extends TestCase
         yield 'unit guest-init handler contract' => [
             _PS_ROOT_DIR_ . '/tests/Unit/Core/Checkout/CheckoutGuestInitHandlerTest.php',
             _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/tests/php/Unit/Checkout/Ajax/OpcGuestInitHandlerTest.php',
-        ];
-
-        yield 'integration guest-init handler contract' => [
-            _PS_ROOT_DIR_ . '/tests/Integration/Classes/Checkout/CheckoutGuestInitHandlerIntegrationTest.php',
-            _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/tests/php/Integration/Checkout/Ajax/OpcGuestInitHandlerIntegrationTest.php',
-        ];
-
-        yield 'integration form sync contract' => [
-            _PS_ROOT_DIR_ . '/tests/Integration/Classes/Checkout/OnePageCheckoutFormSyncContextIntegrationTest.php',
-            _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/tests/php/Integration/Checkout/OnePageCheckoutFormSyncContextIntegrationTest.php',
         ];
     }
 

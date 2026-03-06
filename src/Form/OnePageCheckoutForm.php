@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,28 +25,18 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Form;
+namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
-use AbstractForm;
 use Address;
 use Cart;
-use Configuration;
 use Context;
 use Country;
 use Customer;
-use CustomerAddressPersister;
-use CustomerPersister;
-use FormField;
-use Hook;
-use Language;
-use PrestaShop\PrestaShop\Adapter\Form\AddressFormValidationTrait;
 use PrestaShop\PrestaShop\Core\Util\InternationalizedDomainNameConverter;
-use Smarty;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Tools;
 use Validate;
 
-class OnePageCheckoutForm extends AbstractForm
+class OnePageCheckoutForm extends \AbstractForm
 {
     use AddressFormValidationTrait;
 
@@ -65,18 +56,18 @@ class OnePageCheckoutForm extends AbstractForm
     private $language;
 
     /**
-     * @var Address
+     * @var \Address
      */
     private $address;
 
     public function __construct(
-        Smarty $smarty,
-        Context $context,
-        Language $language,
+        \Smarty $smarty,
+        \Context $context,
+        \Language $language,
         TranslatorInterface $translator,
         OnePageCheckoutFormatter $formatter,
-        CustomerPersister $customerPersister,
-        CustomerAddressPersister $addressPersister
+        \CustomerPersister $customerPersister,
+        \CustomerAddressPersister $addressPersister,
     ) {
         parent::__construct(
             $smarty,
@@ -102,32 +93,32 @@ class OnePageCheckoutForm extends AbstractForm
         // Rebuild delivery field rules from selected country (state/postcode requirements).
         if (isset($params['id_country'])) {
             $country = (int) $params['id_country'] !== (int) $this->formatter->getCountry()->id
-                ? new Country($params['id_country'], $this->language->id)
+                ? new \Country($params['id_country'], $this->language->id)
                 : $this->formatter->getCountry()
             ;
         } elseif ($this->address) {
             $country = $this->formatter->getCountry();
         } elseif (
-            Tools::isCountryFromBrowserAvailable()
-            && Country::getByIso($countryIsoCode = Tools::getCountryIsoCodeFromHeader(), true)
+            \Tools::isCountryFromBrowserAvailable()
+            && \Country::getByIso($countryIsoCode = \Tools::getCountryIsoCodeFromHeader(), true)
         ) {
-            $country = new Country((int) Country::getByIso($countryIsoCode, true), Language::getIdByIso($countryIsoCode));
+            $country = new \Country((int) \Country::getByIso($countryIsoCode, true), \Language::getIdByIso($countryIsoCode));
         } else {
-            $country = new Country((int) Configuration::get('PS_COUNTRY_DEFAULT'), $this->language->id);
+            $country = new \Country((int) \Configuration::get('PS_COUNTRY_DEFAULT'), $this->language->id);
         }
 
         $this->formatter->setCountry($country);
 
         // Apply billing country too so invoice field requirements stay coherent.
         if (isset($params['invoice_id_country']) && (int) $params['invoice_id_country'] > 0) {
-            $invoiceCountry = new Country((int) $params['invoice_id_country'], $this->language->id);
+            $invoiceCountry = new \Country((int) $params['invoice_id_country'], $this->language->id);
             $this->formatter->setInvoiceCountry($invoiceCountry);
         }
 
         return parent::fillWith($params);
     }
 
-    public function fillFromCustomer(Customer $customer)
+    public function fillFromCustomer(\Customer $customer)
     {
         $params = get_object_vars($customer);
 
@@ -144,7 +135,7 @@ class OnePageCheckoutForm extends AbstractForm
         return $this->fillWith($params);
     }
 
-    public function fillFromAddress(Address $address)
+    public function fillFromAddress(\Address $address)
     {
         $this->address = $address;
         $params = get_object_vars($address);
@@ -156,12 +147,12 @@ class OnePageCheckoutForm extends AbstractForm
     /**
      * Fill form from delivery and invoice addresses
      *
-     * @param Address|null $deliveryAddress
-     * @param Address|null $invoiceAddress
+     * @param \Address|null $deliveryAddress
+     * @param \Address|null $invoiceAddress
      *
      * @return self
      */
-    public function fillFromAddresses(?Address $deliveryAddress = null, ?Address $invoiceAddress = null)
+    public function fillFromAddresses(?\Address $deliveryAddress = null, ?\Address $invoiceAddress = null)
     {
         $params = [];
         if ($deliveryAddress) {
@@ -256,16 +247,16 @@ class OnePageCheckoutForm extends AbstractForm
             $this->context->updateCustomer($customer);
         }
 
-        $token = Tools::getToken(true, $this->context);
+        $token = \Tools::getToken(true, $this->context);
         $useSameAddress = $this->getField('use_same_address') && $this->getField('use_same_address')->getValue();
 
         // Create/update delivery address
-        $deliveryAddress = $this->buildAddressFromFields('', Tools::getValue('id_address'));
+        $deliveryAddress = $this->buildAddressFromFields('', \Tools::getValue('id_address'));
         $deliveryAddress->id_customer = $customer->id;
         if (empty($deliveryAddress->alias)) {
             $deliveryAddress->alias = $this->translator->trans('My Address', [], 'Shop.Theme.Checkout');
         }
-        Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$deliveryAddress]);
+        \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$deliveryAddress]);
         if (!$this->addressPersister->save($deliveryAddress, $token)) {
             return false;
         }
@@ -275,7 +266,7 @@ class OnePageCheckoutForm extends AbstractForm
 
         // Create/update invoice address if different
         if (!$useSameAddress) {
-            $idAddressInvoice = (int) Tools::getValue('id_address_invoice');
+            $idAddressInvoice = (int) \Tools::getValue('id_address_invoice');
             $invoiceAddress = $this->buildAddressFromFields('invoice_', $idAddressInvoice ?: null);
             $invoiceAddress->id_customer = $customer->id;
             $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans(
@@ -283,7 +274,7 @@ class OnePageCheckoutForm extends AbstractForm
                 [],
                 'Shop.Theme.Checkout'
             );
-            Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$invoiceAddress]);
+            \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$invoiceAddress]);
             if (!$this->addressPersister->save($invoiceAddress, $token)) {
                 return false;
             }
@@ -303,7 +294,7 @@ class OnePageCheckoutForm extends AbstractForm
      */
     private function syncContextCustomerFromCart(): void
     {
-        if ((int) $this->context->customer->id > 0 || !Validate::isLoadedObject($this->context->cart)) {
+        if ((int) $this->context->customer->id > 0 || !\Validate::isLoadedObject($this->context->cart)) {
             return;
         }
 
@@ -313,8 +304,8 @@ class OnePageCheckoutForm extends AbstractForm
         }
 
         // Read cart owner from DB to align final submit with the real cart owner.
-        $freshCart = new Cart($cartId);
-        if (!Validate::isLoadedObject($freshCart)) {
+        $freshCart = new \Cart($cartId);
+        if (!\Validate::isLoadedObject($freshCart)) {
             return;
         }
 
@@ -323,8 +314,8 @@ class OnePageCheckoutForm extends AbstractForm
             return;
         }
 
-        $cartCustomer = new Customer($cartCustomerId);
-        if (!Validate::isLoadedObject($cartCustomer) || !$cartCustomer->isGuest()) {
+        $cartCustomer = new \Customer($cartCustomerId);
+        if (!\Validate::isLoadedObject($cartCustomer) || !$cartCustomer->isGuest()) {
             return;
         }
 
@@ -362,11 +353,11 @@ class OnePageCheckoutForm extends AbstractForm
      * @param string $prefix Field prefix ('' for delivery, 'invoice_' for invoice)
      * @param int|null $idAddress Existing address ID or null for new
      *
-     * @return Address
+     * @return \Address
      */
     private function buildAddressFromFields($prefix, $idAddress)
     {
-        $address = new Address($idAddress ? (int) $idAddress : null, $this->language->id);
+        $address = new \Address($idAddress ? (int) $idAddress : null, $this->language->id);
 
         foreach ($this->formFields as $formField) {
             $fieldName = $formField->getName();
@@ -404,11 +395,11 @@ class OnePageCheckoutForm extends AbstractForm
     /**
      * Persist guest customer and propagate persister errors to the form.
      *
-     * @param Customer $customer
+     * @param \Customer $customer
      *
      * @return bool
      */
-    private function persistGuestCustomer(Customer $customer): bool
+    private function persistGuestCustomer(\Customer $customer): bool
     {
         if ($this->customerPersister->save($customer, '', '', false)) {
             return true;
@@ -436,7 +427,7 @@ class OnePageCheckoutForm extends AbstractForm
             return false;
         }
 
-        if (Validate::isEmail(trim((string) $emailField->getValue()))) {
+        if (\Validate::isEmail(trim((string) $emailField->getValue()))) {
             return true;
         }
 
@@ -472,11 +463,11 @@ class OnePageCheckoutForm extends AbstractForm
     /**
      * Get customer from form data
      *
-     * @return Customer
+     * @return \Customer
      */
     public function getCustomer()
     {
-        $customer = new Customer($this->context->customer->id);
+        $customer = new \Customer($this->context->customer->id);
 
         foreach ($this->formFields as $field) {
             $customerField = $field->getName();
@@ -491,17 +482,17 @@ class OnePageCheckoutForm extends AbstractForm
     /**
      * Get delivery address from form data
      *
-     * @return Address
+     * @return \Address
      */
     public function getAddress()
     {
-        return $this->buildAddressFromFields('', Tools::getValue('id_address'));
+        return $this->buildAddressFromFields('', \Tools::getValue('id_address'));
     }
 
     /**
      * Get invoice address from form data (when use_same_address is false)
      *
-     * @return Address
+     * @return \Address
      */
     public function getInvoiceAddress()
     {
@@ -517,7 +508,7 @@ class OnePageCheckoutForm extends AbstractForm
         }
 
         $formFields = array_map(
-            function (FormField $item) {
+            function (\FormField $item) {
                 return $item->toArray();
             },
             $this->formFields

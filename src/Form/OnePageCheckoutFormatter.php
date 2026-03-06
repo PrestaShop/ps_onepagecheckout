@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,18 +25,13 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Form;
+namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
 use Address;
-use Configuration;
 use Country;
-use Customer;
-use FormField;
-use FormFormatterInterface;
-use Hook;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-class OnePageCheckoutFormatter implements FormFormatterInterface
+class OnePageCheckoutFormatter implements \FormFormatterInterface
 {
     use AddressFieldsFormatTrait;
 
@@ -48,22 +44,22 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
      * Separate country for the billing (invoice) address section.
      * Null means billing uses the same country as delivery.
      *
-     * @var Country|null
+     * @var \Country|null
      */
-    protected $invoiceCountry = null;
+    protected $invoiceCountry;
 
     public function __construct(
-        Country $country,
+        \Country $country,
         TranslatorInterface $translator,
-        array $availableCountries
+        array $availableCountries,
     ) {
         $this->country = $country;
         $this->translator = $translator;
         $this->availableCountries = $availableCountries;
-        $this->definition = Address::$definition['fields'];
+        $this->definition = \Address::$definition['fields'];
     }
 
-    public function setCountry(Country $country)
+    public function setCountry(\Country $country)
     {
         $this->country = $country;
 
@@ -78,11 +74,11 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
     /**
      * Set the billing country for invoice field structure generation.
      *
-     * @param Country $country
+     * @param \Country $country
      *
      * @return self
      */
-    public function setInvoiceCountry(Country $country)
+    public function setInvoiceCountry(\Country $country)
     {
         $this->invoiceCountry = $country;
 
@@ -94,7 +90,7 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
         $format = [];
 
         // Identity section: email only
-        $format['email'] = (new FormField())
+        $format['email'] = (new \FormField())
             ->setName('email')
             ->setType('email')
             ->setLabel(
@@ -107,9 +103,9 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
             ->setRequired(true);
 
         // Opt-in for partner offers (if enabled)
-        if (Configuration::get('PS_CUSTOMER_OPTIN')) {
-            $customer = new Customer();
-            $format['optin'] = (new FormField())
+        if (\Configuration::get('PS_CUSTOMER_OPTIN')) {
+            $customer = new \Customer();
+            $format['optin'] = (new \FormField())
                 ->setName('optin')
                 ->setType('checkbox')
                 ->setLabel(
@@ -122,7 +118,7 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
                 ->setRequired($customer->isFieldRequired('optin'));
         }
 
-        $additionalCustomerFormFields = Hook::exec('additionalCustomerFormFields', ['fields' => &$format], null, true);
+        $additionalCustomerFormFields = \Hook::exec('additionalCustomerFormFields', ['fields' => &$format], null, true);
         if (is_array($additionalCustomerFormFields)) {
             foreach ($additionalCustomerFormFields as $moduleName => $additionalFormFields) {
                 if (!is_array($additionalFormFields)) {
@@ -130,7 +126,7 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
                 }
 
                 foreach ($additionalFormFields as $formField) {
-                    if (!$formField instanceof FormField) {
+                    if (!$formField instanceof \FormField) {
                         continue;
                     }
 
@@ -141,7 +137,7 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
         }
 
         // Use same address for delivery and invoice
-        $format['use_same_address'] = (new FormField())
+        $format['use_same_address'] = (new \FormField())
             ->setName('use_same_address')
             ->setType('checkbox')
             ->setLabel(
@@ -154,7 +150,7 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
             ->setValue(true);
 
         // Hidden field to preserve invoice address ID when editing
-        $format['id_address_invoice'] = (new FormField())
+        $format['id_address_invoice'] = (new \FormField())
             ->setName('id_address_invoice')
             ->setType('hidden');
 
@@ -176,7 +172,7 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
             $this->addMaxLength($format)
         );
 
-        $additionalAddressFormFields = Hook::exec('additionalCustomerAddressFields', ['fields' => &$format], null, true);
+        $additionalAddressFormFields = \Hook::exec('additionalCustomerAddressFields', ['fields' => &$format], null, true);
         if (is_array($additionalAddressFormFields)) {
             foreach ($additionalAddressFormFields as $moduleName => $additionalFormFields) {
                 if (!is_array($additionalFormFields)) {
@@ -184,7 +180,7 @@ class OnePageCheckoutFormatter implements FormFormatterInterface
                 }
 
                 foreach ($additionalFormFields as $formField) {
-                    if (!$formField instanceof FormField) {
+                    if (!$formField instanceof \FormField) {
                         continue;
                     }
 

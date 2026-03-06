@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,9 +25,7 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Checkout;
-
-use Configuration;
+namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
 class OnePageCheckoutAvailability
 {
@@ -47,6 +46,6 @@ class OnePageCheckoutAvailability
 
     protected function getConfigurationValue(): bool
     {
-        return (bool) Configuration::get($this->configurationKey);
+        return (bool) \Configuration::get($this->configurationKey);
     }
 }

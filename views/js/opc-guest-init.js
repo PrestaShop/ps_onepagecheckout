@@ -24,6 +24,7 @@
  */
 
 (function psOpcGuestInitRuntime() {
+
 const $ = window.$ || window.jQuery;
 const prestashop = window.prestashop || {};
 

@@ -1,10 +1,11 @@
 <?php
+
 /**
  * AJAX endpoint for module-owned OPC address form refresh.
  */
 
-use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcAddressFormHandler;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormFactory;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 
 class Ps_OnepagecheckoutAddressFormModuleFrontController extends ModuleFrontController
 {
@@ -58,9 +59,9 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends ModuleFrontCont
         return new OnePageCheckoutFormFactory($this->context, $this->module);
     }
 
-    protected function createAddressFormHandler(OnePageCheckoutFormFactory $opcFormFactory): OpcAddressFormHandler
+    protected function createAddressFormHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutAddressFormHandler
     {
-        return new OpcAddressFormHandler($opcFormFactory->create());
+        return new OnePageCheckoutAddressFormHandler($opcFormFactory->create());
     }
 
     /**

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,13 +25,9 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Checkout;
+namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
-use CheckoutProcess;
-use CheckoutSession;
-use Context;
-
-class OnePageCheckoutProcess extends CheckoutProcess
+class OnePageCheckoutProcess extends \CheckoutProcess
 {
     /**
      * @var OnePageCheckoutAvailability
@@ -38,11 +35,10 @@ class OnePageCheckoutProcess extends CheckoutProcess
     private $opcAvailability;
 
     public function __construct(
-        Context $context,
-        CheckoutSession $checkoutSession,
-        OnePageCheckoutAvailability $opcAvailability
-    )
-    {
+        \Context $context,
+        \CheckoutSession $checkoutSession,
+        OnePageCheckoutAvailability $opcAvailability,
+    ) {
         parent::__construct($context, $checkoutSession);
         $this->opcAvailability = $opcAvailability;
     }

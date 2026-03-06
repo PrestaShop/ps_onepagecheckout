@@ -1,13 +1,13 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Checkout;
+namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
 use Customer;
-use Validate;
 
 /**
  * Centralizes customer resolution to prevent customer data reloads.
@@ -20,11 +20,11 @@ class ExistingCustomerState
     private $id;
 
     /**
-     * @var Customer|null
+     * @var \Customer|null
      */
     private $customer;
 
-    private function __construct(int $id, ?Customer $customer)
+    private function __construct(int $id, ?\Customer $customer)
     {
         $this->id = $id;
         $this->customer = $customer;
@@ -35,7 +35,7 @@ class ExistingCustomerState
         return new static(0, null);
     }
 
-    public static function fromCustomer(Customer $customer): static
+    public static function fromCustomer(\Customer $customer): static
     {
         return new static((int) $customer->id, $customer);
     }
@@ -45,14 +45,14 @@ class ExistingCustomerState
         return $this->id;
     }
 
-    public function getCustomer(): ?Customer
+    public function getCustomer(): ?\Customer
     {
         return $this->customer;
     }
 
     public function hasCustomer(): bool
     {
-        return Validate::isLoadedObject($this->customer);
+        return \Validate::isLoadedObject($this->customer);
     }
 
     public function isGuestCustomer(): bool

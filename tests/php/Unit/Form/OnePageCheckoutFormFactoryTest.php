@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -8,40 +9,33 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Form;
 
-use Context;
-use Country;
-use CustomerAddressPersister;
-use CustomerPersister;
-use Language;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormFactory;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormatter;
-use Smarty;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormatter;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutFormFactoryTest extends TestCase
 {
     public function testItCreatesFormAndSetsOrderActionUrl(): void
     {
-        $context = new class() extends Context {
+        $context = new class extends \Context {
             public function __construct()
             {
             }
         };
-        $context->smarty = $this->getMockBuilder(Smarty::class)->disableOriginalConstructor()->getMock();
-        $context->language = new class() extends Language {
+        $context->smarty = $this->getMockBuilder(\Smarty::class)->disableOriginalConstructor()->getMock();
+        $context->language = new class extends \Language {
             public function __construct()
             {
             }
         };
-        $context->country = new class() extends Country {
+        $context->country = new class extends \Country {
             public function __construct()
             {
             }
         };
-        $context->link = new class() {
+        $context->link = new class {
             public function getPageLink(string $page, bool $ssl = false): string
             {
                 return '/order';
@@ -64,10 +58,10 @@ class OnePageCheckoutFormFactoryTest extends TestCase
             ->method('setAction')
             ->with('/order');
 
-        $customerPersister = $this->getMockBuilder(CustomerPersister::class)
+        $customerPersister = $this->getMockBuilder(\CustomerPersister::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $addressPersister = $this->getMockBuilder(CustomerAddressPersister::class)
+        $addressPersister = $this->getMockBuilder(\CustomerAddressPersister::class)
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -94,15 +88,15 @@ class SpyOnePageCheckoutFormFactory extends OnePageCheckoutFormFactory
     public array $capturedAvailableCountries = [];
 
     private OnePageCheckoutForm $form;
-    private CustomerPersister $customerPersister;
-    private CustomerAddressPersister $addressPersister;
+    private \CustomerPersister $customerPersister;
+    private \CustomerAddressPersister $addressPersister;
 
     public function __construct(
-        Context $context,
+        \Context $context,
         \Ps_Onepagecheckout $module,
         OnePageCheckoutForm $form,
-        CustomerPersister $customerPersister,
-        CustomerAddressPersister $addressPersister
+        \CustomerPersister $customerPersister,
+        \CustomerAddressPersister $addressPersister,
     ) {
         parent::__construct($context, $module);
         $this->form = $form;
@@ -122,7 +116,7 @@ class SpyOnePageCheckoutFormFactory extends OnePageCheckoutFormFactory
     {
         $this->capturedAvailableCountries = $availableCountries;
 
-        return new class() extends OnePageCheckoutFormatter {
+        return new class extends OnePageCheckoutFormatter {
             public function __construct()
             {
             }
@@ -131,18 +125,18 @@ class SpyOnePageCheckoutFormFactory extends OnePageCheckoutFormFactory
 
     protected function createFormInstance(
         OnePageCheckoutFormatter $formatter,
-        CustomerPersister $customerPersister,
-        CustomerAddressPersister $addressPersister
+        \CustomerPersister $customerPersister,
+        \CustomerAddressPersister $addressPersister,
     ): OnePageCheckoutForm {
         return $this->form;
     }
 
-    public function createCustomerPersister(): CustomerPersister
+    public function createCustomerPersister(): \CustomerPersister
     {
         return $this->customerPersister;
     }
 
-    public function createAddressPersister(): CustomerAddressPersister
+    public function createAddressPersister(): \CustomerAddressPersister
     {
         return $this->addressPersister;
     }

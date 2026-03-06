@@ -1,8 +1,8 @@
 <?php
+
 /**
  * @deprecated since 1.0.0, use AdminPsOnePageCheckoutController instead.
  */
-
 class AdminPsOnepagecheckoutController extends ModuleAdminController
 {
     public function __construct()

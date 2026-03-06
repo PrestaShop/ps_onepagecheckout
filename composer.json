@@ -13,7 +13,7 @@
     "php": ">=8.1"
   },
   "require-dev": {
-    "prestashop/php-dev-tools": "~3.0"
+    "prestashop/php-dev-tools": "^4.3"
   },
   "config": {
     "preferred-install": "dist",
@@ -23,12 +23,19 @@
   },
   "autoload": {
     "psr-4": {
-      "PrestaShop\\Module\\PsOnepagecheckout\\": "src/"
+      "PrestaShop\\Module\\PsOnePageCheckout\\": "src/"
     },
     "classmap": [
       "ps_onepagecheckout.php",
       "controllers/"
     ]
+  },
+  "scripts": {
+    "phpstan": "./tests/php/phpstan.sh latest",
+    "cs-fixer:fix": "./vendor/bin/php-cs-fixer fix . --diff --using-cache=no --sequential --config=vendor/prestashop/php-dev-tools/templates/cs-fixer/.php-cs-fixer.dist.php",
+    "cs-fixer:dry": "./vendor/bin/php-cs-fixer fix . --dry-run --diff --using-cache=no --sequential --config=vendor/prestashop/php-dev-tools/templates/cs-fixer/.php-cs-fixer.dist.php",
+    "test:unit": "SYMFONY_DEPRECATIONS_HELPER=disabled ../../vendor/bin/phpunit -c tests/php/phpunit.xml",
+    "test:integration": "SYMFONY_DEPRECATIONS_HELPER=disabled ../../vendor/bin/phpunit -c tests/php/phpunit-integration.xml"
   },
   "type": "prestashop-module"
 }

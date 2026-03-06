@@ -1,196 +1,205 @@
 /*
- * Checkout layout selector styles owned by ps_onepagecheckout module.
- * This stylesheet is intentionally self-contained so it works in both
- * legacy ModuleAdminController and Symfony BO pages.
+ * For the full copyright and license information, please view the
+ * docs/licenses/LICENSE.txt file that was distributed with this source code.
  */
 
-.psopc-configuration {
-  display: block;
+.psopc-configuration form {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 32px 64px 64px;
+}
+
+.psopc-configuration .card {
   width: 100%;
+  max-width: none;
+  margin: 0;
+  border: 1px solid #d6dbe1;
+  background: #ffffff;
 }
 
-.psopc-card {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
-  border: 1px solid #dbe6e9;
-  border-radius: 4px;
-  background: #fff;
+.psopc-configuration .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: #ffffff;
 }
 
-.psopc-card-body {
-  padding: 1rem;
+.psopc-configuration .checkout-layout-header {
+  margin: 0;
 }
 
-.psopc-layout-title {
+.checkout-layout-title {
   margin: 0 0 0.5rem;
+  margin-top: 0 !important;
   font-size: 1.125rem;
   font-weight: 600;
-  line-height: 1.4;
+  color: #1d1d1b;
 }
 
-.psopc-layout-description {
+.checkout-layout-description {
   margin: 0 0 1rem;
   font-size: 0.875rem;
+  font-weight: 400;
   line-height: 1.25rem;
   color: #576c7b;
 }
 
-.psopc-form {
-  margin: 0;
-}
-
-.psopc-choices {
+.psopc-configuration .enriched-choice {
   display: flex;
   flex-direction: row;
   gap: 1rem;
 }
 
-.psopc-choice {
-  box-sizing: border-box;
+.psopc-configuration .enriched-choice > .form-check-radio {
   display: flex;
+  flex: 1 1 0;
   align-items: flex-start;
-  width: 100%;
+  min-width: 0;
   margin: 0;
-  padding: 0.75rem;
-  border: 1px solid #dbe6e9;
-  border-radius: 4px;
+  padding: 1rem;
+  border: 1px solid #b8c4cc;
   background: #fff;
   cursor: pointer;
+  color: #1d1d1b;
 }
 
-.psopc-choice-radio {
+.psopc-configuration .enriched-choice > .form-check-radio:has(input[type="radio"]:checked) {
+  border-color: #1d1d1b;
+  box-shadow: inset 0 0 0 1px #1d1d1b;
+}
+
+.psopc-configuration .enriched-choice .form-check-round {
   position: relative;
-  display: inline-flex;
-  align-items: flex-start;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 1.125rem;
-  height: 1.125rem;
-  margin-right: 0.75rem;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #1d1d1b;
+  border-radius: 50%;
+  background: #fff;
 }
 
-.psopc-choice-radio input {
+.psopc-configuration .enriched-choice > .form-check-radio > .d-flex.align-items-start.shrink-0 {
+  margin-right: 0.75rem !important;
+  padding-top: 0.125rem;
+}
+
+.psopc-configuration .enriched-choice input[type="radio"] {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 18px;
+  height: 18px;
   margin: 0;
   opacity: 0;
   cursor: pointer;
 }
 
-.psopc-choice-dot {
-  box-sizing: border-box;
-  width: 1.125rem;
-  height: 1.125rem;
-  border: 1px solid #8a9ba8;
+.psopc-configuration .enriched-choice input[type="radio"]:checked + .form-check-round::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: #1d1d1b;
   border-radius: 50%;
-  background: #fff;
+  transform: translate(-50%, -50%);
 }
 
-.psopc-choice-radio input:checked + .psopc-choice-dot {
-  border-color: #25b9d7;
-  box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 8px #25b9d7;
+.psopc-configuration .enriched-choice .enriched-choice-title {
+  margin-bottom: 8px;
+  column-gap: 8px;
+  row-gap: 0.25rem;
 }
 
-.psopc-choice-content {
-  display: block;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.psopc-choice-header {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 0.5rem;
-}
-
-.psopc-choice-label {
-  margin-right: 0.5rem;
+.psopc-configuration .enriched-choice .enriched-choice-label {
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.25rem;
+  color: #1d1d1b;
+  margin-right: 0;
 }
 
-.psopc-choice-badge {
+.psopc-configuration .enriched-choice .enriched-choice-badge {
   display: inline-block;
   padding: 0.125rem 0.5rem;
   font-size: 0.75rem;
   color: #23374a;
-  background-color: #dff1ff;
+  background-color: #dfe7ff;
   border-radius: 44px;
 }
 
-.psopc-choice-body {
+.psopc-configuration .enriched-choice .enriched-choice-body {
+  min-width: 0;
   display: flex;
   align-items: flex-start;
+  column-gap: 1rem;
+}
+
+.psopc-configuration .enriched-choice .enriched-choice-text {
+  flex: 1;
   min-width: 0;
 }
 
-.psopc-choice-text {
-  display: block;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.psopc-choice-description,
-.psopc-choice-features {
-  font-size: 0.75rem;
-  line-height: 1.125rem;
-  color: #576c7b;
-}
-
-.psopc-choice-description {
-  display: block;
-  margin-bottom: 0.75rem;
-}
-
-.psopc-choice-features {
+.psopc-configuration .enriched-choice .enriched-choice-description,
+.psopc-configuration .enriched-choice .enriched-choice-features {
   margin: 0;
-  padding-left: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+  color: #1d1d1b;
 }
 
-.psopc-choice-features li {
+.psopc-configuration .enriched-choice .enriched-choice-description {
+  margin: 0 0 0.75rem;
+  text-indent: 0;
+}
+
+.psopc-configuration .enriched-choice .enriched-choice-features {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style-position: outside;
+}
+
+.psopc-configuration .enriched-choice .enriched-choice-features li {
   margin-bottom: 0.25rem;
 }
 
-.psopc-choice-illustration {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
+.psopc-configuration .enriched-choice .enriched-choice-illustration {
   width: 152px;
   height: 137px;
-  margin-left: 0.75rem;
+  margin-left: auto;
+  align-self: flex-start;
 }
 
-.psopc-choice-illustration img {
+.psopc-configuration .enriched-choice .enriched-choice-illustration img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
 }
 
-.psopc-actions {
-  margin-top: 1rem;
-  text-align: right;
-}
-
-.psopc-save-button {
-  min-width: 6rem;
+.psopc-configuration .psopc-actions {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
 }
 
 @media (max-width: 991.98px) {
-  .psopc-choice-illustration {
-    display: none;
+  .psopc-configuration .enriched-choice .enriched-choice-illustration {
+    display: none !important;
   }
 }
 
 @media (max-width: 575.98px) {
-  .psopc-choices {
-    flex-direction: column;
+  .psopc-configuration .enriched-choice {
+    flex-direction: column !important;
+  }
+
+  .psopc-configuration .enriched-choice .enriched-choice-title {
+    flex-wrap: wrap;
+  }
+
+  .psopc-configuration .enriched-choice .enriched-choice-badge {
+    margin-top: 0.25rem;
   }
 }

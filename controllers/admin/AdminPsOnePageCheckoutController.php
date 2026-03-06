@@ -1,7 +1,11 @@
 <?php
+
 /**
  * Back office entry point for ps_onepagecheckout settings.
  */
+
+use PrestaShop\PrestaShop\Core\Context\LegacyControllerContext;
+use Twig\Environment;
 
 class AdminPsOnePageCheckoutController extends ModuleAdminController
 {
@@ -30,5 +34,20 @@ class AdminPsOnePageCheckoutController extends ModuleAdminController
         }
 
         return $this->module->getBackOfficeConfigurationContent();
+    }
+
+    public function getTwig(): ?Environment
+    {
+        try {
+            $legacyControllerContext = $this->getContainer()->get(LegacyControllerContext::class);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (!$legacyControllerContext instanceof LegacyControllerContext) {
+            return null;
+        }
+
+        return $legacyControllerContext->getTwig();
     }
 }

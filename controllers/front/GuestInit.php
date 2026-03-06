@@ -1,10 +1,11 @@
 <?php
+
 /**
  * AJAX endpoint for module-owned OPC guest initialization.
  */
 
-use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcGuestInitHandler;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormFactory;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutGuestInitHandler;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 
 class Ps_OnepagecheckoutGuestInitModuleFrontController extends ModuleFrontController
 {
@@ -52,9 +53,9 @@ class Ps_OnepagecheckoutGuestInitModuleFrontController extends ModuleFrontContro
         return new OnePageCheckoutFormFactory($this->context, $this->module);
     }
 
-    protected function createGuestInitHandler(OnePageCheckoutFormFactory $opcFormFactory): OpcGuestInitHandler
+    protected function createGuestInitHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutGuestInitHandler
     {
-        return new OpcGuestInitHandler(
+        return new OnePageCheckoutGuestInitHandler(
             $this->context,
             $opcFormFactory->create(),
             $this->getTranslator(),

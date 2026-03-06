@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -13,8 +14,8 @@ if (!defined('_DB_PREFIX_')) {
 }
 
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcAddressFormHandler;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormFactory;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 
 class AddressFormControllerTest extends TestCase
 {
@@ -34,7 +35,7 @@ class AddressFormControllerTest extends TestCase
         $controller = new TestAddressFormController();
         $controller->module = $this->createEnabledModule();
 
-        $handler = $this->getMockBuilder(OpcAddressFormHandler::class)
+        $handler = $this->getMockBuilder(OnePageCheckoutAddressFormHandler::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['getTemplateVariables'])
             ->getMock();
@@ -91,7 +92,7 @@ class AddressFormControllerTest extends TestCase
 
 class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFrontController
 {
-    public ?OpcAddressFormHandler $addressFormHandler = null;
+    public ?OnePageCheckoutAddressFormHandler $addressFormHandler = null;
     public ?OnePageCheckoutFormFactory $opcFormFactory = null;
     public bool $throwOnCreateHandler = false;
 
@@ -104,13 +105,13 @@ class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFron
         return $this->handleAddressFormRefresh();
     }
 
-    protected function createAddressFormHandler(OnePageCheckoutFormFactory $opcFormFactory): OpcAddressFormHandler
+    protected function createAddressFormHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutAddressFormHandler
     {
         if ($this->throwOnCreateHandler) {
             throw new \RuntimeException('address form handler creation failed');
         }
 
-        if (!$this->addressFormHandler instanceof OpcAddressFormHandler) {
+        if (!$this->addressFormHandler instanceof OnePageCheckoutAddressFormHandler) {
             throw new \RuntimeException('address form handler not configured');
         }
 

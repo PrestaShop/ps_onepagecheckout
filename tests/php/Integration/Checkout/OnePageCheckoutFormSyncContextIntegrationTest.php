@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -8,16 +9,10 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Checkout;
 
-use Cart;
-use Configuration;
-use Context;
-use Customer;
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
-use ReflectionClass;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use Tests\Integration\Utility\ContextMockerTrait;
 use Tests\Resources\DatabaseDump;
-use Tools;
 
 class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
 {
@@ -29,8 +24,8 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
 
         self::mockContext();
         self::resetTables();
-        Configuration::loadConfiguration();
-        Configuration::updateValue('PS_GUEST_CHECKOUT_ENABLED', true);
+        \Configuration::loadConfiguration();
+        \Configuration::updateValue('PS_GUEST_CHECKOUT_ENABLED', true);
     }
 
     private static function resetTables(): void
@@ -49,8 +44,8 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $cart = $this->createPersistedCart((int) $guestOwner->id);
 
         $context = self::getContext();
-        $context->customer = new Customer();
-        $context->cart = new Cart((int) $cart->id);
+        $context->customer = new \Customer();
+        $context->cart = new \Cart((int) $cart->id);
 
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
@@ -65,8 +60,8 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $cart = $this->createPersistedCart((int) $registeredOwner->id);
 
         $context = self::getContext();
-        $context->customer = new Customer();
-        $context->cart = new Cart((int) $cart->id);
+        $context->customer = new \Customer();
+        $context->cart = new \Cart((int) $cart->id);
 
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
@@ -82,7 +77,7 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
 
         $context = self::getContext();
         $context->customer = $existingContextCustomer;
-        $context->cart = new Cart((int) $cart->id);
+        $context->cart = new \Cart((int) $cart->id);
 
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
@@ -96,8 +91,8 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $cart = $this->createPersistedCart((int) $guestOwner->id);
 
         $context = self::getContext();
-        $context->customer = new Customer();
-        $context->cart = new Cart();
+        $context->customer = new \Customer();
+        $context->cart = new \Cart();
         $context->cart->id = (int) $cart->id;
         $context->cart->id_customer = 0;
 
@@ -114,9 +109,9 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $cart = $this->createPersistedCart((int) $guestOwner->id);
 
         $context = self::getContext();
-        $context->customer = new Customer();
+        $context->customer = new \Customer();
         $context->customer->id = 999999;
-        $context->cart = new Cart((int) $cart->id);
+        $context->cart = new \Cart((int) $cart->id);
 
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
@@ -129,8 +124,8 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $cart = $this->createPersistedCart(0);
 
         $context = self::getContext();
-        $context->customer = new Customer();
-        $context->cart = new Cart((int) $cart->id);
+        $context->customer = new \Customer();
+        $context->cart = new \Cart((int) $cart->id);
 
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
@@ -143,8 +138,8 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $cart = $this->createPersistedCart(999999);
 
         $context = self::getContext();
-        $context->customer = new Customer();
-        $context->cart = new Cart((int) $cart->id);
+        $context->customer = new \Customer();
+        $context->cart = new \Cart((int) $cart->id);
 
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
@@ -155,8 +150,8 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
     public function testItDoesNothingWhenCartIsNotLoaded(): void
     {
         $context = self::getContext();
-        $context->customer = new Customer();
-        $context->cart = new Cart();
+        $context->customer = new \Customer();
+        $context->cart = new \Cart();
         $context->cart->id = 0;
 
         $form = $this->createFormWithoutConstructor($context);
@@ -165,25 +160,25 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         self::assertSame(0, (int) $context->customer->id);
     }
 
-    private function createCustomer(string $email, bool $isGuest): Customer
+    private function createCustomer(string $email, bool $isGuest): \Customer
     {
-        $customer = new Customer();
+        $customer = new \Customer();
         $customer->firstname = 'Sync';
         $customer->lastname = 'Context';
         $customer->email = $email;
         $customer->is_guest = $isGuest;
-        $customer->passwd = Tools::hash('integration-password');
+        $customer->passwd = \Tools::hash('integration-password');
 
         self::assertTrue($customer->save());
 
         return $customer;
     }
 
-    private function createPersistedCart(int $ownerCustomerId): Cart
+    private function createPersistedCart(int $ownerCustomerId): \Cart
     {
         $context = self::getContext();
 
-        $cart = new Cart();
+        $cart = new \Cart();
         $cart->id_customer = $ownerCustomerId;
         $cart->id_currency = (int) $context->currency->id;
         $cart->id_lang = (int) $context->language->id;
@@ -195,9 +190,9 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         return $cart;
     }
 
-    private function createFormWithoutConstructor(Context $context): OnePageCheckoutForm
+    private function createFormWithoutConstructor(\Context $context): OnePageCheckoutForm
     {
-        $reflection = new ReflectionClass(OnePageCheckoutForm::class);
+        $reflection = new \ReflectionClass(OnePageCheckoutForm::class);
         /** @var OnePageCheckoutForm $form */
         $form = $reflection->newInstanceWithoutConstructor();
 
@@ -210,7 +205,7 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
 
     private function invokeSyncContextCustomerFromCart(OnePageCheckoutForm $form): void
     {
-        $reflection = new ReflectionClass(OnePageCheckoutForm::class);
+        $reflection = new \ReflectionClass(OnePageCheckoutForm::class);
         $method = $reflection->getMethod('syncContextCustomerFromCart');
         $method->setAccessible(true);
         $method->invoke($form);

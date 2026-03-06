@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,20 +25,14 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Checkout;
+namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
-use AbstractCheckoutStep;
 use Address;
-use Cart;
-use ConditionsToApproveFinder;
-use Context;
-use Hook;
-use PaymentOptionsFinder;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Validate;
 
-class CheckoutOnePageStep extends AbstractCheckoutStep
+class CheckoutOnePageStep extends \AbstractCheckoutStep
 {
     protected $template = 'checkout/_partials/steps/one-page-checkout.tpl';
 
@@ -47,12 +42,12 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
     private $opcForm;
 
     /**
-     * @var PaymentOptionsFinder
+     * @var \PaymentOptionsFinder
      */
     public $paymentOptionsFinder;
 
     /**
-     * @var ConditionsToApproveFinder
+     * @var \ConditionsToApproveFinder
      */
     public $conditionsToApproveFinder;
 
@@ -66,18 +61,18 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
     private $validationErrors = [];
 
     /**
-     * @param Context $context
+     * @param \Context $context
      * @param TranslatorInterface $translator
      * @param OnePageCheckoutForm $opcForm
-     * @param PaymentOptionsFinder $paymentOptionsFinder
-     * @param ConditionsToApproveFinder $conditionsToApproveFinder
+     * @param \PaymentOptionsFinder $paymentOptionsFinder
+     * @param \ConditionsToApproveFinder $conditionsToApproveFinder
      */
     public function __construct(
-        Context $context,
+        \Context $context,
         TranslatorInterface $translator,
         OnePageCheckoutForm $opcForm,
-        PaymentOptionsFinder $paymentOptionsFinder,
-        ConditionsToApproveFinder $conditionsToApproveFinder
+        \PaymentOptionsFinder $paymentOptionsFinder,
+        \ConditionsToApproveFinder $conditionsToApproveFinder,
     ) {
         parent::__construct($context, $translator);
         $this->opcForm = $opcForm;
@@ -184,11 +179,11 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
         $idAddressDelivery = $session->getIdAddressDelivery();
         $idAddressInvoice = $session->getIdAddressInvoice();
 
-        $deliveryAddress = $idAddressDelivery ? new Address($idAddressDelivery, $languageId) : null;
+        $deliveryAddress = $idAddressDelivery ? new \Address($idAddressDelivery, $languageId) : null;
 
         $invoiceAddress = null;
         if ($idAddressInvoice && $idAddressInvoice != $idAddressDelivery) {
-            $invoiceAddress = new Address($idAddressInvoice, $languageId);
+            $invoiceAddress = new \Address($idAddressInvoice, $languageId);
         }
 
         if ($deliveryAddress || $invoiceAddress) {
@@ -232,7 +227,7 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
         ];
 
         // 1. Identity validation: email only
-        if (empty($requestParameters['email']) || !Validate::isEmail($requestParameters['email'])) {
+        if (empty($requestParameters['email']) || !\Validate::isEmail($requestParameters['email'])) {
             $result['identity'] = false;
             $this->validationErrors['identity'] = [
                 'email' => $this->getTranslator()->trans(
@@ -283,7 +278,7 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
         $isGuestFlow = !$customer->isLogged() || $customer->isGuest();
         if ($isGuestFlow) {
             $hookResult = array_reduce(
-                Hook::exec('actionSubmitAccountBefore', [], null, true),
+                \Hook::exec('actionSubmitAccountBefore', [], null, true),
                 function ($carry, $item) {
                     return $carry && $item;
                 },
@@ -306,7 +301,7 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
         // Sync customer name from delivery address if needed
         $customer = $this->getCheckoutSession()->getCustomer();
         if ($customer && ($customer->isGuest() || empty($customer->firstname) || empty($customer->lastname))) {
-            $address = new Address($addressIds['id_address_delivery'], $this->context->language->id);
+            $address = new \Address($addressIds['id_address_delivery'], $this->context->language->id);
             if ($address->id && (!empty($address->firstname) || !empty($address->lastname))) {
                 $customer->firstname = $address->firstname;
                 $customer->lastname = $address->lastname;
@@ -340,7 +335,7 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
 
     public function render(array $extraParams = [])
     {
-        $isFree = 0 == (float) $this->getCheckoutSession()->getCart()->getOrderTotal(true, Cart::BOTH);
+        $isFree = 0 == (float) $this->getCheckoutSession()->getCart()->getOrderTotal(true, \Cart::BOTH);
         $paymentOptions = $this->paymentOptionsFinder->present($isFree);
         $conditionsToApprove = $this->conditionsToApproveFinder->getConditionsToApproveForTemplate();
         $deliveryOptions = $this->getCheckoutSession()->getDeliveryOptions();
@@ -358,8 +353,8 @@ class CheckoutOnePageStep extends AbstractCheckoutStep
 
         $assignedVars = [
             'opc_form' => $this->opcForm->getProxy(),
-            'hookDisplayBeforeCarrier' => Hook::exec('displayBeforeCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
-            'hookDisplayAfterCarrier' => Hook::exec('displayAfterCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
+            'hookDisplayBeforeCarrier' => \Hook::exec('displayBeforeCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
+            'hookDisplayAfterCarrier' => \Hook::exec('displayAfterCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
             'delivery_options' => $deliveryOptions,
             'delivery_option' => $deliveryOptionKey,
             'selected_delivery_option' => $selectedDeliveryOption,

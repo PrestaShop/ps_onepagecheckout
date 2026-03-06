@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Register ps_onepagecheckout PSR-4 namespace in the existing Composer autoloader for test suites.
  */
@@ -34,11 +35,10 @@ if (!$loader) {
     throw new RuntimeException('Unable to locate a Composer autoloader for ps_onepagecheckout tests.');
 }
 
-$loader->addPsr4('PrestaShop\\Module\\PsOnepagecheckout\\', _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src');
+$loader->addPsr4('PrestaShop\\Module\\PsOnePageCheckout\\', _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src');
 $loader->addClassMap([
     'Ps_Onepagecheckout' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/ps_onepagecheckout.php',
     'AdminPsOnePageCheckoutController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/admin/AdminPsOnePageCheckoutController.php',
-    'AdminPsOnepagecheckoutController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/admin/AdminPsOnepagecheckoutController.php',
     'Ps_OnepagecheckoutGuestInitModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/GuestInit.php',
     'Ps_OnepagecheckoutAddressFormModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/AddressForm.php',
 ]);

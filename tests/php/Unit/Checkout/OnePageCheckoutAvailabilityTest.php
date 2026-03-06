@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -9,7 +10,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Checkout;
 
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\OnePageCheckoutAvailability;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 
 class OnePageCheckoutAvailabilityTest extends TestCase
 {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -8,12 +9,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Checkout\Ajax;
 
-use Context;
-use Language;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcAddressFormHandler;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 
 class OpcAddressFormHandlerTest extends TestCase
 {
@@ -27,8 +26,8 @@ class OpcAddressFormHandlerTest extends TestCase
             ->getMock()
         ;
 
-        $context = Context::getContext();
-        $context->language = new class() extends Language {
+        $context = \Context::getContext();
+        $context->language = new class extends \Language {
             public function __construct()
             {
             }
@@ -38,7 +37,7 @@ class OpcAddressFormHandlerTest extends TestCase
 
     public function testItBuildsTemplateVariablesFromWhitelistedPayload(): void
     {
-        $handler = new OpcAddressFormHandler($this->opcForm);
+        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm);
 
         $this->opcForm
             ->expects($this->never())
@@ -71,7 +70,7 @@ class OpcAddressFormHandlerTest extends TestCase
 
     public function testItIgnoresNonPositiveIdAddressFromPayload(): void
     {
-        $handler = new OpcAddressFormHandler($this->opcForm);
+        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm);
 
         $this->opcForm
             ->expects($this->never())
@@ -100,7 +99,7 @@ class OpcAddressFormHandlerTest extends TestCase
 
     public function testItDoesNotFillAddressOrFormWhenPayloadHasNoExpectedKeys(): void
     {
-        $handler = new OpcAddressFormHandler($this->opcForm);
+        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm);
 
         $this->opcForm
             ->expects($this->never())

@@ -61,3 +61,8 @@
 - Context: BO tab was historically stored as `AdminPsOnepagecheckout` in existing databases.
 - Decision: add module upgrade `1.0.1` to rename tab class name in DB to `AdminPsOnePageCheckout`.
 - Impact: naming conventions are respected without breaking existing installs.
+
+### D-013
+- Context: module targets PrestaShop `9.2.0`, where BO rendering is Twig-first.
+- Decision: `BackOfficeConfigurationForm::renderConfigurationForm()` now requires Twig and no longer falls back to Smarty templates.
+- Impact: BO configuration rendering is simpler, explicit, and aligned with `9.2.0` expectations.

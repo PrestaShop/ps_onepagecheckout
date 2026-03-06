@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -13,8 +14,8 @@ if (!defined('_DB_PREFIX_')) {
 }
 
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcGuestInitHandler;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormFactory;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutGuestInitHandler;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 
 class GuestInitControllerTest extends TestCase
 {
@@ -34,7 +35,7 @@ class GuestInitControllerTest extends TestCase
         $controller = new TestGuestInitController();
         $controller->module = $this->createEnabledModule();
 
-        $handler = $this->getMockBuilder(OpcGuestInitHandler::class)
+        $handler = $this->getMockBuilder(OnePageCheckoutGuestInitHandler::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['handle'])
             ->getMock();
@@ -93,7 +94,7 @@ class GuestInitControllerTest extends TestCase
 
 class TestGuestInitController extends \Ps_OnepagecheckoutGuestInitModuleFrontController
 {
-    public ?OpcGuestInitHandler $guestInitHandler = null;
+    public ?OnePageCheckoutGuestInitHandler $guestInitHandler = null;
     public ?OnePageCheckoutFormFactory $opcFormFactory = null;
     public bool $throwOnCreateHandler = false;
 
@@ -106,13 +107,13 @@ class TestGuestInitController extends \Ps_OnepagecheckoutGuestInitModuleFrontCon
         return $this->handleGuestInit();
     }
 
-    protected function createGuestInitHandler(OnePageCheckoutFormFactory $opcFormFactory): OpcGuestInitHandler
+    protected function createGuestInitHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutGuestInitHandler
     {
         if ($this->throwOnCreateHandler) {
             throw new \RuntimeException('guest init handler creation failed');
         }
 
-        if (!$this->guestInitHandler instanceof OpcGuestInitHandler) {
+        if (!$this->guestInitHandler instanceof OnePageCheckoutGuestInitHandler) {
             throw new \RuntimeException('guest init handler not configured');
         }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,30 +25,21 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Form;
-
-use Carrier;
-use Configuration;
-use Context;
-use Country;
-use CustomerAddressPersister;
-use CustomerPersister;
-use Ps_Onepagecheckout;
-use Tools;
+namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
 class OnePageCheckoutFormFactory
 {
     /**
-     * @var Context
+     * @var \Context
      */
     private $context;
 
     /**
-     * @var Ps_Onepagecheckout
+     * @var \Ps_Onepagecheckout
      */
     private $module;
 
-    public function __construct(Context $context, Ps_Onepagecheckout $module)
+    public function __construct(\Context $context, \Ps_Onepagecheckout $module)
     {
         $this->context = $context;
         $this->module = $module;
@@ -73,11 +65,11 @@ class OnePageCheckoutFormFactory
      */
     protected function getAvailableCountries(): array
     {
-        if (Configuration::get('PS_RESTRICT_DELIVERED_COUNTRIES')) {
-            return Carrier::getDeliveredCountries($this->context->language->id, true, true);
+        if (\Configuration::get('PS_RESTRICT_DELIVERED_COUNTRIES')) {
+            return \Carrier::getDeliveredCountries($this->context->language->id, true, true);
         }
 
-        return Country::getCountries($this->context->language->id, true);
+        return \Country::getCountries($this->context->language->id, true);
     }
 
     /**
@@ -94,10 +86,9 @@ class OnePageCheckoutFormFactory
 
     protected function createFormInstance(
         OnePageCheckoutFormatter $formatter,
-        CustomerPersister $customerPersister,
-        CustomerAddressPersister $addressPersister
-    ): OnePageCheckoutForm
-    {
+        \CustomerPersister $customerPersister,
+        \CustomerAddressPersister $addressPersister,
+    ): OnePageCheckoutForm {
         return new OnePageCheckoutForm(
             $this->context->smarty,
             $this->context,
@@ -109,22 +100,22 @@ class OnePageCheckoutFormFactory
         );
     }
 
-    public function createCustomerPersister(): CustomerPersister
+    public function createCustomerPersister(): \CustomerPersister
     {
-        return new CustomerPersister(
+        return new \CustomerPersister(
             $this->context,
             $this->module->get('hashing'),
             $this->module->getTranslator(),
-            (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED')
+            (bool) \Configuration::get('PS_GUEST_CHECKOUT_ENABLED')
         );
     }
 
-    public function createAddressPersister(): CustomerAddressPersister
+    public function createAddressPersister(): \CustomerAddressPersister
     {
-        return new CustomerAddressPersister(
+        return new \CustomerAddressPersister(
             $this->context->customer,
             $this->context->cart,
-            Tools::getToken(true, $this->context)
+            \Tools::getToken(true, $this->context)
         );
     }
 }

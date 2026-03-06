@@ -1,12 +1,11 @@
 <?php
+
 /**
  * Module AJAX handler for OPC address form refresh.
  */
 
 namespace PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax;
 
-use Address;
-use Context;
 use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
 
 class OpcAddressFormHandler
@@ -29,7 +28,7 @@ class OpcAddressFormHandler
     public function getTemplateVariables(array $requestParameters): array
     {
         if (isset($requestParameters['id_address']) && (int) $requestParameters['id_address'] > 0) {
-            $this->opcForm->fillFromAddress(new Address((int) $requestParameters['id_address'], Context::getContext()->language->id));
+            $this->opcForm->fillFromAddress(new \Address((int) $requestParameters['id_address'], \Context::getContext()->language->id));
         }
 
         $formParams = [];

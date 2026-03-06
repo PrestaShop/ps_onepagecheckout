@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -12,20 +13,10 @@ if (!defined('_DB_PREFIX_')) {
     define('_DB_PREFIX_', 'ps_');
 }
 
-use Context;
-use Country;
-use Customer;
-use Address;
-use Cart;
-use CustomerAddressPersister;
-use CustomerPersister;
-use FormField;
-use Language;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutFormatter;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Smarty;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutFormTest extends TestCase
@@ -34,9 +25,9 @@ class OnePageCheckoutFormTest extends TestCase
 
     private TranslatorInterface|MockObject $translator;
     private OnePageCheckoutFormatter|MockObject $formatter;
-    private CustomerPersister|MockObject $customerPersister;
-    private CustomerAddressPersister|MockObject $addressPersister;
-    private Context|MockObject $context;
+    private \CustomerPersister|MockObject $customerPersister;
+    private \CustomerAddressPersister|MockObject $addressPersister;
+    private \Context|MockObject $context;
 
     protected function setUp(): void
     {
@@ -55,7 +46,7 @@ class OnePageCheckoutFormTest extends TestCase
             ->method('getFormat')
             ->willReturnCallback([$this, 'getGuestInitFields'])
         ;
-        $defaultCountry = new class() extends Country {
+        $defaultCountry = new class extends \Country {
             public function __construct()
             {
             }
@@ -74,17 +65,17 @@ class OnePageCheckoutFormTest extends TestCase
             ->willReturnSelf()
         ;
 
-        $this->customerPersister = $this->getMockBuilder(CustomerPersister::class)
+        $this->customerPersister = $this->getMockBuilder(\CustomerPersister::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['save', 'getErrors'])
             ->getMock()
         ;
-        $this->addressPersister = $this->getMockBuilder(CustomerAddressPersister::class)
+        $this->addressPersister = $this->getMockBuilder(\CustomerAddressPersister::class)
             ->disableOriginalConstructor()
             ->getMock()
         ;
 
-        $this->context = $this->createMock(Context::class);
+        $this->context = $this->createMock(\Context::class);
         $this->context->customer = new LightweightCustomer();
     }
 
@@ -96,7 +87,7 @@ class OnePageCheckoutFormTest extends TestCase
             ->expects($this->once())
             ->method('save')
             ->with(
-                $this->callback(function (Customer $customer): bool {
+                $this->callback(function (\Customer $customer): bool {
                     return $customer->is_guest
                         && $customer->email === 'guest@example.com'
                         && $customer->firstname === 'Guest'
@@ -300,7 +291,7 @@ class OnePageCheckoutFormTest extends TestCase
         $this->customerPersister
             ->expects($this->once())
             ->method('save')
-            ->willReturnCallback(function (Customer $customer): bool {
+            ->willReturnCallback(function (\Customer $customer): bool {
                 $customer->id = 42;
 
                 return true;
@@ -310,7 +301,7 @@ class OnePageCheckoutFormTest extends TestCase
         $this->context
             ->expects($this->once())
             ->method('updateCustomer')
-            ->with($this->callback(static function (Customer $customer): bool {
+            ->with($this->callback(static function (\Customer $customer): bool {
                 return (int) $customer->id === 42;
             }))
         ;
@@ -319,7 +310,7 @@ class OnePageCheckoutFormTest extends TestCase
         $this->addressPersister
             ->expects($this->exactly(2))
             ->method('save')
-            ->willReturnCallback(static function (Address $address) use (&$savedAddresses): bool {
+            ->willReturnCallback(static function (\Address $address) use (&$savedAddresses): bool {
                 $address->id = count($savedAddresses) === 0 ? 101 : 202;
                 $savedAddresses[] = clone $address;
 
@@ -368,7 +359,7 @@ class OnePageCheckoutFormTest extends TestCase
         $this->customerPersister
             ->expects($this->once())
             ->method('save')
-            ->willReturnCallback(function (Customer $customer): bool {
+            ->willReturnCallback(function (\Customer $customer): bool {
                 $customer->id = 43;
 
                 return true;
@@ -383,7 +374,7 @@ class OnePageCheckoutFormTest extends TestCase
         $this->addressPersister
             ->expects($this->once())
             ->method('save')
-            ->willReturnCallback(static function (Address $address): bool {
+            ->willReturnCallback(static function (\Address $address): bool {
                 $address->id = 303;
 
                 return true;
@@ -409,53 +400,53 @@ class OnePageCheckoutFormTest extends TestCase
     }
 
     /**
-     * @return FormField[]
+     * @return \FormField[]
      */
     public function getGuestInitFields(): array
     {
-        $firstname = (new FormField())
+        $firstname = (new \FormField())
             ->setName('firstname')
             ->setType('text')
             ->setRequired(false)
             ->setLabel('First name')
         ;
 
-        $lastname = (new FormField())
+        $lastname = (new \FormField())
             ->setName('lastname')
             ->setType('text')
             ->setRequired(false)
             ->setLabel('Last name')
         ;
 
-        $email = (new FormField())
+        $email = (new \FormField())
             ->setName('email')
             ->setType('email')
             ->setRequired(true)
             ->setLabel('Email')
         ;
 
-        $requiredConsent = (new FormField())
+        $requiredConsent = (new \FormField())
             ->setName('psgdpr_privacy')
             ->setType('checkbox')
             ->setRequired(true)
         ;
         $requiredConsent->moduleName = 'psgdpr';
 
-        $thirdPartyRequiredConsent = (new FormField())
+        $thirdPartyRequiredConsent = (new \FormField())
             ->setName('compliance_terms')
             ->setType('checkbox')
             ->setRequired(true)
         ;
         $thirdPartyRequiredConsent->moduleName = 'thirdpartygdpr';
 
-        $thirdPartyRequiredTextField = (new FormField())
+        $thirdPartyRequiredTextField = (new \FormField())
             ->setName('compliance_note')
             ->setType('text')
             ->setRequired(true)
         ;
         $thirdPartyRequiredTextField->moduleName = 'thirdpartygdpr';
 
-        $optionalCheckbox = (new FormField())
+        $optionalCheckbox = (new \FormField())
             ->setName('newsletter_optin')
             ->setType('checkbox')
             ->setRequired(false)
@@ -474,63 +465,63 @@ class OnePageCheckoutFormTest extends TestCase
     }
 
     /**
-     * @return FormField[]
+     * @return \FormField[]
      */
     public function getSubmitFields(): array
     {
         $fields = $this->getGuestInitFields();
-        $fields['id_country'] = (new FormField())
+        $fields['id_country'] = (new \FormField())
             ->setName('id_country')
             ->setType('select')
             ->setRequired(true)
             ->setAvailableValues([
                 ['id' => self::DEFAULT_COUNTRY_ID, 'label' => 'France'],
             ]);
-        $fields['address1'] = (new FormField())
+        $fields['address1'] = (new \FormField())
             ->setName('address1')
             ->setType('text')
             ->setRequired(true);
-        $fields['city'] = (new FormField())
+        $fields['city'] = (new \FormField())
             ->setName('city')
             ->setType('text')
             ->setRequired(true);
-        $fields['postcode'] = (new FormField())
+        $fields['postcode'] = (new \FormField())
             ->setName('postcode')
             ->setType('text')
             ->setRequired(true);
-        $fields['use_same_address'] = (new FormField())
+        $fields['use_same_address'] = (new \FormField())
             ->setName('use_same_address')
             ->setType('checkbox')
             ->setRequired(false)
             ->setValue(true);
-        $fields['id_address_invoice'] = (new FormField())
+        $fields['id_address_invoice'] = (new \FormField())
             ->setName('id_address_invoice')
             ->setType('hidden')
             ->setRequired(false);
-        $fields['invoice_firstname'] = (new FormField())
+        $fields['invoice_firstname'] = (new \FormField())
             ->setName('invoice_firstname')
             ->setType('text')
             ->setRequired(false);
-        $fields['invoice_lastname'] = (new FormField())
+        $fields['invoice_lastname'] = (new \FormField())
             ->setName('invoice_lastname')
             ->setType('text')
             ->setRequired(false);
-        $fields['invoice_id_country'] = (new FormField())
+        $fields['invoice_id_country'] = (new \FormField())
             ->setName('invoice_id_country')
             ->setType('select')
             ->setRequired(false)
             ->setAvailableValues([
                 ['id' => self::DEFAULT_COUNTRY_ID, 'label' => 'France'],
             ]);
-        $fields['invoice_address1'] = (new FormField())
+        $fields['invoice_address1'] = (new \FormField())
             ->setName('invoice_address1')
             ->setType('text')
             ->setRequired(false);
-        $fields['invoice_city'] = (new FormField())
+        $fields['invoice_city'] = (new \FormField())
             ->setName('invoice_city')
             ->setType('text')
             ->setRequired(false);
-        $fields['invoice_postcode'] = (new FormField())
+        $fields['invoice_postcode'] = (new \FormField())
             ->setName('invoice_postcode')
             ->setType('text')
             ->setRequired(false);
@@ -540,7 +531,7 @@ class OnePageCheckoutFormTest extends TestCase
 
     private function createForm(): OnePageCheckoutForm
     {
-        $language = new class() extends Language {
+        $language = new class extends \Language {
             public function __construct()
             {
             }
@@ -548,7 +539,7 @@ class OnePageCheckoutFormTest extends TestCase
         $language->id = 1;
 
         return new TestableOnePageCheckoutForm(
-            $this->createMock(Smarty::class),
+            $this->createMock(\Smarty::class),
             $this->context,
             $language,
             $this->translator,
@@ -560,7 +551,7 @@ class OnePageCheckoutFormTest extends TestCase
 
     private function createSubmitForm(): OnePageCheckoutForm
     {
-        $language = new class() extends Language {
+        $language = new class extends \Language {
             public function __construct()
             {
             }
@@ -577,7 +568,7 @@ class OnePageCheckoutFormTest extends TestCase
             ->willReturn($this->getSubmitFields())
         ;
 
-        $defaultCountry = new class() extends Country {
+        $defaultCountry = new class extends \Country {
             public function __construct()
             {
             }
@@ -598,7 +589,7 @@ class OnePageCheckoutFormTest extends TestCase
         ;
 
         return new TestableOnePageCheckoutForm(
-            $this->createMock(Smarty::class),
+            $this->createMock(\Smarty::class),
             $this->context,
             $language,
             $this->translator,
@@ -639,7 +630,7 @@ class TestableOnePageCheckoutForm extends OnePageCheckoutForm
         return parent::validate();
     }
 
-    public function getCustomer(): Customer
+    public function getCustomer(): \Customer
     {
         $customer = new LightweightCustomer();
         $customer->id = 0;
@@ -655,14 +646,14 @@ class TestableOnePageCheckoutForm extends OnePageCheckoutForm
     }
 }
 
-class LightweightCustomer extends Customer
+class LightweightCustomer extends \Customer
 {
     public function __construct()
     {
     }
 }
 
-class LightweightCart extends Cart
+class LightweightCart extends \Cart
 {
     public function __construct()
     {

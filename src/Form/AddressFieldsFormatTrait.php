@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,11 +25,7 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
-namespace PrestaShop\Module\PsOnepagecheckout\Form;
-
-use AddressFormat;
-use FormField;
-use State;
+namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
 /**
  * Module-owned shared logic for OPC address format generation.
@@ -43,19 +40,19 @@ trait AddressFieldsFormatTrait
      * @param string $prefix Prefix for field names (e.g. 'invoice_' for invoice address)
      * @param bool $aliasRequired Whether alias field is required
      *
-     * @return array<string, FormField>
+     * @return array<string, \FormField>
      */
     protected function getAddressFieldsFormat($prefix = '', $aliasRequired = false)
     {
-        $fields = AddressFormat::getOrderedAddressFields(
+        $fields = \AddressFormat::getOrderedAddressFields(
             $this->country->id,
             true,
             true
         );
-        $required = array_flip(AddressFormat::getFieldsRequired());
+        $required = array_flip(\AddressFormat::getFieldsRequired());
         $format = [];
 
-        $format[$prefix . 'alias'] = (new FormField())
+        $format[$prefix . 'alias'] = (new \FormField())
             ->setName($prefix . 'alias')
             ->setLabel($this->getFieldLabel('alias'));
         if ($aliasRequired) {
@@ -63,7 +60,7 @@ trait AddressFieldsFormatTrait
         }
 
         foreach ($fields as $field) {
-            $formField = new FormField();
+            $formField = new \FormField();
             $fieldName = $field;
             $fieldParts = explode(':', $field, 2);
 
@@ -104,7 +101,7 @@ trait AddressFieldsFormatTrait
                     }
                 } elseif ($entity === 'State') {
                     if ($this->country->contains_states) {
-                        $states = State::getStatesByIdCountry($this->country->id, true, 'name', 'asc');
+                        $states = \State::getStatesByIdCountry($this->country->id, true, 'name', 'asc');
                         foreach ($states as $state) {
                             $formField->addAvailableValue(
                                 $state['id_state'],
@@ -143,9 +140,9 @@ trait AddressFieldsFormatTrait
     }
 
     /**
-     * @param array<string, FormField> $format
+     * @param array<string, \FormField> $format
      *
-     * @return array<string, FormField>
+     * @return array<string, \FormField>
      */
     protected function addConstraints(array $format)
     {
@@ -160,9 +157,9 @@ trait AddressFieldsFormatTrait
     }
 
     /**
-     * @param array<string, FormField> $format
+     * @param array<string, \FormField> $format
      *
-     * @return array<string, FormField>
+     * @return array<string, \FormField>
      */
     protected function addMaxLength(array $format)
     {

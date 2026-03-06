@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -9,9 +10,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Checkout;
 
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\OnePageCheckoutAvailability;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\OnePageCheckoutProcess;
-use ReflectionClass;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcess;
 
 class OnePageCheckoutProcessTest extends TestCase
 {
@@ -33,7 +33,7 @@ class OnePageCheckoutProcessTest extends TestCase
 
     private function createProcessWithoutConstructor(): OnePageCheckoutProcess
     {
-        $reflection = new ReflectionClass(OnePageCheckoutProcess::class);
+        $reflection = new \ReflectionClass(OnePageCheckoutProcess::class);
 
         /** @var OnePageCheckoutProcess $process */
         $process = $reflection->newInstanceWithoutConstructor();
@@ -61,7 +61,7 @@ class OnePageCheckoutProcessTest extends TestCase
             }
         };
 
-        $reflection = new ReflectionClass(OnePageCheckoutProcess::class);
+        $reflection = new \ReflectionClass(OnePageCheckoutProcess::class);
         $property = $reflection->getProperty('opcAvailability');
         $property->setValue($process, $availability);
     }

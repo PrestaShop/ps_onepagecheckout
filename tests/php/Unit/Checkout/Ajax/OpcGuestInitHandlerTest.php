@@ -1,4 +1,5 @@
 <?php
+
 /**
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
@@ -12,14 +13,10 @@ if (!defined('_DB_PREFIX_')) {
     define('_DB_PREFIX_', 'ps_');
 }
 
-use Cart;
-use PrestaShop\Module\PsOnepagecheckout\Checkout\Ajax\OpcGuestInitHandler;
-use Context;
-use Customer;
-use CustomerPersister;
-use PrestaShop\Module\PsOnepagecheckout\Form\OnePageCheckoutForm;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutGuestInitHandler;
+use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OpcGuestInitHandlerTest extends TestCase
@@ -531,11 +528,11 @@ class OpcGuestInitHandlerTest extends TestCase
      *  opc_enabled?: bool,
      *  guest_checkout_enabled?: bool,
      *  expected_token?: string,
-     *  customer?: Customer,
-     *  cart?: Cart
+     *  \customer?: \Customer,
+     *  \cart?: \Cart
      * } $options
      *
-     * @return array{TestableCheckoutGuestInitHandler, OnePageCheckoutForm&MockObject, CustomerPersister&MockObject}
+     * @return array{TestableCheckoutGuestInitHandler, OnePageCheckoutForm&MockObject, \CustomerPersister&MockObject}
      */
     private function buildHandler(array $options = []): array
     {
@@ -552,14 +549,14 @@ class OpcGuestInitHandlerTest extends TestCase
             ->onlyMethods(['submitGuestInit', 'getErrors'])
             ->getMock()
         ;
-        $customerPersister = $this->getMockBuilder(CustomerPersister::class)
+        $customerPersister = $this->getMockBuilder(\CustomerPersister::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['save'])
             ->getMock()
         ;
         $customerPersister
             ->method('save')
-            ->willReturnCallback(static function (Customer $customer): bool {
+            ->willReturnCallback(static function (\Customer $customer): bool {
                 if (property_exists($customer, 'updateResult') && $customer->updateResult === false) {
                     return false;
                 }
@@ -583,7 +580,7 @@ class OpcGuestInitHandlerTest extends TestCase
     }
 }
 
-class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
+class TestableCheckoutGuestInitHandler extends OnePageCheckoutGuestInitHandler
 {
     /**
      * @var bool
@@ -596,7 +593,7 @@ class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
     private $expectedToken = '';
 
     /**
-     * @var array<int, Customer>
+     * @var array<int, \Customer>
      */
     private $customersById = [];
 
@@ -606,7 +603,7 @@ class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
     private $customerIdsByEmail = [];
 
     /**
-     * @var array<int, Cart>
+     * @var array<int, \Cart>
      */
     private $cartsById = [];
 
@@ -625,7 +622,7 @@ class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
         $this->expectedToken = $expectedToken;
     }
 
-    public function setCustomerById(int $customerId, Customer $customer): void
+    public function setCustomerById(int $customerId, \Customer $customer): void
     {
         $this->customersById[$customerId] = $customer;
     }
@@ -635,7 +632,7 @@ class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
         $this->customerIdsByEmail[strtolower($email)] = $customerId;
     }
 
-    public function setCartById(int $cartId, Cart $cart): void
+    public function setCartById(int $cartId, \Cart $cart): void
     {
         if ($cartId <= 0) {
             return;
@@ -658,7 +655,7 @@ class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
         return $this->guestCheckoutEnabled;
     }
 
-    protected function loadCustomerById(int $customerId): Customer
+    protected function loadCustomerById(int $customerId): \Customer
     {
         return $this->customersById[$customerId] ?? new LightweightCustomer();
     }
@@ -673,7 +670,7 @@ class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
         return $this->expectedToken;
     }
 
-    protected function loadCartById(int $cartId): Cart
+    protected function loadCartById(int $cartId): \Cart
     {
         return $this->cartsById[$cartId] ?? new LightweightCart();
     }
@@ -710,14 +707,14 @@ class TestableCheckoutGuestInitHandler extends OpcGuestInitHandler
     }
 }
 
-class LightweightContext extends Context
+class LightweightContext extends \Context
 {
     public function __construct()
     {
     }
 }
 
-class LightweightCustomer extends Customer
+class LightweightCustomer extends \Customer
 {
     /**
      * @var bool
@@ -739,7 +736,7 @@ class LightweightCustomer extends Customer
     }
 }
 
-class LightweightCart extends Cart
+class LightweightCart extends \Cart
 {
     /**
      * @var int

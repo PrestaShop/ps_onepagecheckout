@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <module>
 	<name>ps_onepagecheckout</name>
-	<displayName><![CDATA[One-page checkout (native)]]></displayName>
-	<version><![CDATA[1.0.2]]></version>
-	<description><![CDATA[Migrates native one-page checkout flow into a dedicated module.]]></description>
+	<displayName><![CDATA[One-page checkout]]></displayName>
+	<version><![CDATA[1.0.0]]></version>
+	<description><![CDATA[Native one-page checkout.]]></description>
 	<author><![CDATA[PrestaShop]]></author>
 	<tab><![CDATA[front_office_features]]></tab>
 	<is_configurable>1</is_configurable>
