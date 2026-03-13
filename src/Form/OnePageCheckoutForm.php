@@ -96,7 +96,7 @@ class OnePageCheckoutForm extends \AbstractForm
                 ? new \Country($params['id_country'], $this->language->id)
                 : $this->formatter->getCountry()
             ;
-        } elseif ($this->address) {
+        } elseif ($this->address) { // @phpstan-ignore elseif.alwaysTrue (defensive fallback when formatter country differs)
             $country = $this->formatter->getCountry();
         } elseif (
             \Tools::isCountryFromBrowserAvailable()

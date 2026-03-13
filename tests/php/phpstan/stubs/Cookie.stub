@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * Stub for PrestaShop Cookie class - declares dynamic properties used at runtime.
+ *
+ * @property int    $id_customer
+ * @property string $customer_lastname
+ * @property string $customer_firstname
+ * @property string $email
+ * @property string $passwd
+ * @property bool   $logged
+ * @property bool   $is_guest
+ * @property string $psopc_bo_configuration_saved
+ */
+class Cookie
+{
+    public function write(): void
+    {
+    }
+}

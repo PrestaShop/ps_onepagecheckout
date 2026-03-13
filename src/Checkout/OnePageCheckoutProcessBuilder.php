@@ -17,11 +17,6 @@ class OnePageCheckoutProcessBuilder
     private $context;
 
     /**
-     * @var \Ps_Onepagecheckout
-     */
-    private $module;
-
-    /**
      * @var OnePageCheckoutFormFactory
      */
     private $opcFormFactory;
@@ -38,7 +33,6 @@ class OnePageCheckoutProcessBuilder
         ?OnePageCheckoutAvailability $opcAvailability = null,
     ) {
         $this->context = $context;
-        $this->module = $module;
         $this->opcFormFactory = $opcFormFactory ?? new OnePageCheckoutFormFactory($context, $module);
         $this->opcAvailability = $opcAvailability ?? new OnePageCheckoutAvailability(\Ps_Onepagecheckout::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }

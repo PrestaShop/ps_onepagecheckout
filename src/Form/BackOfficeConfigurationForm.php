@@ -29,7 +29,6 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 
 class BackOfficeConfigurationForm
@@ -183,9 +182,6 @@ class BackOfficeConfigurationForm
     private function trans(string $message, string $domain = 'Modules.PsOnePageCheckout.Admin'): string
     {
         $translator = \Context::getContext()->getTranslator();
-        if (!$translator instanceof TranslatorInterface) {
-            return $message;
-        }
 
         return $translator->trans($message, [], $domain);
     }
