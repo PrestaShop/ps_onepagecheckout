@@ -4,6 +4,9 @@
 
 `ps_onepagecheckout` is the native PrestaShop module that provides the one-page checkout experience.
 
+> [!WARNING]
+> This module is under heavy development. It is not production-ready and should not be used in live environments.
+
 ## Compatibility
 
 PrestaShop: `9.0.0` or later.
