@@ -40,44 +40,6 @@ if (typeof os.networkInterfaces === 'function') {
 EOF
 ```
 
-## Campaign commands
-
-Run with explicit env (do not rely on defaults):
-```bash
-source ~/.nvm/nvm.sh && nvm use 20 >/dev/null
-cd tests/UI
-
-NODE_OPTIONS='--require /tmp/node-networkinterfaces-polyfill.js' \
-URL_FO='http://localhost:8001/' \
-URL_BO='http://localhost:8001/admin-dev/' \
-URL_API='http://localhost:8001/admin-api/' \
-URL_INSTALL='http://localhost:8001/install-dev/' \
-LOGIN='demo@prestashop.com' \
-PASSWD='Correct Horse Battery Staple' \
-FIRSTNAME='Marc' \
-LASTNAME='Beier' \
-DB_SERVER='127.0.0.1' \
-DB_NAME='prestashop' \
-DB_USER='root' \
-DB_PASSWD='prestashop' \
-DB_PREFIX='ps_' \
-SHOP_NAME='thb' \
-BROWSER='chromium' \
-BROWSER_LANG='en-GB' \
-BROWSER_WIDTH='1680' \
-BROWSER_HEIGHT='900' \
-HEADLESS='true' \
-SLOW_MO='5' \
-SMTP_PORT='1025' \
-SMTP_SERVER='localhost' \
-TEST_PATH='regression/checkout/101_opcGuestInit_FO.ts' \
-EXTRA_TEST_PARAMS='--reporter spec' \
-npm run test:specific:fast-fail
-```
-
-Same command for parity campaign with:
-- `TEST_PATH='regression/checkout/102_opcBoConfigurationParityAndOneStepE2E.ts'`
-
 ## Known non-functional blockers
 
 1. Locale-dependent BO assertions can fail on FR-only shops (`Tableau de bord` vs `Dashboard`).
