@@ -12,7 +12,7 @@ use Customer;
 /**
  * Centralizes customer resolution to prevent customer data reloads.
  */
-class ExistingCustomerState
+final class ExistingCustomerState
 {
     /**
      * @var int

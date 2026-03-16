@@ -56,6 +56,8 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends ModuleFrontCont
 
     protected function getOpcFormFactory(): OnePageCheckoutFormFactory
     {
+        assert($this->module instanceof Ps_Onepagecheckout);
+
         return new OnePageCheckoutFormFactory($this->context, $this->module);
     }
 
