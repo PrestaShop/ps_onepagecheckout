@@ -48,17 +48,27 @@ require_command() {
 prepare_prestashop_volume() {
   echo "Prepare PrestaShop files from ${PS_ROOT_DIR_HOST}"
 
+  # Copy the prepared PrestaShop checkout into an ephemeral Docker volume.
+  # Every later container reads /var/www/html from this volume, so local runs
+  # and CI execute against the same isolated filesystem layout.
   docker volume create "${PS_VOLUME}" >/dev/null
-  docker volume create "${TMP_VOLUME}" >/dev/null
+
+  if [ "${TEST_SUITE}" = "integration" ]; then
+    # Integration preparation writes temporary artifacts to /tmp.
+    # The install container, the DB preparation container and the final PHPUnit
+    # container must all read the same /tmp content, so integration needs a
+    # dedicated shared tmp volume.
+    docker volume create "${TMP_VOLUME}" >/dev/null
+  fi
 
   docker run --rm \
     -v "${PS_ROOT_DIR_HOST}:/source:ro" \
     -v "${PS_VOLUME}:/var/www/html" \
-    alpine sh -lc 'cp -a /source/. /var/www/html/'
-
-  docker run --rm \
-    -v "${PS_VOLUME}:/var/www/html" \
-    alpine sh -lc 'chown -R 33:33 /var/www/html'
+    alpine sh -lc '
+      cp -a /source/. /var/www/html/ &&
+      rm -rf /var/www/html/modules/ps_onepagecheckout &&
+      chown -R 33:33 /var/www/html
+    '
 }
 
 wait_for_prestashop_install() {
@@ -93,12 +103,16 @@ run_prestashop_image() {
   local docker_run_args=(
     --rm
     -v "${PS_VOLUME}:/var/www/html"
-    -v "${TMP_VOLUME}:/tmp"
     --workdir="${workdir}"
     --entrypoint=bash
   )
 
   if [ "${TEST_SUITE}" = "integration" ]; then
+    # Unit tests only need the copied PrestaShop files.
+    # Integration also needs:
+    # - the shared /tmp volume populated during DB preparation
+    # - the private Docker network used by PrestaShop and MySQL
+    docker_run_args+=(-v "${TMP_VOLUME}:/tmp")
     docker_run_args+=(--network "${PS_NETWORK}")
   fi
 
@@ -106,6 +120,9 @@ run_prestashop_image() {
 }
 
 prepare_integration_database() {
+  # These PrestaShop helpers create the dedicated test database and write the
+  # SQL dump files expected by the integration bootstrap into /tmp.
+  # /tmp must therefore be shared with the later PHPUnit container.
   run_prestashop_image /var/www/html \
     -lc 'php ./tests/bin/create-test-db.php && php ./tests/bin/create-test-tables-dump.php'
 }
@@ -154,26 +171,21 @@ start_integration_services() {
   prepare_integration_database
 }
 
-remove_previous_module() {
-  echo "Clear previous module"
-  docker run --rm \
-    -v "${PS_VOLUME}:/var/www/html" \
-    alpine sh -lc 'rm -rf /var/www/html/modules/ps_onepagecheckout'
-}
-
 run_phpunit() {
   echo "Run PHPUnit (${TEST_SUITE})"
 
   local docker_run_args=(
     --rm
     -v "${PS_VOLUME}:/var/www/html"
-    -v "${TMP_VOLUME}:/tmp"
     -v "${REPO_DIR}:/var/www/html/modules/ps_onepagecheckout"
     --workdir=/var/www/html/modules/ps_onepagecheckout
     --entrypoint=bash
   )
 
   if [ "${TEST_SUITE}" = "integration" ]; then
+    # PHPUnit integration must read the same /tmp dump files created by
+    # create-test-db.php and create-test-tables-dump.php.
+    docker_run_args+=(-v "${TMP_VOLUME}:/tmp")
     docker_run_args+=(--network "${PS_NETWORK}")
   fi
 
@@ -219,5 +231,4 @@ if [ "${TEST_SUITE}" = "integration" ]; then
   start_integration_services
 fi
 
-remove_previous_module
 run_phpunit
