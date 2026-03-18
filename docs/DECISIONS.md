@@ -66,3 +66,8 @@
 - Context: module targets PrestaShop `9.2.0`, where BO rendering is Twig-first.
 - Decision: `BackOfficeConfigurationForm::renderConfigurationForm()` now requires Twig and no longer falls back to Smarty templates.
 - Impact: BO configuration rendering is simpler, explicit, and aligned with `9.2.0` expectations.
+
+### D-014
+- Context: module PHPUnit suites were not executed in CI, and local vs CI execution paths were diverging.
+- Decision: run unit and integration suites in GitHub Actions through a shared isolated entrypoint, `./scripts/run-tests.sh`, used both locally and in CI.
+- Impact: PHPUnit execution is reproducible across environments, and regressions detected by unit or integration suites now block validation.
