@@ -109,7 +109,9 @@ class OnePageCheckoutFormTest extends TestCase
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
+            'communication_channel' => 'email',
         ])));
+        self::assertFalse($form->wasModuleValidationCalled());
     }
 
     public function testItDoesNotCreateGuestCustomerWhenThirdPartyRequiredCheckboxIsMissing(): void
@@ -177,6 +179,7 @@ class OnePageCheckoutFormTest extends TestCase
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
+            'communication_channel' => 'email',
         ])));
     }
 
@@ -204,6 +207,29 @@ class OnePageCheckoutFormTest extends TestCase
         self::assertNotEmpty($errors['compliance_terms']);
     }
 
+    public function testGuestInitDoesNotCallModuleCustomerValidation(): void
+    {
+        $form = $this->createForm();
+        $form->setModuleFieldErrors([
+            'compliance_note' => ['Probe customer text is required.'],
+        ]);
+
+        $this->customerPersister
+            ->expects($this->once())
+            ->method('save')
+            ->willReturn(true)
+        ;
+
+        self::assertTrue($form->submitGuestInit($this->withDefaultCountry([
+            'email' => 'guest-no-module-validation@example.com',
+            'psgdpr_privacy' => '1',
+            'compliance_terms' => '1',
+            'communication_channel' => 'email',
+        ])));
+        self::assertFalse($form->wasModuleValidationCalled());
+        self::assertEmpty($form->getField('thirdpartygdpr_compliance_note')->getErrors());
+    }
+
     public function testItReturnsPersisterErrorsWhenGuestSaveFails(): void
     {
         $form = $this->createForm();
@@ -229,6 +255,67 @@ class OnePageCheckoutFormTest extends TestCase
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
+            'communication_channel' => 'email',
+        ])));
+    }
+
+    public function testItDoesNotCreateGuestCustomerWhenRequiredRadioConsentIsMissing(): void
+    {
+        $form = $this->createForm();
+
+        $this->customerPersister
+            ->expects($this->never())
+            ->method('save')
+        ;
+
+        self::assertFalse($form->submitGuestInit($this->withDefaultCountry([
+            'email' => 'guest-radio-missing@example.com',
+            'psgdpr_privacy' => '1',
+            'compliance_terms' => '1',
+            'compliance_note' => 'Ready',
+        ])));
+
+        $errors = $form->getErrors();
+        self::assertArrayHasKey('communication_channel', $errors);
+        self::assertNotEmpty($errors['communication_channel']);
+    }
+
+    public function testGuestInitIgnoresRequiredAddressConsentFields(): void
+    {
+        $form = $this->createForm();
+
+        $this->customerPersister
+            ->expects($this->once())
+            ->method('save')
+            ->willReturn(true)
+        ;
+
+        self::assertTrue($form->submitGuestInit($this->withDefaultCountry([
+            'email' => 'guest-address-consent-ignored@example.com',
+            'psgdpr_privacy' => '1',
+            'compliance_terms' => '1',
+            'compliance_note' => 'Ready',
+            'communication_channel' => 'email',
+            'marketing_preferences' => '0',
+        ])));
+    }
+
+    public function testGuestInitIgnoresFinalSubmitVeto(): void
+    {
+        $form = $this->createForm();
+
+        $this->customerPersister
+            ->expects($this->once())
+            ->method('save')
+            ->willReturn(true)
+        ;
+
+        self::assertTrue($form->submitGuestInit($this->withDefaultCountry([
+            'email' => 'guest-veto@example.com',
+            'psgdpr_privacy' => '1',
+            'compliance_terms' => '1',
+            'compliance_note' => 'Ready',
+            'communication_channel' => 'email',
         ])));
     }
 
@@ -278,6 +365,95 @@ class OnePageCheckoutFormTest extends TestCase
 
         self::assertSame('Alice', (string) $form->getValue('firstname'));
         self::assertSame('Martin', (string) $form->getValue('lastname'));
+    }
+
+    public function testItSeparatesTemplateVariablesByBusinessOrigin(): void
+    {
+        $form = $this->createForm();
+        $customerTextField = (new \FormField())
+            ->setName('customer_text')
+            ->setType('text');
+        $customerTextField->moduleName = 'opcinvariantprobe';
+        $customerSelectField = (new \FormField())
+            ->setName('customer_select')
+            ->setType('select');
+        $customerSelectField->moduleName = 'opcinvariantprobe';
+        $customerTextareaField = (new \FormField())
+            ->setName('customer_textarea')
+            ->setType('textarea');
+        $customerTextareaField->moduleName = 'opcinvariantprobe';
+        $customerCheckboxField = (new \FormField())
+            ->setName('customer_checkbox')
+            ->setType('checkbox');
+        $customerCheckboxField->moduleName = 'opcinvariantprobe';
+        $customerRadioField = (new \FormField())
+            ->setName('customer_radio')
+            ->setType('radio-buttons');
+        $customerRadioField->moduleName = 'opcinvariantprobe';
+        $addressCheckboxField = (new \FormField())
+            ->setName('marketing_preferences')
+            ->setType('checkbox');
+        $addressCheckboxField->moduleName = 'addressmodule';
+
+        $form->setFormFieldsForTest([
+            'email' => (new \FormField())
+                ->setName('email')
+                ->setType('email'),
+            'optin' => (new \FormField())
+                ->setName('optin')
+                ->setType('checkbox'),
+            'opcinvariantprobe_customer_text' => $customerTextField,
+            'opcinvariantprobe_customer_select' => $customerSelectField,
+            'opcinvariantprobe_customer_textarea' => $customerTextareaField,
+            'opcinvariantprobe_customer_checkbox' => $customerCheckboxField,
+            'opcinvariantprobe_customer_radio' => $customerRadioField,
+            'use_same_address' => (new \FormField())
+                ->setName('use_same_address')
+                ->setType('checkbox'),
+            'id_address_invoice' => (new \FormField())
+                ->setName('id_address_invoice')
+                ->setType('hidden'),
+            'firstname' => (new \FormField())
+                ->setName('firstname')
+                ->setType('text'),
+            'invoice_address1' => (new \FormField())
+                ->setName('invoice_address1')
+                ->setType('text'),
+            'addressmodule_marketing_preferences' => $addressCheckboxField,
+        ]);
+
+        $templateVariables = $form->getTemplateVariables();
+
+        self::assertSame(['email', 'optin'], array_keys($templateVariables['contactFields']));
+        self::assertSame(
+            [
+                'opcinvariantprobe_customer_text',
+                'opcinvariantprobe_customer_select',
+                'opcinvariantprobe_customer_textarea',
+                'opcinvariantprobe_customer_checkbox',
+                'opcinvariantprobe_customer_radio',
+            ],
+            array_keys($templateVariables['additionalCustomerFields'])
+        );
+        self::assertSame('use_same_address', $templateVariables['useSameAddressField']['name']);
+        self::assertSame(
+            ['firstname', 'addressmodule_marketing_preferences'],
+            array_keys($templateVariables['deliveryFields'])
+        );
+        self::assertArrayNotHasKey('use_same_address', $templateVariables['deliveryFields']);
+        self::assertSame(
+            ['invoice_address1'],
+            array_keys($templateVariables['invoiceFields'])
+        );
+        self::assertSame(
+            ['id_address_invoice'],
+            array_keys($templateVariables['invoiceMetaFields'])
+        );
+        self::assertArrayNotHasKey('id_address_invoice', $templateVariables['invoiceFields']);
+        self::assertArrayNotHasKey('opcinvariantprobe_customer_text', $templateVariables['deliveryFields']);
+        self::assertArrayNotHasKey('opcinvariantprobe_customer_select', $templateVariables['deliveryFields']);
+        self::assertArrayNotHasKey('opcinvariantprobe_customer_textarea', $templateVariables['deliveryFields']);
+        self::assertArrayNotHasKey('opcinvariantprobe_customer_checkbox', $templateVariables['deliveryFields']);
     }
 
     public function testSubmitPersistsDeliveryAndInvoiceAddressesWhenUseSameAddressIsDisabled(): void
@@ -446,6 +622,17 @@ class OnePageCheckoutFormTest extends TestCase
         ;
         $thirdPartyRequiredTextField->moduleName = 'thirdpartygdpr';
 
+        $requiredRadioConsent = (new \FormField())
+            ->setName('communication_channel')
+            ->setType('radio-buttons')
+            ->setRequired(true)
+            ->setAvailableValues([
+                'email' => 'Email',
+                'sms' => 'SMS',
+            ])
+        ;
+        $requiredRadioConsent->moduleName = 'thirdpartygdpr';
+
         $optionalCheckbox = (new \FormField())
             ->setName('newsletter_optin')
             ->setType('checkbox')
@@ -453,14 +640,32 @@ class OnePageCheckoutFormTest extends TestCase
         ;
         $optionalCheckbox->moduleName = 'anothermodule';
 
+        $requiredAddressConsent = (new \FormField())
+            ->setName('marketing_preferences')
+            ->setType('checkbox')
+            ->setRequired(true)
+        ;
+        $requiredAddressConsent->moduleName = 'addressmodule';
+
         return [
+            'email' => $email,
+            'psgdpr_psgdpr_privacy' => $requiredConsent,
+            'thirdpartygdpr_compliance_terms' => $thirdPartyRequiredConsent,
+            'thirdpartygdpr_compliance_note' => $thirdPartyRequiredTextField,
+            'thirdpartygdpr_communication_channel' => $requiredRadioConsent,
+            'anothermodule_newsletter_optin' => $optionalCheckbox,
+            'use_same_address' => (new \FormField())
+                ->setName('use_same_address')
+                ->setType('checkbox')
+                ->setRequired(false)
+                ->setValue(true),
+            'id_address_invoice' => (new \FormField())
+                ->setName('id_address_invoice')
+                ->setType('hidden')
+                ->setRequired(false),
             'firstname' => $firstname,
             'lastname' => $lastname,
-            'email' => $email,
-            'psgdpr_privacy' => $requiredConsent,
-            'compliance_terms' => $thirdPartyRequiredConsent,
-            'compliance_note' => $thirdPartyRequiredTextField,
-            'newsletter_optin' => $optionalCheckbox,
+            'addressmodule_marketing_preferences' => $requiredAddressConsent,
         ];
     }
 
@@ -614,7 +819,37 @@ class OnePageCheckoutFormTest extends TestCase
 
 class TestableOnePageCheckoutForm extends OnePageCheckoutForm
 {
+    /**
+     * @var array<string, array<int, string>>
+     */
+    private array $moduleFieldErrors = [];
     private ?bool $forcedValidationResult = null;
+    private bool $moduleValidationCalled = false;
+
+    /**
+     * @param array<string, array<int, string>> $moduleFieldErrors
+     */
+    public function setModuleFieldErrors(array $moduleFieldErrors): self
+    {
+        $this->moduleFieldErrors = $moduleFieldErrors;
+
+        return $this;
+    }
+
+    public function wasModuleValidationCalled(): bool
+    {
+        return $this->moduleValidationCalled;
+    }
+
+    /**
+     * @param array<string, \FormField> $formFields
+     */
+    public function setFormFieldsForTest(array $formFields): self
+    {
+        $this->formFields = $formFields;
+
+        return $this;
+    }
 
     public function forceValidateResult(bool $result): void
     {
@@ -643,6 +878,23 @@ class TestableOnePageCheckoutForm extends OnePageCheckoutForm
         }
 
         return $customer;
+    }
+
+    protected function validateCustomerFieldsByModules(): void
+    {
+        $this->moduleValidationCalled = true;
+
+        foreach ($this->moduleFieldErrors as $fieldName => $errors) {
+            foreach ($this->formFields as $field) {
+                if ($field->getName() !== $fieldName) {
+                    continue;
+                }
+
+                foreach ($errors as $error) {
+                    $field->addError($error);
+                }
+            }
+        }
     }
 }
 

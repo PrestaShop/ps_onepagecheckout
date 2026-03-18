@@ -330,12 +330,13 @@ class OnePageCheckoutForm extends \AbstractForm
     public function submitGuestInit(array $params = []): bool
     {
         $this->fillWith($params);
+        $fieldsByGroup = $this->mapFieldsByGroup();
 
-        if (!$this->validateGuestInit()) {
+        if (!$this->validateGuestInit($fieldsByGroup)) {
             return false;
         }
 
-        $customer = $this->getCustomer();
+        $customer = $this->buildCustomerFromFields($this->getCustomerFields($fieldsByGroup));
         $customer->is_guest = true;
         $customer->firstname = $customer->firstname ?: self::GUEST_PLACEHOLDER_FIRSTNAME;
         $customer->lastname = $customer->lastname ?: self::GUEST_PLACEHOLDER_LASTNAME;
@@ -377,7 +378,10 @@ class OnePageCheckoutForm extends \AbstractForm
         return $address;
     }
 
-    private function validateGuestInit(): bool
+    /**
+     * @param array<string, array<string, \FormField>> $fieldsByGroup
+     */
+    private function validateGuestInit(array $fieldsByGroup): bool
     {
         if (!$this->isGuestInitEmailValid()) {
             return false;
@@ -385,9 +389,10 @@ class OnePageCheckoutForm extends \AbstractForm
 
         if (!$this->formFields) {
             $this->formFields = $this->formatter->getFormat();
+            $this->stripAdditionalCustomerFieldsForConnectedCustomer();
         }
 
-        $this->validateRequiredGuestConsentFields();
+        $this->validateRequiredGuestConsentFields($fieldsByGroup);
 
         return !$this->hasErrors();
     }
@@ -447,10 +452,15 @@ class OnePageCheckoutForm extends \AbstractForm
      *
      * @return void
      */
-    private function validateRequiredGuestConsentFields(): void
+    /**
+     * @param array<string, array<string, \FormField>> $fieldsByGroup
+     */
+    private function validateRequiredGuestConsentFields(array $fieldsByGroup): void
     {
-        foreach ($this->formFields as $field) {
-            if ($field->getType() !== 'checkbox' || !$field->isRequired()) {
+        $guestFields = $fieldsByGroup['contactFields'] + $fieldsByGroup['additionalCustomerFields'];
+
+        foreach ($guestFields as $field) {
+            if (!in_array($field->getType(), ['checkbox', 'radio-buttons'], true) || !$field->isRequired()) {
                 continue;
             }
 
@@ -467,9 +477,175 @@ class OnePageCheckoutForm extends \AbstractForm
      */
     public function getCustomer()
     {
-        $customer = new \Customer($this->context->customer->id);
+        return $this->buildCustomerFromFields(
+            $this->getCustomerFields($this->mapFieldsByGroup())
+        );
+    }
 
-        foreach ($this->formFields as $field) {
+    /**
+     * Get delivery address from form data
+     *
+     * @return \Address
+     */
+    public function getAddress()
+    {
+        $fieldsByGroup = $this->mapFieldsByGroup();
+
+        return $this->buildAddressFromGroup($fieldsByGroup['deliveryFields'], \Tools::getValue('id_address'));
+    }
+
+    /**
+     * Get invoice address from form data (when use_same_address is false)
+     *
+     * @return \Address
+     */
+    public function getInvoiceAddress()
+    {
+        $fieldsByGroup = $this->mapFieldsByGroup();
+
+        return $this->buildAddressFromGroup($fieldsByGroup['invoiceFields'], null, 'invoice_');
+    }
+
+    public function getTemplateVariables()
+    {
+        if (!$this->formFields) {
+            $this->formFields = $this->formatter->getFormat();
+            $this->stripAdditionalCustomerFieldsForConnectedCustomer();
+        }
+
+        $fieldsByGroup = $this->mapFieldsByGroup();
+        $formFields = $this->convertFieldsToTemplateArray($this->formFields);
+
+        return [
+            'action' => $this->action,
+            'errors' => $this->getErrors(),
+            'formFields' => $formFields,
+            'contactFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['contactFields']),
+            'additionalCustomerFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['additionalCustomerFields']),
+            'useSameAddressField' => $this->convertFieldToTemplateArray($fieldsByGroup['useSameAddressField']['use_same_address'] ?? null),
+            'deliveryFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['deliveryFields']),
+            'invoiceFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceFields']),
+            'invoiceMetaFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceMetaFields']),
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, \FormField>>
+     */
+    private function mapFieldsByGroup(): array
+    {
+        $fieldsByGroup = [
+            'contactFields' => [],
+            'additionalCustomerFields' => [],
+            'useSameAddressField' => [],
+            'deliveryFields' => [],
+            'invoiceFields' => [],
+            'invoiceMetaFields' => [],
+        ];
+        $addressSectionStarted = false;
+
+        foreach ($this->formFields as $key => $field) {
+            if ($this->isContactField($key)) {
+                $fieldsByGroup['contactFields'][$key] = $field;
+                continue;
+            }
+
+            if (!$addressSectionStarted && $this->isAdditionalCustomerField($field)) {
+                $fieldsByGroup['additionalCustomerFields'][$key] = $field;
+                continue;
+            }
+
+            if ($this->isUseSameAddressField($key)) {
+                $fieldsByGroup['useSameAddressField'][$key] = $field;
+                $addressSectionStarted = true;
+                continue;
+            }
+
+            if ($this->isInvoiceMetaField($key)) {
+                $fieldsByGroup['invoiceMetaFields'][$key] = $field;
+                $addressSectionStarted = true;
+                continue;
+            }
+
+            if ($this->isInvoiceField($key)) {
+                $fieldsByGroup['invoiceFields'][$key] = $field;
+                $addressSectionStarted = true;
+                continue;
+            }
+
+            $addressSectionStarted = true;
+            $fieldsByGroup['deliveryFields'][$key] = $field;
+        }
+
+        return $fieldsByGroup;
+    }
+
+    private function stripAdditionalCustomerFieldsForConnectedCustomer(): void
+    {
+        if (!$this->isRegisteredCustomer()) {
+            return;
+        }
+
+        foreach (array_keys($this->mapFieldsByGroup()['additionalCustomerFields']) as $key) {
+            unset($this->formFields[$key]);
+        }
+    }
+
+    private function isRegisteredCustomer(): bool
+    {
+        $customer = $this->context->customer;
+
+        return $customer instanceof \Customer
+            && !empty($customer->id)
+            && !$customer->isGuest();
+    }
+
+    private function isAdditionalCustomerField(\FormField $field): bool
+    {
+        return isset($field->moduleName) && $field->moduleName !== '';
+    }
+
+    private function isContactField(string $key): bool
+    {
+        return in_array($key, ['email', 'optin'], true);
+    }
+
+    private function isUseSameAddressField(string $key): bool
+    {
+        return $key === 'use_same_address';
+    }
+
+    private function isInvoiceMetaField(string $key): bool
+    {
+        return $key === 'id_address_invoice';
+    }
+
+    private function isInvoiceField(string $key): bool
+    {
+        return strpos($key, 'invoice_') === 0;
+    }
+
+    /**
+     * @param array<string, array<string, \FormField>> $fieldsByGroup
+     *
+     * @return array<string, \FormField>
+     */
+    private function getCustomerFields(array $fieldsByGroup): array
+    {
+        return $fieldsByGroup['contactFields']
+            + $fieldsByGroup['additionalCustomerFields']
+            + $fieldsByGroup['deliveryFields'];
+    }
+
+    /**
+     * @param array<string, \FormField> $fields
+     */
+    private function buildCustomerFromFields(array $fields): \Customer
+    {
+        $customerId = (int) $this->context->customer->id;
+        $customer = $customerId > 0 ? new \Customer($customerId) : new \Customer();
+
+        foreach ($fields as $field) {
             $customerField = $field->getName();
             if (property_exists($customer, $customerField)) {
                 $customer->$customerField = $field->getValue();
@@ -480,44 +656,51 @@ class OnePageCheckoutForm extends \AbstractForm
     }
 
     /**
-     * Get delivery address from form data
-     *
-     * @return \Address
+     * @param array<string, \FormField> $fields
+     * @param int|null $idAddress
      */
-    public function getAddress()
+    private function buildAddressFromGroup(array $fields, $idAddress, string $prefix = ''): \Address
     {
-        return $this->buildAddressFromFields('', \Tools::getValue('id_address'));
+        $address = new \Address($idAddress ? (int) $idAddress : null, $this->language->id);
+
+        foreach ($fields as $formField) {
+            $fieldName = $formField->getName();
+            $baseName = $prefix && strpos($fieldName, $prefix) === 0
+                ? substr($fieldName, strlen($prefix))
+                : $fieldName;
+
+            if (property_exists($address, $baseName)) {
+                $address->{$baseName} = $formField->getValue();
+            }
+        }
+
+        if (!isset($fields[$prefix . 'id_state'])) {
+            $address->id_state = 0;
+        }
+
+        return $address;
     }
 
     /**
-     * Get invoice address from form data (when use_same_address is false)
+     * @param array<string, \FormField> $fields
      *
-     * @return \Address
+     * @return array<string, array<string, mixed>>
      */
-    public function getInvoiceAddress()
+    private function convertFieldsToTemplateArray(array $fields): array
     {
-        return $this->buildAddressFromFields('invoice_', null);
+        return array_map(
+            static function (\FormField $field): array {
+                return $field->toArray();
+            },
+            $fields
+        );
     }
 
-    public function getTemplateVariables()
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function convertFieldToTemplateArray(?\FormField $field): ?array
     {
-        if (!$this->formFields) {
-            // This is usually done by fillWith but the form may be
-            // rendered before fillWith is called.
-            $this->formFields = $this->formatter->getFormat();
-        }
-
-        $formFields = array_map(
-            function (\FormField $item) {
-                return $item->toArray();
-            },
-            $this->formFields
-        );
-
-        return [
-            'action' => $this->action,
-            'errors' => $this->getErrors(),
-            'formFields' => $formFields,
-        ];
+        return $field ? $field->toArray() : null;
     }
 }

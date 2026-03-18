@@ -67,6 +67,17 @@ PHP test configuration lives in [`tests/php`](./tests/php):
 - integration suite: `modules/ps_onepagecheckout/tests/php/phpunit-integration.xml`
 - static analysis helpers: `modules/ps_onepagecheckout/tests/php/phpstan.sh`
 
+Run PHPUnit in the same isolated Docker environment locally and in GitHub Actions:
+
+```bash
+./scripts/run-tests.sh unit
+./scripts/run-tests.sh integration
+```
+
+The runner expects a prepared PrestaShop checkout in `../prestashop` by default.
+Override it with `PS_ROOT_DIR_HOST=/path/to/prestashop` when needed.
+Integration tests provision MySQL automatically inside Docker.
+
 For end-to-end checks, use the dedicated runbook:
 
 - [`docs/E2E_RUNBOOK.md`](./docs/E2E_RUNBOOK.md)
