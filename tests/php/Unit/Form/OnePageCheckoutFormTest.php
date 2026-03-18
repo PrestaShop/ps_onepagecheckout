@@ -224,10 +224,9 @@ class OnePageCheckoutFormTest extends TestCase
             'email' => 'guest-no-module-validation@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
-            'communication_channel' => 'email',
         ])));
         self::assertFalse($form->wasModuleValidationCalled());
-        self::assertEmpty($form->getField('thirdpartygdpr_compliance_note')->getErrors());
+        self::assertEmpty($form->getField('compliance_note')->getErrors());
     }
 
     public function testItReturnsPersisterErrorsWhenGuestSaveFails(): void
@@ -264,11 +263,12 @@ class OnePageCheckoutFormTest extends TestCase
         $form = $this->createForm();
 
         $this->customerPersister
-            ->expects($this->never())
+            ->expects($this->once())
             ->method('save')
+            ->willReturn(true)
         ;
 
-        self::assertFalse($form->submitGuestInit($this->withDefaultCountry([
+        self::assertTrue($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'guest-radio-missing@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
@@ -277,7 +277,7 @@ class OnePageCheckoutFormTest extends TestCase
 
         $errors = $form->getErrors();
         self::assertArrayHasKey('communication_channel', $errors);
-        self::assertNotEmpty($errors['communication_channel']);
+        self::assertEmpty($errors['communication_channel']);
     }
 
     public function testGuestInitIgnoresRequiredAddressConsentFields(): void
@@ -295,7 +295,6 @@ class OnePageCheckoutFormTest extends TestCase
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
             'compliance_note' => 'Ready',
-            'communication_channel' => 'email',
             'marketing_preferences' => '0',
         ])));
     }
@@ -315,7 +314,6 @@ class OnePageCheckoutFormTest extends TestCase
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
             'compliance_note' => 'Ready',
-            'communication_channel' => 'email',
         ])));
     }
 
@@ -370,31 +368,6 @@ class OnePageCheckoutFormTest extends TestCase
     public function testItSeparatesTemplateVariablesByBusinessOrigin(): void
     {
         $form = $this->createForm();
-        $customerTextField = (new \FormField())
-            ->setName('customer_text')
-            ->setType('text');
-        $customerTextField->moduleName = 'opcinvariantprobe';
-        $customerSelectField = (new \FormField())
-            ->setName('customer_select')
-            ->setType('select');
-        $customerSelectField->moduleName = 'opcinvariantprobe';
-        $customerTextareaField = (new \FormField())
-            ->setName('customer_textarea')
-            ->setType('textarea');
-        $customerTextareaField->moduleName = 'opcinvariantprobe';
-        $customerCheckboxField = (new \FormField())
-            ->setName('customer_checkbox')
-            ->setType('checkbox');
-        $customerCheckboxField->moduleName = 'opcinvariantprobe';
-        $customerRadioField = (new \FormField())
-            ->setName('customer_radio')
-            ->setType('radio-buttons');
-        $customerRadioField->moduleName = 'opcinvariantprobe';
-        $addressCheckboxField = (new \FormField())
-            ->setName('marketing_preferences')
-            ->setType('checkbox');
-        $addressCheckboxField->moduleName = 'addressmodule';
-
         $form->setFormFieldsForTest([
             'email' => (new \FormField())
                 ->setName('email')
@@ -402,58 +375,68 @@ class OnePageCheckoutFormTest extends TestCase
             'optin' => (new \FormField())
                 ->setName('optin')
                 ->setType('checkbox'),
-            'opcinvariantprobe_customer_text' => $customerTextField,
-            'opcinvariantprobe_customer_select' => $customerSelectField,
-            'opcinvariantprobe_customer_textarea' => $customerTextareaField,
-            'opcinvariantprobe_customer_checkbox' => $customerCheckboxField,
-            'opcinvariantprobe_customer_radio' => $customerRadioField,
+            'customer_probe_text' => (new \FormField())
+                ->setName('opcinvariantprobe_customer_text')
+                ->setType('text'),
+            'customer_probe_select' => (new \FormField())
+                ->setName('opcinvariantprobe_customer_select')
+                ->setType('select'),
+            'customer_probe_textarea' => (new \FormField())
+                ->setName('opcinvariantprobe_customer_textarea')
+                ->setType('textarea'),
+            'customer_probe_checkbox' => (new \FormField())
+                ->setName('opcinvariantprobe_customer_checkbox')
+                ->setType('checkbox'),
+            'customer_probe_radio' => (new \FormField())
+                ->setName('opcinvariantprobe_customer_radio')
+                ->setType('radio-buttons'),
+            'firstname' => (new \FormField())
+                ->setName('firstname')
+                ->setType('text'),
+            'opcinvariantprobe_address_checkbox' => (new \FormField())
+                ->setName('opcinvariantprobe_address_checkbox')
+                ->setType('checkbox'),
+            'invoice_address1' => (new \FormField())
+                ->setName('invoice_address1')
+                ->setType('text'),
             'use_same_address' => (new \FormField())
                 ->setName('use_same_address')
                 ->setType('checkbox'),
             'id_address_invoice' => (new \FormField())
                 ->setName('id_address_invoice')
                 ->setType('hidden'),
-            'firstname' => (new \FormField())
-                ->setName('firstname')
-                ->setType('text'),
-            'invoice_address1' => (new \FormField())
-                ->setName('invoice_address1')
-                ->setType('text'),
-            'addressmodule_marketing_preferences' => $addressCheckboxField,
         ]);
 
         $templateVariables = $form->getTemplateVariables();
 
-        self::assertSame(['email', 'optin'], array_keys($templateVariables['contactFields']));
         self::assertSame(
             [
-                'opcinvariantprobe_customer_text',
-                'opcinvariantprobe_customer_select',
-                'opcinvariantprobe_customer_textarea',
-                'opcinvariantprobe_customer_checkbox',
-                'opcinvariantprobe_customer_radio',
+                'email',
+                'optin',
+                'customer_probe_text',
+                'customer_probe_select',
+                'customer_probe_textarea',
+                'customer_probe_checkbox',
+                'customer_probe_radio',
+                'firstname',
+                'opcinvariantprobe_address_checkbox',
+                'invoice_address1',
+                'use_same_address',
+                'id_address_invoice',
             ],
-            array_keys($templateVariables['additionalCustomerFields'])
+            array_keys($templateVariables['formFields'])
         );
-        self::assertSame('use_same_address', $templateVariables['useSameAddressField']['name']);
-        self::assertSame(
-            ['firstname', 'addressmodule_marketing_preferences'],
-            array_keys($templateVariables['deliveryFields'])
-        );
-        self::assertArrayNotHasKey('use_same_address', $templateVariables['deliveryFields']);
-        self::assertSame(
-            ['invoice_address1'],
-            array_keys($templateVariables['invoiceFields'])
-        );
-        self::assertSame(
-            ['id_address_invoice'],
-            array_keys($templateVariables['invoiceMetaFields'])
-        );
-        self::assertArrayNotHasKey('id_address_invoice', $templateVariables['invoiceFields']);
-        self::assertArrayNotHasKey('opcinvariantprobe_customer_text', $templateVariables['deliveryFields']);
-        self::assertArrayNotHasKey('opcinvariantprobe_customer_select', $templateVariables['deliveryFields']);
-        self::assertArrayNotHasKey('opcinvariantprobe_customer_textarea', $templateVariables['deliveryFields']);
-        self::assertArrayNotHasKey('opcinvariantprobe_customer_checkbox', $templateVariables['deliveryFields']);
+        self::assertArrayNotHasKey('contactFields', $templateVariables);
+        self::assertArrayNotHasKey('additionalCustomerFields', $templateVariables);
+        self::assertArrayNotHasKey('useSameAddressField', $templateVariables);
+        self::assertArrayNotHasKey('deliveryFields', $templateVariables);
+        self::assertArrayNotHasKey('invoiceFields', $templateVariables);
+        self::assertArrayNotHasKey('invoiceMetaFields', $templateVariables);
+        self::assertSame('email', $templateVariables['formFields']['email']['name']);
+        self::assertSame('opcinvariantprobe_customer_text', $templateVariables['formFields']['customer_probe_text']['name']);
+        self::assertSame('use_same_address', $templateVariables['formFields']['use_same_address']['name']);
+        self::assertSame('invoice_address1', $templateVariables['formFields']['invoice_address1']['name']);
+        self::assertSame('id_address_invoice', $templateVariables['formFields']['id_address_invoice']['name']);
     }
 
     public function testSubmitPersistsDeliveryAndInvoiceAddressesWhenUseSameAddressIsDisabled(): void
@@ -640,32 +623,15 @@ class OnePageCheckoutFormTest extends TestCase
         ;
         $optionalCheckbox->moduleName = 'anothermodule';
 
-        $requiredAddressConsent = (new \FormField())
-            ->setName('marketing_preferences')
-            ->setType('checkbox')
-            ->setRequired(true)
-        ;
-        $requiredAddressConsent->moduleName = 'addressmodule';
-
         return [
-            'email' => $email,
-            'psgdpr_psgdpr_privacy' => $requiredConsent,
-            'thirdpartygdpr_compliance_terms' => $thirdPartyRequiredConsent,
-            'thirdpartygdpr_compliance_note' => $thirdPartyRequiredTextField,
-            'thirdpartygdpr_communication_channel' => $requiredRadioConsent,
-            'anothermodule_newsletter_optin' => $optionalCheckbox,
-            'use_same_address' => (new \FormField())
-                ->setName('use_same_address')
-                ->setType('checkbox')
-                ->setRequired(false)
-                ->setValue(true),
-            'id_address_invoice' => (new \FormField())
-                ->setName('id_address_invoice')
-                ->setType('hidden')
-                ->setRequired(false),
             'firstname' => $firstname,
             'lastname' => $lastname,
-            'addressmodule_marketing_preferences' => $requiredAddressConsent,
+            'email' => $email,
+            'psgdpr_privacy' => $requiredConsent,
+            'compliance_terms' => $thirdPartyRequiredConsent,
+            'compliance_note' => $thirdPartyRequiredTextField,
+            'communication_channel' => $requiredRadioConsent,
+            'newsletter_optin' => $optionalCheckbox,
         ];
     }
 

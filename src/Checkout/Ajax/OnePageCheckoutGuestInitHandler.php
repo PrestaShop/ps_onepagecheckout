@@ -296,7 +296,7 @@ class OnePageCheckoutGuestInitHandler
         }
 
         if ($freshCartCustomerId > 0) {
-            // Persisted owner is stale or invalid: preserve the current request identity if available.
+            // Ignore stale persisted owner and continue with current request context.
             return $contextCustomerId > 0 ? $contextCustomerId : self::CUSTOMER_ID_NONE;
         }
 
