@@ -33,6 +33,7 @@ Both entry points must render the same module-owned configuration flow (no redir
 2. JS toolchain lives in `views/` and must provide:
 - `npm run watch`
 - `npm run build`
+3. When changing files under `views/js`, developers must regenerate and commit the built assets shipped by the module from `views/public` (including `*.LICENSE.txt` files). See [`README.md` → Front assets](../README.md#front-assets).
 
 ## Delivery checklist
 
