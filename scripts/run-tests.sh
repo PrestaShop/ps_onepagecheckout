@@ -96,6 +96,36 @@ wait_for_prestashop_install() {
   done
 }
 
+wait_for_mysql_database() {
+  local database_name=$1
+  local deadline
+  deadline=$((SECONDS + PS_INSTALL_TIMEOUT))
+
+  echo "Wait for MySQL database ${database_name}"
+
+  while true; do
+    if docker exec "${DB_CONTAINER}" sh -lc \
+      "mysql -uroot -pprestashop -Nse \"SHOW DATABASES LIKE '${database_name}'\" | grep -Fx '${database_name}'" \
+      >/dev/null 2>&1; then
+      return 0
+    fi
+
+    if [ "$(docker inspect -f '{{.State.Running}}' "${DB_CONTAINER}" 2>/dev/null || echo false)" != "true" ]; then
+      echo "MySQL container stopped before database ${database_name} became available." >&2
+      docker logs "${DB_CONTAINER}" || true
+      exit 1
+    fi
+
+    if [ "${SECONDS}" -ge "${deadline}" ]; then
+      echo "Timed out after ${PS_INSTALL_TIMEOUT}s waiting for MySQL database ${database_name}." >&2
+      docker logs "${DB_CONTAINER}" || true
+      exit 1
+    fi
+
+    sleep 2
+  done
+}
+
 run_prestashop_image() {
   local workdir=${1:-/var/www/html}
   shift || true
@@ -141,6 +171,8 @@ start_integration_services() {
     -e MYSQL_DATABASE=prestashop \
     "${MYSQL_IMAGE}" >/dev/null
 
+  wait_for_mysql_database prestashop
+
   docker run --rm \
     -v "${PS_VOLUME}:/var/www/html" \
     alpine sh -lc 'rm -f /var/www/html/app/config/parameters.php /var/www/html/config/settings.inc.php'
@@ -153,6 +185,7 @@ start_integration_services() {
     -v "${TMP_VOLUME}:/tmp" \
     --name "${PS_CONTAINER}" \
     -e PS_INSTALL_AUTO=1 \
+    -e PS_INSTALL_DB=1 \
     -e PS_ERASE_DB=1 \
     -e DB_SERVER="${DB_CONTAINER}" \
     -e DB_NAME=prestashop \

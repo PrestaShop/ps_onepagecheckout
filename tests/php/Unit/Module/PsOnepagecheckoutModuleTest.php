@@ -23,7 +23,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
         self::assertTrue($result);
         self::assertSame(1, $module->installInParentCalls);
-        self::assertSame(1, $module->enableConfigurationCalls);
+        self::assertSame(1, $module->installConfigurationCalls);
         self::assertSame(1, $module->initializeProviderCalls);
         self::assertSame([
             'actionCheckoutBuildProcess',
@@ -210,8 +210,8 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
 {
     public int $installInParentCalls = 0;
     public bool $installInParentResult = true;
-    public int $enableConfigurationCalls = 0;
-    public bool $enableConfigurationResult = true;
+    public int $installConfigurationCalls = 0;
+    public bool $installConfigurationResult = true;
     public int $initializeProviderCalls = 0;
     public bool $initializeProviderResult = true;
 
@@ -287,11 +287,11 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         return $this->installInParentResult;
     }
 
-    protected function enableOnePageCheckoutConfigurationForCurrentContext(): bool
+    protected function installOnePageCheckoutConfiguration(): bool
     {
-        ++$this->enableConfigurationCalls;
+        ++$this->installConfigurationCalls;
 
-        return $this->enableConfigurationResult;
+        return $this->installConfigurationResult;
     }
 
     protected function initializeCheckoutProcessProviderConfiguration(): bool
