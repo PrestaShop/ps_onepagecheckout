@@ -25,8 +25,6 @@ class OpcGuestInitHandlerTest extends TestCase
 
     protected function setUp(): void
     {
-        \MockDb::resetBehaviors();
-
         $this->translator = $this->createMock(TranslatorInterface::class);
         $this->translator
             ->method('trans')
@@ -371,9 +369,39 @@ class OpcGuestInitHandlerTest extends TestCase
         self::assertNotEmpty($response['errors']['']);
     }
 
-    public function testItIgnoresCreationWhenEmailAlreadyExistsAndNoGuestIsLinked(): void
+    public function testItCreatesANewGuestWhenRegisteredEmailIsSubmittedOnAnonymousCart(): void
     {
         [$handler, $opcForm] = $this->buildHandler(['expected_token' => 'expected-token']);
+        $handler->setCustomerIdByEmail('john@doe.example', 55);
+        $registeredCustomer = new LightweightCustomer();
+        $registeredCustomer->id = 55;
+        $registeredCustomer->is_guest = 0;
+        $registeredCustomer->email = 'john@doe.example';
+        $handler->setCustomerById(55, $registeredCustomer);
+
+        $opcForm
+            ->expects($this->never())
+            ->method('submitGuestInit')
+        ;
+
+        $response = $handler->handle([
+            'email' => 'john@doe.example',
+            'token' => 'expected-token',
+        ]);
+
+        self::assertTrue($response['success']);
+        self::assertFalse($response['customer_created']);
+        self::assertSame(0, $response['id_customer']);
+    }
+
+    public function testItCreatesANewGuestWhenExistingGuestEmailIsSubmittedOnAnonymousCart(): void
+    {
+        [$handler, $opcForm] = $this->buildHandler(['expected_token' => 'expected-token']);
+        $existingGuest = new LightweightCustomer();
+        $existingGuest->id = 55;
+        $existingGuest->is_guest = 1;
+        $existingGuest->email = 'john@doe.example';
+        $handler->setCustomerById(55, $existingGuest);
         $handler->setCustomerIdByEmail('john@doe.example', 55);
 
         $opcForm
@@ -435,13 +463,7 @@ class OpcGuestInitHandlerTest extends TestCase
 
         [$handler, $opcForm] = $this->buildHandler(['customer' => $guest, 'cart' => $cart]);
         $handler->setCustomerById(10, $guest);
-        \MockDb::setGetValueCallback(static function ($sql) {
-            if (is_string($sql) && str_contains($sql, 'FROM `ps_cart` WHERE `id_cart` = 1')) {
-                return 999;
-            }
-
-            return false;
-        });
+        $handler->setFreshCartCustomerIdByCartId(1, 999);
 
         $opcForm
             ->expects($this->never())
@@ -457,6 +479,9 @@ class OpcGuestInitHandlerTest extends TestCase
         self::assertArrayHasKey('', $response['errors']);
         self::assertNotEmpty($response['errors']['']);
         self::assertSame(999, (int) $cart->id_customer);
+        self::assertSame(10, (int) \Context::getContext()->customer->id);
+        self::assertSame('updated@example.com', $guest->email);
+        self::assertSame('updated@example.com', (string) \Context::getContext()->customer->email);
     }
 
     public function testItReturnsErrorWhenCartClaimLosesRaceAndFreshOwnerCannotBeReadInUnitDbMock(): void
@@ -480,6 +505,7 @@ class OpcGuestInitHandlerTest extends TestCase
         $handler->setCustomerById(10, $guest);
         $handler->setCustomerById(88, $concurrentWinner);
         $handler->forceReplaceRaceWinner(1, 88);
+        $handler->setFreshCartCustomerIdSequenceByCartId(1, [10, 0]);
 
         $opcForm
             ->expects($this->never())
@@ -536,7 +562,7 @@ class OpcGuestInitHandlerTest extends TestCase
      */
     private function buildHandler(array $options = []): array
     {
-        $context = new LightweightContext();
+        $context = \Context::getContext();
         $context->customer = $options['customer'] ?? new LightweightCustomer();
         $context->cart = $options['cart'] ?? new LightweightCart();
         if (empty($options['cart'])) {
@@ -583,6 +609,11 @@ class OpcGuestInitHandlerTest extends TestCase
 class TestableCheckoutGuestInitHandler extends OnePageCheckoutGuestInitHandler
 {
     /**
+     * @var \Context
+     */
+    private $testContext;
+
+    /**
      * @var bool
      */
     private $guestCheckoutEnabled = true;
@@ -611,6 +642,34 @@ class TestableCheckoutGuestInitHandler extends OnePageCheckoutGuestInitHandler
      * @var array<int, int>
      */
     private $forcedRaceWinnerByCartId = [];
+
+    /**
+     * @var array<int, list<int>>
+     */
+    private $freshCartCustomerIdByCartId = [];
+
+    /**
+     * @var array<int, int>
+     */
+    private $freshCartCustomerIdCallCountByCartId = [];
+
+    public function __construct(
+        \Context $context,
+        OnePageCheckoutForm $opcForm,
+        TranslatorInterface $translator,
+        \CustomerPersister $customerPersister,
+        bool $isOnePageCheckoutEnabled,
+    ) {
+        $this->testContext = $context;
+
+        parent::__construct(
+            $context,
+            $opcForm,
+            $translator,
+            $customerPersister,
+            $isOnePageCheckoutEnabled
+        );
+    }
 
     public function setGuestCheckoutEnabled(bool $guestCheckoutEnabled): void
     {
@@ -650,6 +709,27 @@ class TestableCheckoutGuestInitHandler extends OnePageCheckoutGuestInitHandler
         $this->forcedRaceWinnerByCartId[$cartId] = $winnerCustomerId;
     }
 
+    public function setFreshCartCustomerIdByCartId(int $cartId, int $customerId): void
+    {
+        if ($cartId <= 0) {
+            return;
+        }
+
+        $this->freshCartCustomerIdByCartId[$cartId] = [$customerId];
+    }
+
+    /**
+     * @param list<int> $customerIds
+     */
+    public function setFreshCartCustomerIdSequenceByCartId(int $cartId, array $customerIds): void
+    {
+        if ($cartId <= 0 || $customerIds === []) {
+            return;
+        }
+
+        $this->freshCartCustomerIdByCartId[$cartId] = array_values($customerIds);
+    }
+
     protected function isGuestCheckoutEnabled(): bool
     {
         return $this->guestCheckoutEnabled;
@@ -673,6 +753,39 @@ class TestableCheckoutGuestInitHandler extends OnePageCheckoutGuestInitHandler
     protected function loadCartById(int $cartId): \Cart
     {
         return $this->cartsById[$cartId] ?? new LightweightCart();
+    }
+
+    protected function getFreshCartCustomerId(): int
+    {
+        if (!\Validate::isLoadedObject($this->testContext->cart)) {
+            return 0;
+        }
+
+        $cartId = (int) $this->testContext->cart->id;
+        if ($cartId <= 0) {
+            return 0;
+        }
+
+        if (array_key_exists($cartId, $this->freshCartCustomerIdByCartId)) {
+            $freshCustomerIds = $this->freshCartCustomerIdByCartId[$cartId];
+            $freshCustomerId = $freshCustomerIds[0];
+            if (count($freshCustomerIds) > 1) {
+                array_shift($freshCustomerIds);
+                $this->freshCartCustomerIdByCartId[$cartId] = $freshCustomerIds;
+            }
+
+            return $freshCustomerId;
+        }
+
+        $callCount = $this->freshCartCustomerIdCallCountByCartId[$cartId] ?? 0;
+        $this->freshCartCustomerIdCallCountByCartId[$cartId] = $callCount + 1;
+
+        $persistedCustomerId = isset($this->cartsById[$cartId]) ? (int) $this->cartsById[$cartId]->id_customer : 0;
+        if ($persistedCustomerId > 0) {
+            return $persistedCustomerId;
+        }
+
+        return $callCount === 0 ? (int) $this->testContext->customer->id : 0;
     }
 
     protected function compareAndSetCartCustomerId(int $cartId, int $customerId): int

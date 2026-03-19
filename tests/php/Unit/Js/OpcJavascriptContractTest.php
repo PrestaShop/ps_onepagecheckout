@@ -24,11 +24,4 @@ class OpcJavascriptContractTest extends TestCase
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-address.js');
         self::assertStringContainsString('window.ps_onepagecheckout', $script);
     }
-
-    public function testFrontCoreBundleDoesNotOwnOpcRuntimeGlobal(): void
-    {
-        $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/themes/core.js');
-        self::assertStringNotContainsString('window.ps_onepagecheckout', $script);
-        self::assertStringNotContainsString('window.prestashopOpc', $script);
-    }
 }

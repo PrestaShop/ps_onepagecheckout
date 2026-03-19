@@ -313,7 +313,7 @@ class OnePageCheckoutGuestInitHandler
      *
      * @return int Customer id linked to cart in DB, or CUSTOMER_ID_NONE when unavailable
      */
-    private function getFreshCartCustomerId(): int
+    protected function getFreshCartCustomerId(): int
     {
         if (!\Validate::isLoadedObject($this->context->cart)) {
             return self::CUSTOMER_ID_NONE;

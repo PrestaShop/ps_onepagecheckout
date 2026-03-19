@@ -40,3 +40,4 @@ Both entry points must render the same module-owned configuration flow (no redir
 2. Integration tests updated for changed behavior.
 3. Decision log updated for every architectural choice.
 4. E2E preflight and troubleshooting must be kept up to date in `docs/E2E_RUNBOOK.md`.
+5. Module PHPUnit entrypoints must stay reproducible between local and CI through `./scripts/run-tests.sh`.
