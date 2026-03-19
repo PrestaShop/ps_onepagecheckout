@@ -67,7 +67,9 @@
 - Decision: `BackOfficeConfigurationForm::renderConfigurationForm()` now requires Twig and no longer falls back to Smarty templates.
 - Impact: BO configuration rendering is simpler, explicit, and aligned with `9.2.0` expectations.
 
+## 2026-03-17
+
 ### D-014
-- Context: module PHPUnit suites were not executed in CI, and local vs CI execution paths were diverging.
-- Decision: run unit and integration suites in GitHub Actions through a shared isolated entrypoint, `./scripts/run-tests.sh`, used both locally and in CI.
-- Impact: PHPUnit execution is reproducible across environments, and regressions detected by unit or integration suites now block validation.
+- Context: `PS_ONE_PAGE_CHECKOUT_ENABLED` is no longer provisioned by Core and must be fully owned by the module lifecycle.
+- Decision: create `PS_ONE_PAGE_CHECKOUT_ENABLED` during module install with value `0`, and remove it during module uninstall instead of recreating it with value `0`.
+- Impact: module installation remains self-sufficient without activating OPC by default, and uninstall leaves no stale OPC configuration entry behind.

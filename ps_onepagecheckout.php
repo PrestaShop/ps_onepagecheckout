@@ -62,7 +62,7 @@ class Ps_Onepagecheckout extends Module
     public function install()
     {
         return $this->installInParent()
-            && $this->enableOnePageCheckoutConfigurationForCurrentContext()
+            && $this->installOnePageCheckoutConfiguration()
             && $this->initializeCheckoutProcessProviderConfiguration()
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
@@ -91,7 +91,7 @@ class Ps_Onepagecheckout extends Module
 
     public function uninstall()
     {
-        return $this->disableOnePageCheckoutConfigurationForAllShops()
+        return $this->uninstallOnePageCheckoutConfiguration()
             && $this->clearCheckoutProcessProviderConfigurationForCurrentModule()
             && $this->uninstallInParent();
     }
@@ -281,9 +281,9 @@ class Ps_Onepagecheckout extends Module
         return $this->backOfficeConfigurationForm;
     }
 
-    protected function enableOnePageCheckoutConfigurationForCurrentContext(): bool
+    protected function installOnePageCheckoutConfiguration(): bool
     {
-        return Configuration::updateValue(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED, 1, false);
+        return Configuration::updateValue(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED, 0, false);
     }
 
     protected function disableOnePageCheckoutConfigurationForCurrentContext(): bool
@@ -327,9 +327,8 @@ class Ps_Onepagecheckout extends Module
         );
     }
 
-    private function disableOnePageCheckoutConfigurationForAllShops(): bool
+    protected function uninstallOnePageCheckoutConfiguration(): bool
     {
-        return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED)
-            && Configuration::updateGlobalValue(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED, 0);
+        return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }
 }

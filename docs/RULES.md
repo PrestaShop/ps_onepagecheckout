@@ -21,11 +21,12 @@ These rules are mandatory for one-page checkout implementation in the native `ps
 - dedicated BO tab `AdminPsOnePageCheckout`.
 Both entry points must render the same module-owned configuration flow (no redirect-only BO tab).
 
-3. `disable()` and `uninstall()` must set `PS_ONE_PAGE_CHECKOUT_ENABLED` to `0`.
-4. BO form rendering/submit handling must be implemented in a dedicated form class under `src/Form`, not inline in `ps_onepagecheckout.php`.
-5. BO layout selector UI must keep parity with Core checkout layout experience (title, descriptions, feature lists, recommended badge, illustrations), rendered from module-owned Twig template/assets.
-6. OPC form creation must go through a dedicated factory (`src/Form/OnePageCheckoutFormFactory.php`) to avoid duplicated setup logic in controllers/builders.
-7. Runtime checkout flag (`is_one_page_checkout_enabled`) must be aligned with module state when module-owned checkout process is injected.
+3. `install()` must provision `PS_ONE_PAGE_CHECKOUT_ENABLED` with value `0` by default.
+4. `disable()` must set `PS_ONE_PAGE_CHECKOUT_ENABLED` to `0`, and `uninstall()` must remove `PS_ONE_PAGE_CHECKOUT_ENABLED`.
+5. BO form rendering/submit handling must be implemented in a dedicated form class under `src/Form`, not inline in `ps_onepagecheckout.php`.
+6. BO layout selector UI must keep parity with Core checkout layout experience (title, descriptions, feature lists, recommended badge, illustrations), rendered from module-owned Twig template/assets.
+7. OPC form creation must go through a dedicated factory (`src/Form/OnePageCheckoutFormFactory.php`) to avoid duplicated setup logic in controllers/builders.
+8. Runtime checkout flag (`is_one_page_checkout_enabled`) must be aligned with module state when module-owned checkout process is injected.
 
 ## JS
 
