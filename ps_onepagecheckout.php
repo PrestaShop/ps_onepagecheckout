@@ -113,7 +113,7 @@ class Ps_Onepagecheckout extends Module
 
     public function hookActionFrontControllerSetMedia(): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!$this->isOrderController()) {
             return;
         }
 
@@ -157,7 +157,7 @@ class Ps_Onepagecheckout extends Module
 
     public function hookActionFrontControllerSetVariables(array $params): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!$this->isOrderController()) {
             return;
         }
 
@@ -330,5 +330,10 @@ class Ps_Onepagecheckout extends Module
     protected function uninstallOnePageCheckoutConfiguration(): bool
     {
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
+    }
+
+    protected function isOrderController(): bool
+    {
+        return $this->context->controller instanceof OrderController;    
     }
 }
