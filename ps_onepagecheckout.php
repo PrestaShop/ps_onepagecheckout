@@ -27,7 +27,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '1.0.2';
+        $this->version = '1.0.0';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -187,7 +187,7 @@ class Ps_Onepagecheckout extends Module
 
         $this->context->controller->registerJavascript(
             'module-ps-onepagecheckout-guest-init',
-            'modules/' . $this->name . '/views/js/opc-guest-init.js',
+            'modules/' . $this->name . '/views/public/opc-guest-init.bundle.js',
             [
                 'position' => 'bottom',
                 'priority' => 150,
@@ -196,7 +196,7 @@ class Ps_Onepagecheckout extends Module
 
         $this->context->controller->registerJavascript(
             'module-ps-onepagecheckout-address',
-            'modules/' . $this->name . '/views/js/opc-address.js',
+            'modules/' . $this->name . '/views/public/opc-address.bundle.js',
             [
                 'position' => 'bottom',
                 'priority' => 151,

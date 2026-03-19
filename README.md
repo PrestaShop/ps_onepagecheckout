@@ -35,7 +35,7 @@ PrestaShop: `9.0.0` or later.
 Before opening a PR:
 
 1. Regenerate the module autoload when PHP classes move or are added.
-2. Rebuild front assets when changing files under `views/js`.
+2. Rebuild front assets when changing files under `views/js`, and commit the generated bundles from `views/public` (including `.LICENSE.txt` files).
 3. Run the relevant PHP tests for the area you touched.
 4. Use the decision log and implementation rules as the source of truth for sensitive changes.
 
@@ -55,9 +55,24 @@ From `ps_onepagecheckout/views`:
 
 ```bash
 npm install
+
+# Development: rebuild assets on every change under views/js
 npm run watch
+
+# Production build: generate bundles consumed by the module
 npm run build
 ```
+
+When you change any file under `views/js`:
+
+- run `npm run build` to regenerate:
+  - `views/public/opc-guest-init.bundle.js`
+  - `views/public/opc-address.bundle.js`
+  - their corresponding `*.LICENSE.txt` files,
+- and commit both the source changes and the updated files in `views/public`.
+
+> The CI workflow `js.yml` runs `npm run build` to ensure the assets remain buildable,
+> and the shared `build-release` workflow packages the module using the files present in the repository (including the generated bundles).
 
 ## Testing
 
@@ -86,7 +101,6 @@ For end-to-end checks, use the dedicated runbook:
 
 - implementation rules: [`docs/RULES.md`](./docs/RULES.md)
 - architectural decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
-- MVP product + technical documentation: [`docs/MVP_DOCUMENTATION.md`](./docs/MVP_DOCUMENTATION.md)
 - contributors: [`CONTRIBUTORS.md`](./CONTRIBUTORS.md)
 
 ## License
