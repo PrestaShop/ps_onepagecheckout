@@ -15,6 +15,34 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class PsOnepagecheckoutModuleTest extends TestCase
 {
+    public function testInstallInitializesFlagRegistersHooksAndCallsParentInstall(): void
+    {
+        $module = $this->createModule();
+
+        $result = $module->install();
+
+        self::assertTrue($result);
+        self::assertSame(1, $module->installInParentCalls);
+        self::assertSame(1, $module->enableConfigurationCalls);
+        self::assertSame(1, $module->initializeProviderCalls);
+        self::assertSame([
+            'actionCheckoutBuildProcess',
+            'actionFrontControllerSetMedia',
+            'actionFrontControllerSetVariables',
+        ], $module->registerHookCalls);
+    }
+
+    public function testUninstallRemovesFlagAndCallsParentUninstall(): void
+    {
+        $module = $this->createModule();
+
+        $result = $module->uninstall();
+
+        self::assertTrue($result);
+        self::assertSame(1, $module->clearProviderForCurrentModuleCalls);
+        self::assertSame(1, $module->uninstallInParentCalls);
+    }
+
     public function testDisableDisablesFlagForCurrentContextAndCallsParentDisable(): void
     {
         $module = $this->createModule();
@@ -180,6 +208,19 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
 class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
 {
+    public int $installInParentCalls = 0;
+    public bool $installInParentResult = true;
+    public int $enableConfigurationCalls = 0;
+    public bool $enableConfigurationResult = true;
+    public int $initializeProviderCalls = 0;
+    public bool $initializeProviderResult = true;
+
+    /**
+     * @var list<string>
+     */
+    public array $registerHookCalls = [];
+    public bool $registerHookResult = true;
+
     /**
      * @var list<bool>
      */
@@ -196,8 +237,11 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     public bool $disableCurrentContextResult = true;
     public int $clearProviderCalls = 0;
     public bool $clearProviderResult = true;
-
     public bool $disableInParentResult = true;
+    public int $clearProviderForCurrentModuleCalls = 0;
+    public bool $clearProviderForCurrentModuleResult = true;
+    public int $uninstallInParentCalls = 0;
+    public bool $uninstallInParentResult = true;
 
     public ?OnePageCheckoutProcessBuilder $checkoutProcessBuilder = null;
 
@@ -220,6 +264,13 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         return $this->isEnabled;
     }
 
+    public function registerHook($hookName, $shopList = null): bool
+    {
+        $this->registerHookCalls[] = (string) $hookName;
+
+        return $this->registerHookResult;
+    }
+
     protected function createCheckoutProcessBuilder(): OnePageCheckoutProcessBuilder
     {
         if ($this->checkoutProcessBuilder instanceof OnePageCheckoutProcessBuilder) {
@@ -227,6 +278,27 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         }
 
         throw new \RuntimeException('Checkout process builder test double is not configured.');
+    }
+
+    protected function installInParent(): bool
+    {
+        ++$this->installInParentCalls;
+
+        return $this->installInParentResult;
+    }
+
+    protected function enableOnePageCheckoutConfigurationForCurrentContext(): bool
+    {
+        ++$this->enableConfigurationCalls;
+
+        return $this->enableConfigurationResult;
+    }
+
+    protected function initializeCheckoutProcessProviderConfiguration(): bool
+    {
+        ++$this->initializeProviderCalls;
+
+        return $this->initializeProviderResult;
     }
 
     protected function disableOnePageCheckoutConfigurationForCurrentContext(): bool
@@ -241,6 +313,13 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         ++$this->clearProviderCalls;
 
         return $this->clearProviderResult;
+    }
+
+    protected function clearCheckoutProcessProviderConfigurationForCurrentModule(): bool
+    {
+        ++$this->clearProviderForCurrentModuleCalls;
+
+        return $this->clearProviderForCurrentModuleResult;
     }
 
     protected function addOpcJavascriptDefinition(array $javascriptDefinition): void
@@ -258,6 +337,13 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         $this->disableInParentCalls[] = $forceAll;
 
         return $this->disableInParentResult;
+    }
+
+    protected function uninstallInParent(): bool
+    {
+        ++$this->uninstallInParentCalls;
+
+        return $this->uninstallInParentResult;
     }
 }
 

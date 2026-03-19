@@ -34,8 +34,8 @@
     "phpstan": "./tests/php/phpstan.sh latest",
     "cs-fixer:fix": "./vendor/bin/php-cs-fixer fix . --diff --using-cache=no --sequential --config=vendor/prestashop/php-dev-tools/templates/cs-fixer/.php-cs-fixer.dist.php",
     "cs-fixer:dry": "./vendor/bin/php-cs-fixer fix . --dry-run --diff --using-cache=no --sequential --config=vendor/prestashop/php-dev-tools/templates/cs-fixer/.php-cs-fixer.dist.php",
-    "test:unit": "SYMFONY_DEPRECATIONS_HELPER=disabled ../../vendor/bin/phpunit -c tests/php/phpunit.xml",
-    "test:integration": "SYMFONY_DEPRECATIONS_HELPER=disabled ../../vendor/bin/phpunit -c tests/php/phpunit-integration.xml"
+    "test:unit": "./scripts/run-tests.sh unit",
+    "test:integration": "./scripts/run-tests.sh integration"
   },
   "type": "prestashop-module"
 }

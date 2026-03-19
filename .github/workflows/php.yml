@@ -53,3 +53,91 @@ jobs:
 
       - name: Execute PHPStan on PrestaShop (Tag ${{ matrix.presta-versions }})
         run: ./tests/php/phpstan.sh ${{ matrix.presta-versions }}
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        prestashop:
+          # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
+          - label: latest
+            image_tag: latest
+            core_ref: ''
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Checkout PrestaShop core (default branch)
+        if: ${{ matrix.prestashop.core_ref == '' }}
+        uses: actions/checkout@v5
+        with:
+          repository: PrestaShop/PrestaShop
+          path: prestashop-core
+
+      - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
+        if: ${{ matrix.prestashop.core_ref != '' }}
+        uses: actions/checkout@v5
+        with:
+          repository: PrestaShop/PrestaShop
+          ref: ${{ matrix.prestashop.core_ref }}
+          path: prestashop-core
+
+      - name: Install PrestaShop core dependencies
+        working-directory: prestashop-core
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Execute unit tests on PrestaShop (Tag ${{ matrix.prestashop.image_tag }})
+        env:
+          PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
+        run: ./scripts/run-tests.sh unit ${{ matrix.prestashop.image_tag }}
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        prestashop:
+          # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
+          - label: latest
+            image_tag: latest
+            core_ref: ''
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Checkout PrestaShop core (default branch)
+        if: ${{ matrix.prestashop.core_ref == '' }}
+        uses: actions/checkout@v5
+        with:
+          repository: PrestaShop/PrestaShop
+          path: prestashop-core
+
+      - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
+        if: ${{ matrix.prestashop.core_ref != '' }}
+        uses: actions/checkout@v5
+        with:
+          repository: PrestaShop/PrestaShop
+          ref: ${{ matrix.prestashop.core_ref }}
+          path: prestashop-core
+
+      - name: Install PrestaShop core dependencies
+        working-directory: prestashop-core
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Execute integration tests on PrestaShop (Tag ${{ matrix.prestashop.image_tag }})
+        env:
+          PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
+        run: ./scripts/run-tests.sh integration ${{ matrix.prestashop.image_tag }}
