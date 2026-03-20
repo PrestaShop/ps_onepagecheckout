@@ -67,6 +67,40 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertSame([true], $module->disableInParentCalls);
     }
 
+    public function testEnableReinitializesProviderAndCallsParentEnable(): void
+    {
+        $module = $this->createModule();
+
+        $result = $module->enable();
+
+        self::assertTrue($result);
+        self::assertSame([false], $module->enableInParentCalls);
+        self::assertSame(1, $module->initializeProviderCalls);
+    }
+
+    public function testEnablePassesForceAllToParentEnable(): void
+    {
+        $module = $this->createModule();
+
+        $result = $module->enable(true);
+
+        self::assertTrue($result);
+        self::assertSame([true], $module->enableInParentCalls);
+        self::assertSame(1, $module->initializeProviderCalls);
+    }
+
+    public function testEnableStopsWhenParentEnableFails(): void
+    {
+        $module = $this->createModule();
+        $module->enableInParentResult = false;
+
+        $result = $module->enable();
+
+        self::assertFalse($result);
+        self::assertSame([false], $module->enableInParentCalls);
+        self::assertSame(0, $module->initializeProviderCalls);
+    }
+
     public function testDisableStopsWhenCurrentContextDisableFails(): void
     {
         $module = $this->createModule();
@@ -224,6 +258,11 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     /**
      * @var list<bool>
      */
+    public array $enableInParentCalls = [];
+
+    /**
+     * @var list<bool>
+     */
     public array $disableInParentCalls = [];
 
     /**
@@ -237,6 +276,7 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     public bool $disableCurrentContextResult = true;
     public int $clearProviderCalls = 0;
     public bool $clearProviderResult = true;
+    public bool $enableInParentResult = true;
     public bool $disableInParentResult = true;
     public int $clearProviderForCurrentModuleCalls = 0;
     public bool $clearProviderForCurrentModuleResult = true;
@@ -337,6 +377,13 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         $this->disableInParentCalls[] = $forceAll;
 
         return $this->disableInParentResult;
+    }
+
+    protected function enableInParent(bool $forceAll): bool
+    {
+        $this->enableInParentCalls[] = $forceAll;
+
+        return $this->enableInParentResult;
     }
 
     protected function uninstallInParent(): bool
