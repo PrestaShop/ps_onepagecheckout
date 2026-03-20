@@ -56,7 +56,7 @@ class ModuleLifecycleIntegrationTest extends TestCase
         self::assertTrue($module->install());
         self::assertTrue(\Module::isInstalled(self::MODULE_NAME));
         self::assertTrue(\Module::isEnabled(self::MODULE_NAME));
-        self::assertSame('1', (string) \Configuration::get(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED));
+        self::assertSame('0', (string) \Configuration::get(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED));
         self::assertSame(self::MODULE_NAME, trim((string) \Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE)));
 
         $module = $this->buildModule();

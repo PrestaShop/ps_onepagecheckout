@@ -15,7 +15,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class PsOnepagecheckoutModuleTest extends TestCase
 {
-    public function testInstallInitializesFlagRegistersHooksAndCallsParentInstall(): void
+    public function testInstallInitializesDisabledFlagRegistersHooksAndCallsParentInstall(): void
     {
         $module = $this->createModule();
 
