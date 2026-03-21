@@ -334,6 +334,6 @@ class Ps_Onepagecheckout extends Module
 
     protected function isOrderController(): bool
     {
-        return $this->context->controller instanceof OrderController;    
+        return $this->context->controller instanceof OrderController;
     }
 }
