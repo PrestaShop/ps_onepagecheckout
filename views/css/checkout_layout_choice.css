@@ -203,3 +203,120 @@
     margin-top: 0.25rem;
   }
 }
+
+/* Confirmation modal - header */
+#psopc-confirmation-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: none;
+}
+
+#psopc-confirmation-modal .modal-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+#psopc-confirmation-modal .modal-header .close {
+  padding: 0;
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  opacity: 0.5;
+}
+
+#psopc-confirmation-modal .modal-header .close:hover {
+  opacity: 1;
+}
+
+#psopc-confirmation-modal .modal-footer {
+  border-top: none;
+}
+
+/* Confirmation modal - warning alert */
+.psopc-modal-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #FFF5E5;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.psopc-modal-warning-icon {
+  color: #ffa000;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.psopc-modal-warning span:last-child {
+  font-size: 0.875rem;
+  color: #3f3f3d;
+  line-height: 1.5;
+}
+
+/* Confirmation modal - maintenance toggle row */
+.psopc-maintenance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid #DDDDDD;
+  border-radius: 4px;
+}
+
+.psopc-maintenance-row > span:first-child {
+  font-size: 14px;
+  color: #1D1D1B;
+}
+
+/* Toggle switch */
+.psopc-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 24px;
+  margin: 0;
+}
+
+.psopc-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.psopc-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #DDDDDD;
+  transition: 0.2s;
+  border-radius: 24px;
+}
+
+.psopc-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #fff;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+.psopc-toggle input:checked + .psopc-toggle-slider {
+  background-color: #207f4b;
+}
+
+.psopc-toggle input:checked + .psopc-toggle-slider:before {
+  transform: translateX(12px);
+}

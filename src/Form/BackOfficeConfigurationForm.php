@@ -35,6 +35,8 @@ class BackOfficeConfigurationForm
 {
     private const FORM_SUBMIT_ACTION = 'submitPsOnePageCheckoutConfiguration';
     private const SUCCESS_FLASH_COOKIE_KEY = 'psopc_bo_configuration_saved';
+    private const MAINTENANCE_FLASH_COOKIE_KEY = 'psopc_bo_maintenance_enabled';
+    private const MAINTENANCE_INPUT_NAME = 'psopc_enable_maintenance';
 
     private \Module $module;
     private string $configurationKey;
@@ -51,18 +53,30 @@ class BackOfficeConfigurationForm
 
         if (\Tools::isSubmit(self::FORM_SUBMIT_ACTION)) {
             $isEnabled = (int) \Tools::getValue($this->configurationKey, 0) === 1;
+            $enableMaintenance = (int) \Tools::getValue(self::MAINTENANCE_INPUT_NAME, 0) === 1;
+
+            if ($enableMaintenance) {
+                if (!$this->enableMaintenanceMode()) {
+                    return $this->module->displayError(
+                        $this->trans('Unable to enable maintenance mode. Checkout layout was not changed.', 'Modules.Psonepagecheckout.Admin')
+                    ) . $this->renderConfigurationForm();
+                }
+            }
+
             $this->persistConfigurationValue((int) $isEnabled);
-            $this->storeSuccessFlash();
+
+            if ($enableMaintenance) {
+                $this->storeMaintenanceFlash();
+            } else {
+                $this->storeSuccessFlash();
+            }
+
             $this->redirectToConfigurationForm();
 
             return '';
         }
 
-        if ($this->consumeSuccessFlash()) {
-            $output .= $this->module->displayConfirmation(
-                $this->trans('Settings updated.', 'Admin.Notifications.Success')
-            );
-        }
+        $output .= $this->consumeFlashMessages();
 
         return $output . $this->renderConfigurationForm();
     }
@@ -108,6 +122,16 @@ class BackOfficeConfigurationForm
                 'Admin.Design.Feature'
             ),
             'save_button_label' => $this->trans('Save', 'Admin.Actions'),
+            'confirm_modal_title' => $this->trans('Change checkout appearance', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_description' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.Psonepagecheckout.Admin'),
+            'cancel_button_label' => $this->trans('Cancel', 'Admin.Actions'),
+            'confirm_button_label' => $this->trans('Change checkout appearance', 'Modules.Psonepagecheckout.Admin'),
+            'maintenance_mode_input_name' => self::MAINTENANCE_INPUT_NAME,
+            'maintenance_mode_label' => $this->trans('Maintenance mode', 'Modules.Psonepagecheckout.Admin'),
+            'maintenance_mode_warning' => $this->trans(
+                'We recommend you to enable the Maintenance mode to ensure a smooth transition and avoid any issues with orders.',
+                'Modules.Psonepagecheckout.Admin'
+            ),
             'choices' => [
                 [
                     'id' => $this->configurationKey . '_one_page',
@@ -179,7 +203,7 @@ class BackOfficeConfigurationForm
         );
     }
 
-    private function trans(string $message, string $domain = 'Modules.PsOnePageCheckout.Admin'): string
+    private function trans(string $message, string $domain = 'Modules.Psonepagecheckout.Admin'): string
     {
         $translator = \Context::getContext()->getTranslator();
 
@@ -260,5 +284,51 @@ class BackOfficeConfigurationForm
         $context->cookie->write();
 
         return true;
+    }
+
+    protected function storeMaintenanceFlash(): void
+    {
+        $context = \Context::getContext();
+        if (!isset($context->cookie)) {
+            return;
+        }
+
+        $context->cookie->{self::MAINTENANCE_FLASH_COOKIE_KEY} = '1';
+        $context->cookie->write();
+    }
+
+    protected function consumeMaintenanceFlash(): bool
+    {
+        $context = \Context::getContext();
+        if (!isset($context->cookie) || !isset($context->cookie->{self::MAINTENANCE_FLASH_COOKIE_KEY})) {
+            return false;
+        }
+
+        unset($context->cookie->{self::MAINTENANCE_FLASH_COOKIE_KEY});
+        $context->cookie->write();
+
+        return true;
+    }
+
+    private function consumeFlashMessages(): string
+    {
+        $output = '';
+
+        if ($this->consumeMaintenanceFlash()) {
+            $output .= $this->module->displayWarning(
+                $this->trans('Checkout layout has been changed. Shop is now in maintenance mode.', 'Modules.Psonepagecheckout.Admin')
+            );
+        } elseif ($this->consumeSuccessFlash()) {
+            $output .= $this->module->displayConfirmation(
+                $this->trans('Checkout layout has been changed.', 'Modules.Psonepagecheckout.Admin')
+            );
+        }
+
+        return $output;
+    }
+
+    protected function enableMaintenanceMode(): bool
+    {
+        return \Configuration::updateValue('PS_SHOP_ENABLE', 0, false);
     }
 }

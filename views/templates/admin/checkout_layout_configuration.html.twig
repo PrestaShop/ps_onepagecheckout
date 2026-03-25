@@ -74,11 +74,82 @@
         </div>
       </div>
 
+      <input type="hidden" name="{{ maintenance_mode_input_name }}" id="psopc-maintenance-hidden" value="0">
+
+      <input type="hidden" name="{{ form_submit_action }}" value="1">
+
       <div class="psopc-actions text-right">
-        <button type="submit" name="{{ form_submit_action }}" class="btn btn-primary">
+        <button type="button" id="psopc-save-btn" class="btn btn-primary">
           {{ save_button_label }}
         </button>
       </div>
     </form>
+
+    <div id="psopc-confirmation-modal" class="modal modal-vcenter fade" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">{{ confirm_modal_title }}</h4>
+            <button class="close" type="button" data-dismiss="modal">×</button>
+          </div>
+          <div class="modal-body">
+            <p>{{ confirm_modal_description }}</p>
+            <div class="psopc-modal-warning">
+              <i class="material-icons psopc-modal-warning-icon">warning</i>
+              <span>{{ maintenance_mode_warning }}</span>
+            </div>
+            <div class="psopc-maintenance-row">
+              <span>{{ maintenance_mode_label }}</span>
+              <label class="psopc-toggle">
+                <input type="checkbox" id="psopc-maintenance-toggle">
+                <span class="psopc-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <input type="button" class="btn btn-outline-secondary" data-dismiss="modal" value="{{ cancel_button_label }}"/>
+            <button type="button" class="btn btn-primary uppercase" id="psopc-confirm-btn">{{ confirm_button_label }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const saveBtn = document.getElementById('psopc-save-btn');
+        const confirmBtn = document.getElementById('psopc-confirm-btn');
+        const modal = $('#psopc-confirmation-modal');
+        const form = document.querySelector('.psopc-configuration form');
+        const radioInputs = document.querySelectorAll('input[name="{{ configuration_key }}"]');
+        const maintenanceHidden = document.getElementById('psopc-maintenance-hidden');
+        const maintenanceToggle = document.getElementById('psopc-maintenance-toggle');
+
+        const initialValue = document.querySelector('input[name="{{ configuration_key }}"]:checked').value;
+
+        saveBtn.disabled = true;
+
+        radioInputs.forEach(function(radio) {
+          radio.addEventListener('change', function() {
+            const currentValue = document.querySelector('input[name="{{ configuration_key }}"]:checked').value;
+            saveBtn.disabled = (currentValue === initialValue);
+          });
+        });
+
+        saveBtn.addEventListener('click', function() {
+          maintenanceToggle.checked = false;
+          maintenanceHidden.value = '0';
+          modal.modal('show');
+        });
+
+        maintenanceToggle.addEventListener('change', function() {
+          maintenanceHidden.value = this.checked ? '1' : '0';
+        });
+
+        confirmBtn.addEventListener('click', function() {
+          modal.modal('hide');
+          form.submit();
+        });
+      });
+    </script>
   {% endif %}
 </div>
