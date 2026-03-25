@@ -204,7 +204,6 @@
   }
 }
 
-/* Confirmation modal - header */
 #psopc-confirmation-modal .modal-header {
   display: flex;
   justify-content: space-between;
@@ -236,7 +235,6 @@
   border-top: none;
 }
 
-/* Confirmation modal - warning alert */
 .psopc-modal-warning {
   display: flex;
   align-items: flex-start;
@@ -259,7 +257,6 @@
   line-height: 1.5;
 }
 
-/* Confirmation modal - maintenance toggle row */
 .psopc-maintenance-row {
   display: flex;
   justify-content: space-between;
