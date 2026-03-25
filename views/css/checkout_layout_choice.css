@@ -204,6 +204,11 @@
   }
 }
 
+#psopc-confirmation-modal .modal-dialog {
+  top: 50%;
+  max-height: 100vh;
+}
+
 #psopc-confirmation-modal .modal-header {
   display: flex;
   justify-content: space-between;
@@ -233,6 +238,35 @@
 
 #psopc-confirmation-modal .modal-footer {
   border-top: none;
+}
+
+.psopc-modal-intro {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #1D1D1B;
+}
+
+.psopc-modal-checklist-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1D1D1B;
+}
+
+.psopc-modal-checklist {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  color: #1D1D1B;
+  line-height: 1.5;
+}
+
+.psopc-modal-checklist li {
+  margin-bottom: 0.5rem;
+}
+
+.psopc-modal-checklist li:last-child {
+  margin-bottom: 0;
 }
 
 .psopc-modal-warning {

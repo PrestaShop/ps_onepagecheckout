@@ -85,7 +85,7 @@
       </div>
     </form>
 
-    <div id="psopc-confirmation-modal" class="modal modal-vcenter fade" role="dialog">
+    <div id="psopc-confirmation-modal" class="modal fade" role="dialog">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
@@ -93,10 +93,16 @@
             <button class="close" type="button" data-dismiss="modal">×</button>
           </div>
           <div class="modal-body">
-            <p>{{ confirm_modal_description }}</p>
+            <p class="psopc-modal-intro">{{ confirm_modal_description }}</p>
+            <p class="psopc-modal-checklist-title">{{ confirm_modal_checklist_title }}</p>
+            <ul class="psopc-modal-checklist">
+              {% for item in confirm_modal_checklist %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
             <div class="psopc-modal-warning">
               <i class="material-icons psopc-modal-warning-icon">warning</i>
-              <span>{{ maintenance_mode_warning }}</span>
+              <span>{{ maintenance_mode_warning|raw }}</span>
             </div>
             <div class="psopc-maintenance-row">
               <span>{{ maintenance_mode_label }}</span>

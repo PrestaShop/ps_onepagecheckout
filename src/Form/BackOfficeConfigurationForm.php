@@ -122,14 +122,20 @@ class BackOfficeConfigurationForm
                 'Admin.Design.Feature'
             ),
             'save_button_label' => $this->trans('Save', 'Admin.Actions'),
-            'confirm_modal_title' => $this->trans('Change checkout appearance', 'Modules.Psonepagecheckout.Admin'),
-            'confirm_modal_description' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_title' => $this->trans('Check theme compatibility', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_description' => $this->trans('One-page checkout layout requires a Hummingbird-compatible theme.', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_checklist_title' => $this->trans('Before you proceed, please make sure that:', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_checklist' => [
+                $this->trans('You are NOT using the "Classic" theme: This layout is incompatible with the legacy Classic theme and will break your storefront.', 'Modules.Psonepagecheckout.Admin'),
+                $this->trans('Your theme is Hummingbird-based: Ensure your custom or third-party theme supports this new checkout architecture.', 'Modules.Psonepagecheckout.Admin'),
+                $this->trans('Your checkout modules are compatible. Some older modules may not be compatible with a one-page layout.', 'Modules.Psonepagecheckout.Admin'),
+            ],
             'cancel_button_label' => $this->trans('Cancel', 'Admin.Actions'),
             'confirm_button_label' => $this->trans('Change checkout appearance', 'Modules.Psonepagecheckout.Admin'),
             'maintenance_mode_input_name' => self::MAINTENANCE_INPUT_NAME,
             'maintenance_mode_label' => $this->trans('Maintenance mode', 'Modules.Psonepagecheckout.Admin'),
             'maintenance_mode_warning' => $this->trans(
-                'We recommend you to enable the Maintenance mode to ensure a smooth transition and avoid any issues with orders.',
+                'We strongly recommend enabling <strong>Maintenance Mode</strong> or testing this in a <strong>Staging Environment</strong> first to ensure a smooth transition for your customers.',
                 'Modules.Psonepagecheckout.Admin'
             ),
             'choices' => [
