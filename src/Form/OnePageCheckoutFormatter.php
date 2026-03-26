@@ -35,10 +35,17 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
 {
     use AddressFieldsFormatTrait;
 
+    public const FIELD_GROUP_CUSTOMER = 'customer';
+    public const FIELD_GROUP_ADDRESS = 'address';
+
     protected $country;
     protected $translator;
     protected $availableCountries;
     protected $definition;
+    /**
+     * @var array<string, string>
+     */
+    private array $fieldGroups = [];
 
     /**
      * Separate country for the billing (invoice) address section.
@@ -88,6 +95,7 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
     public function getFormat()
     {
         $format = [];
+        $this->fieldGroups = [];
 
         // Identity section: email only
         $format['email'] = (new \FormField())
@@ -130,8 +138,10 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
                         continue;
                     }
 
+                    $fieldKey = $moduleName . '_' . $formField->getName();
                     $formField->moduleName = $moduleName;
-                    $format[$moduleName . '_' . $formField->getName()] = $formField;
+                    $this->fieldGroups[$fieldKey] = self::FIELD_GROUP_CUSTOMER;
+                    $format[$fieldKey] = $formField;
                 }
             }
         }
@@ -148,6 +158,11 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
                 )
             )
             ->setValue(true);
+
+        // Hidden field to preserve delivery address ID when editing
+        $format['id_address'] = (new \FormField())
+            ->setName('id_address')
+            ->setType('hidden');
 
         // Hidden field to preserve invoice address ID when editing
         $format['id_address_invoice'] = (new \FormField())
@@ -184,8 +199,10 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
                         continue;
                     }
 
+                    $fieldKey = $moduleName . '_' . $formField->getName();
                     $formField->moduleName = $moduleName;
-                    $format[$moduleName . '_' . $formField->getName()] = $formField;
+                    $this->fieldGroups[$fieldKey] = self::FIELD_GROUP_ADDRESS;
+                    $format[$fieldKey] = $formField;
                 }
             }
         }
@@ -203,5 +220,10 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
     protected function getDefinitionKey($name)
     {
         return strpos($name, 'invoice_') === 0 ? substr($name, 8) : $name;
+    }
+
+    public function getFieldGroup(string $key): ?string
+    {
+        return $this->fieldGroups[$key] ?? null;
     }
 }

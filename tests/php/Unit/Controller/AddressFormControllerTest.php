@@ -16,6 +16,7 @@ if (!defined('_DB_PREFIX_')) {
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
+use PrestaShop\PrestaShop\Adapter\Presenter\Object\ObjectPresenter;
 
 class AddressFormControllerTest extends TestCase
 {
@@ -34,6 +35,7 @@ class AddressFormControllerTest extends TestCase
     {
         $controller = new TestAddressFormController();
         $controller->module = $this->createEnabledModule();
+        $controller->setTestContext($this->createControllerContext());
 
         $handler = $this->getMockBuilder(OnePageCheckoutAddressFormHandler::class)
             ->disableOriginalConstructor()
@@ -54,7 +56,7 @@ class AddressFormControllerTest extends TestCase
 
         $response = $controller->callHandleAddressFormRefresh();
 
-        self::assertSame('rendered:checkout/_partials/one-page-checkout-form', $response['address_form']);
+        self::assertSame('rendered:checkout/_partials/one-page-checkout/addresses-section', $response['addresses_section']);
     }
 
     public function testHandleAddressFormRefreshReturnsTechnicalErrorOnRuntimeException(): void
@@ -88,6 +90,83 @@ class AddressFormControllerTest extends TestCase
     {
         return new DisabledPsOnepagecheckoutModuleForAddressForm();
     }
+
+    private function createControllerContext(): \Context
+    {
+        $smarty = $this->getMockBuilder(\Smarty::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['assign', 'getTemplateVars'])
+            ->getMock();
+        $smarty
+            ->expects($this->once())
+            ->method('assign')
+            ->with('customer', $this->callback(static function (array $customer): bool {
+                return array_key_exists('is_logged', $customer)
+                    && array_key_exists('is_guest', $customer)
+                    && array_key_exists('firstname', $customer)
+                    && array_key_exists('lastname', $customer)
+                    && array_key_exists('gender', $customer)
+                    && array_key_exists('risk', $customer)
+                    && array_key_exists('addresses', $customer)
+                    && $customer['is_logged'] === false
+                    && $customer['is_guest'] === true
+                    && $customer['firstname'] === 'Alice'
+                    && $customer['lastname'] === 'Doe'
+                    && is_array($customer['addresses']);
+            }))
+        ;
+        $smarty
+            ->method('getTemplateVars')
+            ->with('customer')
+            ->willReturn([])
+        ;
+
+        $context = new class extends \Context {
+            public function __construct()
+            {
+            }
+        };
+        $context->smarty = $smarty;
+        $context->customer = new class extends \Customer {
+            public function __construct()
+            {
+            }
+
+            public function getSimpleAddresses($idLang = null)
+            {
+                return [
+                    [
+                        'id' => 0,
+                        'alias' => 'Home',
+                    ],
+                ];
+            }
+
+            public function isGuest()
+            {
+                return true;
+            }
+
+            public function isLogged($withGuest = false)
+            {
+                return false;
+            }
+        };
+        $context->customer->id = 42;
+        $context->customer->firstname = 'Alice';
+        $context->customer->lastname = 'Doe';
+        $context->customer->id_gender = 0;
+        $context->customer->id_risk = 0;
+        $context->customer->is_guest = true;
+        $context->language = new class extends \Language {
+            public function __construct()
+            {
+            }
+        };
+        $context->language->id = 1;
+
+        return $context;
+    }
 }
 
 class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFrontController
@@ -103,6 +182,12 @@ class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFron
     public function callHandleAddressFormRefresh(): array
     {
         return $this->handleAddressFormRefresh();
+    }
+
+    public function setTestContext(\Context $context): void
+    {
+        $this->context = $context;
+        $this->objectPresenter = new ObjectPresenter();
     }
 
     protected function createAddressFormHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutAddressFormHandler

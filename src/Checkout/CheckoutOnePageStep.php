@@ -46,6 +46,8 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
      */
     public $paymentOptionsFinder;
 
+    private PaymentSelectionKeyBuilder $paymentSelectionKeyBuilder;
+
     /**
      * @var \ConditionsToApproveFinder
      */
@@ -66,6 +68,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
      * @param OnePageCheckoutForm $opcForm
      * @param \PaymentOptionsFinder $paymentOptionsFinder
      * @param \ConditionsToApproveFinder $conditionsToApproveFinder
+     * @param PaymentSelectionKeyBuilder|null $paymentSelectionKeyBuilder
      */
     public function __construct(
         \Context $context,
@@ -73,11 +76,13 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         OnePageCheckoutForm $opcForm,
         \PaymentOptionsFinder $paymentOptionsFinder,
         \ConditionsToApproveFinder $conditionsToApproveFinder,
+        ?PaymentSelectionKeyBuilder $paymentSelectionKeyBuilder = null,
     ) {
         parent::__construct($context, $translator);
         $this->opcForm = $opcForm;
         $this->paymentOptionsFinder = $paymentOptionsFinder;
         $this->conditionsToApproveFinder = $conditionsToApproveFinder;
+        $this->paymentSelectionKeyBuilder = $paymentSelectionKeyBuilder ?? new PaymentSelectionKeyBuilder();
     }
 
     // Delivery options setters (like CheckoutDeliveryStep)
@@ -151,6 +156,15 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             $this->hydrateOpcFromSession();
         }
 
+        if (
+            !$this->context->cart->isVirtualCart()
+            && isset($requestParameters['delivery_option'])
+            && is_array($requestParameters['delivery_option'])
+            && !isset($requestParameters['submitOnePageCheckout'])
+        ) {
+            $this->getCheckoutSession()->setDeliveryOption($requestParameters['delivery_option']);
+        }
+
         // Handle submission
         if (isset($requestParameters['submitOnePageCheckout'])) {
             $this->handleOnePageCheckoutSubmit($requestParameters);
@@ -193,6 +207,8 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
 
     private function handleOnePageCheckoutSubmit(array $requestParameters): void
     {
+        $this->hydrateOpcFromSubmittedAddresses($requestParameters);
+
         $validationResult = $this->validateAllSections($requestParameters);
         if (!$this->isAllSectionsValid($validationResult)) {
             $this->getCheckoutProcess()->setHasErrors(true);
@@ -226,8 +242,19 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             'conditions' => true,
         ];
 
-        // 1. Identity validation: email only
-        if (empty($requestParameters['email']) || !\Validate::isEmail($requestParameters['email'])) {
+        // 1. Identity validation: registered customers reuse the email already stored in session.
+        $customer = $this->context->customer;
+        $email = (string) ($requestParameters['email'] ?? '');
+        if (
+            $email === ''
+            && $customer instanceof \Customer
+            && $customer->isLogged()
+            && !$customer->isGuest()
+        ) {
+            $email = (string) $customer->email;
+        }
+
+        if ($email === '' || !\Validate::isEmail($email)) {
             $result['identity'] = false;
             $this->validationErrors['identity'] = [
                 'email' => $this->getTranslator()->trans(
@@ -298,6 +325,22 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         $this->getCheckoutSession()->setIdAddressDelivery($addressIds['id_address_delivery']);
         $this->getCheckoutSession()->setIdAddressInvoice($addressIds['id_address_invoice']);
 
+        if (isset($requestParameters['delivery_message'])) {
+            $this->getCheckoutSession()->setMessage($requestParameters['delivery_message']);
+        }
+
+        if ($this->isRecyclablePackAllowed()) {
+            $this->getCheckoutSession()->setRecyclable($requestParameters['recyclable'] ?? false);
+        }
+
+        if ($this->isGiftAllowed()) {
+            $useGift = $requestParameters['gift'] ?? false;
+            $this->getCheckoutSession()->setGift(
+                $useGift,
+                $useGift ? ($requestParameters['gift_message'] ?? '') : ''
+            );
+        }
+
         // Sync customer name from delivery address if needed
         $customer = $this->getCheckoutSession()->getCustomer();
         if ($customer && ($customer->isGuest() || empty($customer->firstname) || empty($customer->lastname))) {
@@ -313,6 +356,29 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         return true;
     }
 
+    private function hydrateOpcFromSubmittedAddresses(array $requestParameters): void
+    {
+        $deliveryAddressId = (int) ($requestParameters['id_address'] ?? 0);
+        $invoiceAddressId = (int) ($requestParameters['id_address_invoice'] ?? 0);
+        $customerId = (int) ($this->context->customer->id ?? 0);
+
+        if (($deliveryAddressId <= 0 && $invoiceAddressId <= 0) || $customerId <= 0) {
+            return;
+        }
+
+        $languageId = (int) $this->context->language->id;
+        $deliveryAddress = $this->resolveSubmittedAddress($deliveryAddressId, $customerId, $languageId);
+        $invoiceAddress = null;
+
+        if ($invoiceAddressId > 0 && $invoiceAddressId !== $deliveryAddressId) {
+            $invoiceAddress = $this->resolveSubmittedAddress($invoiceAddressId, $customerId, $languageId);
+        }
+
+        if ($deliveryAddress || $invoiceAddress) {
+            $this->opcForm->fillFromAddresses($deliveryAddress, $invoiceAddress);
+        }
+    }
+
     /**
      * Get validation errors
      *
@@ -323,20 +389,12 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         return $this->validationErrors;
     }
 
-    /**
-     * Keep step identifier stable to avoid persistence regressions in checkout_session_data.
-     *
-     * @return string
-     */
-    public function getIdentifier()
-    {
-        return 'checkout-one-page-step';
-    }
-
     public function render(array $extraParams = [])
     {
         $isFree = 0 == (float) $this->getCheckoutSession()->getCart()->getOrderTotal(true, \Cart::BOTH);
-        $paymentOptions = $this->paymentOptionsFinder->present($isFree);
+        $paymentOptions = $this->paymentSelectionKeyBuilder->enrichPaymentOptions(
+            $this->paymentOptionsFinder->present($isFree)
+        );
         $conditionsToApprove = $this->conditionsToApproveFinder->getConditionsToApproveForTemplate();
         $deliveryOptions = $this->getCheckoutSession()->getDeliveryOptions();
         $deliveryOptionKey = $this->getCheckoutSession()->getSelectedDeliveryOption();
@@ -352,13 +410,14 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         }
 
         $assignedVars = [
-            'opc_form' => $this->opcForm->getProxy(),
             'hookDisplayBeforeCarrier' => \Hook::exec('displayBeforeCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
             'hookDisplayAfterCarrier' => \Hook::exec('displayAfterCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
             'delivery_options' => $deliveryOptions,
             'delivery_option' => $deliveryOptionKey,
             'selected_delivery_option' => $selectedDeliveryOption,
             'payment_options' => $paymentOptions,
+            'selected_payment_module' => $this->getSelectedPaymentModule(),
+            'selected_payment_selection_key' => $this->getSelectedPaymentSelectionKey(),
             'conditions_to_approve' => $conditionsToApprove,
             'validation_errors' => $this->validationErrors,
             'recyclable' => $this->getCheckoutSession()->isRecyclable(),
@@ -370,8 +429,55 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
                 'message' => $this->getCheckoutSession()->getGift()['message'],
             ],
             'is_virtual_cart' => $this->context->cart->isVirtualCart(),
-        ];
+            'configuration' => $this->getTemplateConfiguration(),
+        ] + $this->opcForm->getTemplateVariables();
 
         return $this->renderTemplate($this->getTemplate(), $extraParams, $assignedVars);
+    }
+
+    private function getSelectedPaymentModule(): string
+    {
+        if (!isset($this->context->cookie)) {
+            return '';
+        }
+
+        return (string) ($this->context->cookie->__get('opc_selected_payment_module') ?: '');
+    }
+
+    private function getSelectedPaymentSelectionKey(): string
+    {
+        if (!isset($this->context->cookie)) {
+            return '';
+        }
+
+        return (string) ($this->context->cookie->__get('opc_selected_payment_selection_key') ?: '');
+    }
+
+    private function resolveSubmittedAddress(int $addressId, int $customerId, int $languageId): ?\Address
+    {
+        if ($addressId <= 0 || !\Customer::customerHasAddress($customerId, $addressId)) {
+            return null;
+        }
+
+        $address = new \Address($addressId, $languageId);
+
+        return \Validate::isLoadedObject($address) ? $address : null;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function getTemplateConfiguration(): array
+    {
+        $configuration = [];
+        $controller = $this->context->controller ?? null;
+
+        if (is_object($controller) && method_exists($controller, 'getTemplateVarConfiguration')) {
+            $configuration = (array) $controller->getTemplateVarConfiguration();
+        }
+
+        $configuration['is_guest_checkout_enabled'] = (bool) \Configuration::get('PS_GUEST_CHECKOUT_ENABLED');
+
+        return $configuration;
     }
 }

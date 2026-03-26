@@ -73,3 +73,30 @@
 - Context: `PS_ONE_PAGE_CHECKOUT_ENABLED` is no longer provisioned by Core and must be fully owned by the module lifecycle.
 - Decision: create `PS_ONE_PAGE_CHECKOUT_ENABLED` during module install with value `0`, and remove it during module uninstall instead of recreating it with value `0`.
 - Impact: module installation remains self-sufficient without activating OPC by default, and uninstall leaves no stale OPC configuration entry behind.
+
+## 2026-03-23
+
+### D-015
+- Context: `opcFinalSubmitStarted` was still treated as a Core-side runtime dependency while the checkout flow had already moved into `ps_onepagecheckout`.
+- Decision: the module owns the emission of `opcFinalSubmitStarted`, and must ship the runtime asset that emits it during final checkout submit.
+- Impact: the JS contract required by guest-init and final-submit protections stays available even when the module owns the checkout process.
+
+### D-016
+- Context: registration success messaging was discussed during OPC migration, but the module does not own the registration controller lifecycle.
+- Decision: `RegistrationController` and the `Account successfully created` success message remain Core-owned and must not be duplicated or overridden by `ps_onepagecheckout`.
+- Impact: the module stays focused on checkout behavior and avoids reintroducing registration logic outside Core.
+
+### D-017
+- Context: the dedicated BO tab `AdminPsOnePageCheckout` appends module configuration content after the legacy admin controller initialization step.
+- Decision: only append configuration content when BO view access is granted.
+- Impact: unauthorized employees cannot render the module configuration content through the dedicated BO controller.
+
+### D-018
+- Context: the migrated checkout runtime depends on an existing JS event contract that has two distinct responsibilities.
+- Decision: document and test `opcFinalSubmitStarted` as both a listener contract for existing runtime code and an emitter contract owned by `ps_onepagecheckout`.
+- Impact: the module preserves compatibility with current listeners while making ownership of the final-submit event explicit.
+
+### D-019
+- Context: guest-init legacy behavior could rebind a brand new anonymous cart to an older guest account when the submitted email already matched an existing guest.
+- Decision: ownership is `1 anonymous cart = 1 guest customer`. A guest may be reused only for the same cart already linked to that guest, never for a fresh anonymous cart.
+- Impact: a new anonymous cart must create a new guest even when the submitted email matches an older guest account; legacy reuse scenarios must not be reintroduced.

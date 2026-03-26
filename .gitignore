@@ -1,6 +1,9 @@
 /config_*.xml
 /translations/*.php
 /node_modules
+/tests/e2e/node_modules
+/tests/e2e/artifacts
+/tests/e2e/.env
 /vendor
 /views/node_modules
 /.php_cs.cache

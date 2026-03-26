@@ -3,6 +3,7 @@
 ## Scope
 
 These rules are mandatory for one-page checkout implementation in the native `ps_onepagecheckout` module.
+The migration reference document is [`docs/CORE_PORTING_PLAYBOOK.md`](./CORE_PORTING_PLAYBOOK.md).
 
 ## Architecture
 
@@ -35,6 +36,19 @@ Both entry points must render the same module-owned configuration flow (no redir
 - `npm run watch`
 - `npm run build`
 3. When changing files under `views/js`, developers must regenerate and commit the built assets shipped by the module from `views/public` (including `*.LICENSE.txt` files). See [`README.md` → Front assets](../README.md#front-assets).
+
+## Core to module migration
+
+1. Triage every future checkout change using the playbook before coding.
+2. Correct existing parity gaps in the module before porting new Core behavior.
+3. Keep Core changes to the minimal no-override surface only.
+4. Keep checkout business logic in the module and DOM/visual ownership in Hummingbird.
+
+## Test workflow
+
+1. Each migration lot must be implemented with a story/test pair and incremental automated verification.
+2. Every lot must ship unit tests for local logic and integration tests for observable behavior.
+3. After JS changes, rebuild `views/public/*` and verify the runtime contracts through tests.
 
 ## Delivery checklist
 

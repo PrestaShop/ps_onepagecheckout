@@ -63,10 +63,13 @@ prepare_prestashop_volume() {
 
   docker run --rm \
     -v "${PS_ROOT_DIR_HOST}:/source:ro" \
+    -v "${REPO_DIR}:/module-source:ro" \
     -v "${PS_VOLUME}:/var/www/html" \
     alpine sh -lc '
       cp -a /source/. /var/www/html/ &&
       rm -rf /var/www/html/modules/ps_onepagecheckout &&
+      mkdir -p /var/www/html/modules/ps_onepagecheckout &&
+      cp -a /module-source/. /var/www/html/modules/ps_onepagecheckout/ &&
       chown -R 33:33 /var/www/html
     '
 }
@@ -223,7 +226,7 @@ run_phpunit() {
   fi
 
   docker run "${docker_run_args[@]}" "${PHPUNIT_IMAGE}" \
-    -lc "SYMFONY_DEPRECATIONS_HELPER=disabled /var/www/html/vendor/bin/phpunit -c ${PHPUNIT_CONFIG}"
+    -lc "if command -v composer >/dev/null 2>&1; then composer dump-autoload -o --no-interaction; fi; SYMFONY_DEPRECATIONS_HELPER=disabled /var/www/html/vendor/bin/phpunit -c ${PHPUNIT_CONFIG}"
 }
 
 case "${TEST_SUITE}" in

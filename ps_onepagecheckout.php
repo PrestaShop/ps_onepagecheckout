@@ -56,7 +56,18 @@ class Ps_Onepagecheckout extends Module
             'Modules.Psonepagecheckout.Admin'
         );
         $this->ps_versions_compliancy = ['min' => '9.0.0', 'max' => _PS_VERSION_];
-        $this->controllers = ['GuestInit', 'AddressForm'];
+        $this->controllers = [
+            'guestinit',
+            'addressform',
+            'addresseslist',
+            'states',
+            'saveaddress',
+            'deleteaddress',
+            'carriers',
+            'selectcarrier',
+            'paymentmethods',
+            'selectpayment',
+        ];
     }
 
     public function install()
@@ -129,7 +140,7 @@ class Ps_Onepagecheckout extends Module
             'urls' => [
                 'guestInit' => $this->context->link->getModuleLink(
                     $this->name,
-                    'GuestInit',
+                    'guestinit',
                     ['ajax' => 1, 'action' => 'opcGuestInit'],
                     null,
                     null,
@@ -138,13 +149,95 @@ class Ps_Onepagecheckout extends Module
                 ),
                 'addressForm' => $this->context->link->getModuleLink(
                     $this->name,
-                    'AddressForm',
+                    'addressform',
                     ['ajax' => 1, 'action' => 'opcAddressForm'],
                     null,
                     null,
                     null,
                     true
                 ),
+                'addressesList' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'addresseslist',
+                    ['ajax' => 1, 'action' => 'opcAddressesList'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'states' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'states',
+                    ['ajax' => 1, 'action' => 'getStatesByCountry'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'saveAddress' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'saveaddress',
+                    ['ajax' => 1, 'action' => 'saveOpcAddress'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'deleteAddress' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'deleteaddress',
+                    ['ajax' => 1, 'action' => 'deleteOpcAddress'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'carriers' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'carriers',
+                    ['ajax' => 1, 'action' => 'opcCarriers'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'selectCarrier' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'selectcarrier',
+                    ['ajax' => 1, 'action' => 'opcSelectCarrier'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'paymentMethods' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'paymentmethods',
+                    ['ajax' => 1, 'action' => 'opcPaymentMethods'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'selectPayment' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'selectpayment',
+                    ['ajax' => 1, 'action' => 'opcSelectPayment'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+            ],
+            'i18n' => [
+                'deleteAddressConfirmTitle' => $this->trans('Delete this address?', [], 'Shop.Theme.Actions'),
+                'deleteAddressConfirmMessage' => $this->trans(
+                    'This action will remove the selected address from your checkout.',
+                    [],
+                    'Shop.Theme.Checkout'
+                ),
+                'deleteAddressConfirmLabel' => $this->trans('Delete', [], 'Shop.Theme.Actions'),
+                'deleteAddressCancelLabel' => $this->trans('Cancel', [], 'Shop.Theme.Actions'),
             ],
         ];
 
@@ -202,6 +295,32 @@ class Ps_Onepagecheckout extends Module
                 'priority' => 151,
             ]
         );
+
+        $this->context->controller->registerJavascript(
+            'module-ps-onepagecheckout-submit',
+            'modules/' . $this->name . '/views/public/opc-submit.bundle.js',
+            [
+                'position' => 'bottom',
+                'priority' => 149,
+            ]
+        );
+
+        foreach ([
+            ['module-ps-onepagecheckout-address-modal', 'views/public/opc-address-modal.bundle.js', 152],
+            ['module-ps-onepagecheckout-carriers', 'views/public/opc-carrier-list.bundle.js', 153],
+            ['module-ps-onepagecheckout-select-carrier', 'views/public/opc-carrier-select.bundle.js', 154],
+            ['module-ps-onepagecheckout-payment-methods', 'views/public/opc-payment-list.bundle.js', 155],
+            ['module-ps-onepagecheckout-select-payment', 'views/public/opc-payment-select.bundle.js', 156],
+        ] as [$id, $path, $priority]) {
+            $this->context->controller->registerJavascript(
+                $id,
+                'modules/' . $this->name . '/' . $path,
+                [
+                    'position' => 'bottom',
+                    'priority' => $priority,
+                ]
+            );
+        }
     }
 
     protected function addOpcJavascriptDefinition(array $javascriptDefinition): void
