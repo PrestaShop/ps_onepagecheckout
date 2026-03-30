@@ -59,8 +59,8 @@
 
 ### D-012
 - Context: BO tab was historically stored as `AdminPsOnepagecheckout` in existing databases.
-- Decision: add module upgrade `1.0.1` to rename tab class name in DB to `AdminPsOnePageCheckout`.
-- Impact: naming conventions are respected without breaking existing installs.
+- Decision: do not ship a module-owned `upgrade/` migration for this rename yet, because the module has not been released and there is no released-to-released upgrade path to support at this stage.
+- Impact: no speculative upgrade file is added before it is needed, but module-owned `upgrade/` scripts remain expected later whenever a real released version transition requires a migration.
 
 ### D-013
 - Context: module targets PrestaShop `9.2.0`, where BO rendering is Twig-first.
@@ -73,3 +73,18 @@
 - Context: `PS_ONE_PAGE_CHECKOUT_ENABLED` is no longer provisioned by Core and must be fully owned by the module lifecycle.
 - Decision: create `PS_ONE_PAGE_CHECKOUT_ENABLED` during module install with value `0`, and remove it during module uninstall instead of recreating it with value `0`.
 - Impact: module installation remains self-sufficient without activating OPC by default, and uninstall leaves no stale OPC configuration entry behind.
+
+### D-015
+- Context: module PHPUnit suites were not executed in CI, and local vs CI execution paths were diverging.
+- Decision: run unit and integration suites in GitHub Actions through a shared isolated entrypoint, `./scripts/run-tests.sh`, used both locally and in CI.
+- Impact: PHPUnit execution is reproducible across environments, and regressions detected by unit or integration suites now block validation.
+
+### D-016
+- Context: `ps_onepagecheckout` must be available as a native baseline in the Core and later upgradable from the Back Office.
+- Decision: publish `prestashop/ps_onepagecheckout` on Packagist for initial Core inclusion, then expose newer versions through `distribution-api`.
+- Impact: the baseline version is pinned by the Core `composer.lock`, while newer compatible releases can still be discovered and upgraded from Module Manager.
+
+### D-017
+- Context: distribution and archive retrieval for native module updates are handled outside this repository by Packagist and `distribution-api`.
+- Decision: keep module tests focused on module-owned lifecycle only; document external publication/distribution steps without retesting them here.
+- Impact: the suite validates install/enable/disable/uninstall behavior, while Packagist publication, archive retrieval and upgrade execution through `distribution-api` stay external operational concerns.
