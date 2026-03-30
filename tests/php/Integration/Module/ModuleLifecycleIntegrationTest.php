@@ -25,7 +25,6 @@ class ModuleLifecycleIntegrationTest extends TestCase
 
     private const MODULE_NAME = 'ps_onepagecheckout';
     private const CONFIG_ONE_PAGE_CHECKOUT_ENABLED = 'PS_ONE_PAGE_CHECKOUT_ENABLED';
-    private const CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE = 'PS_CHECKOUT_PROCESS_PROVIDER_MODULE';
 
     protected function setUp(): void
     {
@@ -49,7 +48,7 @@ class ModuleLifecycleIntegrationTest extends TestCase
         \Module::updateTranslationsAfterInstall(false);
     }
 
-    public function testInstallDisableEnableAndUninstallKeepCheckoutProviderStateConsistent(): void
+    public function testInstallDisableEnableAndUninstallKeepOpcFlagStateConsistent(): void
     {
         $module = $this->buildModule();
 
@@ -57,7 +56,6 @@ class ModuleLifecycleIntegrationTest extends TestCase
         self::assertTrue(\Module::isInstalled(self::MODULE_NAME));
         self::assertTrue(\Module::isEnabled(self::MODULE_NAME));
         self::assertSame('0', (string) \Configuration::get(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED));
-        self::assertSame(self::MODULE_NAME, trim((string) \Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE)));
 
         $module = $this->buildModule();
         self::assertTrue($module->disable());
@@ -65,14 +63,12 @@ class ModuleLifecycleIntegrationTest extends TestCase
 
         self::assertFalse(\Module::isEnabled(self::MODULE_NAME));
         self::assertSame('0', (string) \Configuration::get(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED));
-        self::assertSame('', trim((string) \Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE)));
 
         $module = $this->buildModule();
         self::assertTrue($module->enable());
         \Configuration::loadConfiguration();
 
         self::assertTrue(\Module::isEnabled(self::MODULE_NAME));
-        self::assertSame(self::MODULE_NAME, trim((string) \Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE)));
         self::assertSame('0', (string) \Configuration::get(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED));
 
         $module = $this->buildModule();
@@ -81,7 +77,6 @@ class ModuleLifecycleIntegrationTest extends TestCase
 
         self::assertFalse(\Module::isInstalled(self::MODULE_NAME));
         self::assertSame('0', (string) \Configuration::get(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED));
-        self::assertSame('', trim((string) \Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE)));
     }
 
     private function buildModule(): \Ps_Onepagecheckout
