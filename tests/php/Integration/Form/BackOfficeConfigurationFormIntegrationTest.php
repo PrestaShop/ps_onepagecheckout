@@ -244,8 +244,18 @@ class IntegrationBackOfficeControllerStub
      */
     public array $registeredCss = [];
 
+    /**
+     * @var string[]
+     */
+    public array $registeredJs = [];
+
     public function addCSS($css): void
     {
         $this->registeredCss[] = (string) $css;
+    }
+
+    public function addJS($js): void
+    {
+        $this->registeredJs[] = (string) $js;
     }
 }

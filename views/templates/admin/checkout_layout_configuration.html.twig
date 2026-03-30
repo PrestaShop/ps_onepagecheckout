@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="{{ checkout_layout_css_url }}">
 {% endif %}
 
-<div class="psopc-configuration">
+<div class="psopc-configuration" data-opc-configuration-key="{{ configuration_key }}">
   {% if not is_single_shop_context %}
     <div class="alert alert-warning" role="alert">
       <p class="alert-text">{{ single_shop_context_warning }}</p>
@@ -120,42 +120,5 @@
       </div>
     </div>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const saveBtn = document.getElementById('psopc-save-btn');
-        const confirmBtn = document.getElementById('psopc-confirm-btn');
-        const modal = $('#psopc-confirmation-modal');
-        const form = document.querySelector('.psopc-configuration form');
-        const radioInputs = document.querySelectorAll('input[name="{{ configuration_key }}"]');
-        const maintenanceHidden = document.getElementById('psopc-maintenance-hidden');
-        const maintenanceToggle = document.getElementById('psopc-maintenance-toggle');
-
-        const initialValue = document.querySelector('input[name="{{ configuration_key }}"]:checked').value;
-
-        saveBtn.disabled = true;
-
-        radioInputs.forEach(function(radio) {
-          radio.addEventListener('change', function() {
-            const currentValue = document.querySelector('input[name="{{ configuration_key }}"]:checked').value;
-            saveBtn.disabled = (currentValue === initialValue);
-          });
-        });
-
-        saveBtn.addEventListener('click', function() {
-          maintenanceToggle.checked = false;
-          maintenanceHidden.value = '0';
-          modal.modal('show');
-        });
-
-        maintenanceToggle.addEventListener('change', function() {
-          maintenanceHidden.value = this.checked ? '1' : '0';
-        });
-
-        confirmBtn.addEventListener('click', function() {
-          modal.modal('hide');
-          form.submit();
-        });
-      });
-    </script>
   {% endif %}
 </div>

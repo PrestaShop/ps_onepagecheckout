@@ -53,19 +53,17 @@ class BackOfficeConfigurationForm
 
         if (\Tools::isSubmit(self::FORM_SUBMIT_ACTION)) {
             $isEnabled = (int) \Tools::getValue($this->configurationKey, 0) === 1;
-            $enableMaintenance = (int) \Tools::getValue(self::MAINTENANCE_INPUT_NAME, 0) === 1;
+            $isMaintenanceEnabled = (int) \Tools::getValue(self::MAINTENANCE_INPUT_NAME, 0) === 1;
 
-            if ($enableMaintenance) {
-                if (!$this->enableMaintenanceMode()) {
-                    return $this->module->displayError(
-                        $this->trans('Unable to enable maintenance mode. Checkout layout was not changed.', 'Modules.Psonepagecheckout.Admin')
-                    ) . $this->renderConfigurationForm();
-                }
+            if ($isMaintenanceEnabled && !$this->enableMaintenanceMode()) {
+                return $this->module->displayError(
+                    $this->trans('Unable to enable maintenance mode. Checkout layout was not changed.', 'Modules.Psonepagecheckout.Admin')
+                ) . $this->renderConfigurationForm();
             }
 
             $this->persistConfigurationValue((int) $isEnabled);
 
-            if ($enableMaintenance) {
+            if ($isMaintenanceEnabled) {
                 $this->storeMaintenanceFlash();
             } else {
                 $this->storeSuccessFlash();
@@ -207,6 +205,10 @@ class BackOfficeConfigurationForm
         $context->controller->addCSS(
             $this->module->getPathUri() . 'views/css/checkout_layout_choice.css'
         );
+
+        $context->controller->addJS(
+            $this->module->getPathUri() . 'views/public/opc-checkout-layout.bundle.js'
+        );
     }
 
     private function trans(string $message, string $domain = 'Modules.Psonepagecheckout.Admin'): string
@@ -275,18 +277,18 @@ class BackOfficeConfigurationForm
             return;
         }
 
-        $context->cookie->{self::SUCCESS_FLASH_COOKIE_KEY} = '1';
+        $context->cookie->__set(self::SUCCESS_FLASH_COOKIE_KEY, '1');
         $context->cookie->write();
     }
 
     protected function consumeSuccessFlash(): bool
     {
         $context = \Context::getContext();
-        if (!isset($context->cookie) || !isset($context->cookie->{self::SUCCESS_FLASH_COOKIE_KEY})) {
+        if (!isset($context->cookie) || !$context->cookie->__isset(self::SUCCESS_FLASH_COOKIE_KEY)) {
             return false;
         }
 
-        unset($context->cookie->{self::SUCCESS_FLASH_COOKIE_KEY});
+        $context->cookie->__unset(self::SUCCESS_FLASH_COOKIE_KEY);
         $context->cookie->write();
 
         return true;
@@ -299,18 +301,18 @@ class BackOfficeConfigurationForm
             return;
         }
 
-        $context->cookie->{self::MAINTENANCE_FLASH_COOKIE_KEY} = '1';
+        $context->cookie->__set(self::MAINTENANCE_FLASH_COOKIE_KEY, '1');
         $context->cookie->write();
     }
 
     protected function consumeMaintenanceFlash(): bool
     {
         $context = \Context::getContext();
-        if (!isset($context->cookie) || !isset($context->cookie->{self::MAINTENANCE_FLASH_COOKIE_KEY})) {
+        if (!isset($context->cookie) || !$context->cookie->__isset(self::MAINTENANCE_FLASH_COOKIE_KEY)) {
             return false;
         }
 
-        unset($context->cookie->{self::MAINTENANCE_FLASH_COOKIE_KEY});
+        $context->cookie->__unset(self::MAINTENANCE_FLASH_COOKIE_KEY);
         $context->cookie->write();
 
         return true;

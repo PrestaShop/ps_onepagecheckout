@@ -10,6 +10,7 @@ module.exports = {
   entry: {
     'opc-guest-init': './js/opc-guest-init.js',
     'opc-address': './js/opc-address.js',
+    'opc-checkout-layout': './js/opc-checkout-layout.js',
   },
   output: {
     path: path.resolve(__dirname, 'public'),
