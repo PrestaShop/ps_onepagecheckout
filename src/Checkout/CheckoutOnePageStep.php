@@ -410,6 +410,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         }
 
         $assignedVars = [
+            'opc_form' => $this->opcForm->getProxy(),
             'hookDisplayBeforeCarrier' => \Hook::exec('displayBeforeCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
             'hookDisplayAfterCarrier' => \Hook::exec('displayAfterCarrier', ['cart' => $this->getCheckoutSession()->getCart()]),
             'delivery_options' => $deliveryOptions,

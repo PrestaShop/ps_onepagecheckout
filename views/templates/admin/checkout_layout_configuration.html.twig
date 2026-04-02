@@ -89,14 +89,14 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h4 class="modal-title" data-psopc-modal="compatibility">{{ confirm_modal_compatibility_title }}</h4>
-            <h4 class="modal-title" data-psopc-modal="direct" style="display:none">{{ confirm_modal_title }}</h4>
+            <h4 class="modal-title" data-psopc-modal="opc">{{ confirm_modal_compatibility_title }}</h4>
+            <h4 class="modal-title" data-psopc-modal="simple" style="display:none">{{ confirm_modal_title }}</h4>
             <button class="close" type="button" data-dismiss="modal">×</button>
           </div>
           <div class="modal-body">
-            <p class="psopc-modal-intro" data-psopc-modal="compatibility">{{ confirm_modal_compatibility_description }}</p>
-            <p class="psopc-modal-intro" data-psopc-modal="direct" style="display:none">{{ confirm_modal_description }}</p>
-            <div data-psopc-modal="compatibility">
+            <p class="psopc-modal-intro" data-psopc-modal="opc">{{ confirm_modal_compatibility_description }}</p>
+            <p class="psopc-modal-intro" data-psopc-modal="simple" style="display:none">{{ confirm_modal_description }}</p>
+            <div data-psopc-modal="opc">
               <p class="psopc-modal-checklist-title">{{ confirm_modal_checklist_title }}</p>
               <ul class="psopc-modal-checklist">
                 {% for item in confirm_modal_checklist %}
@@ -104,7 +104,7 @@
                 {% endfor %}
               </ul>
             </div>
-            {% if !is_maintenance_enabled %}
+            {% if not is_maintenance_enabled %}
               <div class="psopc-modal-warning">
                 <i class="material-icons psopc-modal-warning-icon">warning</i>
                 <span>{{ maintenance_mode_warning|raw }}</span>

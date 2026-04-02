@@ -33,21 +33,21 @@ const MODAL_SELECTOR = '#psopc-confirmation-modal';
 const FORM_SELECTOR = '.psopc-configuration form';
 const MAINTENANCE_HIDDEN_SELECTOR = '#psopc-maintenance-hidden';
 const MAINTENANCE_TOGGLE_SELECTOR = '#psopc-maintenance-toggle';
-const COMPATIBILITY_SELECTOR = '[data-psopc-modal="compatibility"]';
-const DIRECT_SELECTOR = '[data-psopc-modal="direct"]';
+const OPC_SELECTOR = '[data-psopc-modal="opc"]';
+const SIMPLE_SELECTOR = '[data-psopc-modal="simple"]';
 
 /**
  * @param {boolean} isOpc
  */
 function updateModalContent(isOpc) {
-  const compatibilityElements = document.querySelectorAll(COMPATIBILITY_SELECTOR);
-  const directElements = document.querySelectorAll(DIRECT_SELECTOR);
+  const opcSelectors = document.querySelectorAll(OPC_SELECTOR);
+  const simpleSelectors = document.querySelectorAll(SIMPLE_SELECTOR);
 
-  compatibilityElements.forEach(function (el) {
+  opcSelectors.forEach(function (el) {
     el.style.display = isOpc ? '' : 'none';
   });
 
-  directElements.forEach(function (el) {
+  simpleSelectors.forEach(function (el) {
     el.style.display = isOpc ? 'none' : '';
   });
 }
