@@ -39,7 +39,7 @@ class OnePageCheckoutFormTest extends TestCase
 
         $this->formatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
             ->disableOriginalConstructor()
-            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry'])
+            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry', 'getFieldGroup'])
             ->getMock()
         ;
         $this->formatter
@@ -63,6 +63,10 @@ class OnePageCheckoutFormTest extends TestCase
         $this->formatter
             ->method('setInvoiceCountry')
             ->willReturnSelf()
+        ;
+        $this->formatter
+            ->method('getFieldGroup')
+            ->willReturnCallback([$this, 'getFieldGroupForTest'])
         ;
 
         $this->customerPersister = $this->getMockBuilder(\CustomerPersister::class)
@@ -224,6 +228,7 @@ class OnePageCheckoutFormTest extends TestCase
             'email' => 'guest-no-module-validation@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
+            'communication_channel' => 'email',
         ])));
         self::assertFalse($form->wasModuleValidationCalled());
         self::assertEmpty($form->getField('compliance_note')->getErrors());
@@ -263,12 +268,11 @@ class OnePageCheckoutFormTest extends TestCase
         $form = $this->createForm();
 
         $this->customerPersister
-            ->expects($this->once())
+            ->expects($this->never())
             ->method('save')
-            ->willReturn(true)
         ;
 
-        self::assertTrue($form->submitGuestInit($this->withDefaultCountry([
+        self::assertFalse($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'guest-radio-missing@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
@@ -277,7 +281,7 @@ class OnePageCheckoutFormTest extends TestCase
 
         $errors = $form->getErrors();
         self::assertArrayHasKey('communication_channel', $errors);
-        self::assertEmpty($errors['communication_channel']);
+        self::assertNotEmpty($errors['communication_channel']);
     }
 
     public function testGuestInitIgnoresRequiredAddressConsentFields(): void
@@ -295,6 +299,7 @@ class OnePageCheckoutFormTest extends TestCase
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
             'compliance_note' => 'Ready',
+            'communication_channel' => 'email',
             'marketing_preferences' => '0',
         ])));
     }
@@ -314,6 +319,7 @@ class OnePageCheckoutFormTest extends TestCase
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
             'compliance_note' => 'Ready',
+            'communication_channel' => 'email',
         ])));
     }
 
@@ -367,6 +373,29 @@ class OnePageCheckoutFormTest extends TestCase
 
     public function testItSeparatesTemplateVariablesByBusinessOrigin(): void
     {
+        $customerProbeText = (new \FormField())
+            ->setName('opcinvariantprobe_customer_text')
+            ->setType('text');
+        $customerProbeSelect = (new \FormField())
+            ->setName('opcinvariantprobe_customer_select')
+            ->setType('select');
+
+        $customerProbeTextarea = (new \FormField())
+            ->setName('opcinvariantprobe_customer_textarea')
+            ->setType('textarea');
+
+        $customerProbeCheckbox = (new \FormField())
+            ->setName('opcinvariantprobe_customer_checkbox')
+            ->setType('checkbox');
+
+        $customerProbeRadio = (new \FormField())
+            ->setName('opcinvariantprobe_customer_radio')
+            ->setType('radio-buttons');
+
+        $addressProbeCheckbox = (new \FormField())
+            ->setName('opcinvariantprobe_address_checkbox')
+            ->setType('checkbox');
+
         $form = $this->createForm();
         $form->setFormFieldsForTest([
             'email' => (new \FormField())
@@ -375,27 +404,15 @@ class OnePageCheckoutFormTest extends TestCase
             'optin' => (new \FormField())
                 ->setName('optin')
                 ->setType('checkbox'),
-            'customer_probe_text' => (new \FormField())
-                ->setName('opcinvariantprobe_customer_text')
-                ->setType('text'),
-            'customer_probe_select' => (new \FormField())
-                ->setName('opcinvariantprobe_customer_select')
-                ->setType('select'),
-            'customer_probe_textarea' => (new \FormField())
-                ->setName('opcinvariantprobe_customer_textarea')
-                ->setType('textarea'),
-            'customer_probe_checkbox' => (new \FormField())
-                ->setName('opcinvariantprobe_customer_checkbox')
-                ->setType('checkbox'),
-            'customer_probe_radio' => (new \FormField())
-                ->setName('opcinvariantprobe_customer_radio')
-                ->setType('radio-buttons'),
+            'customer_probe_text' => $customerProbeText,
+            'customer_probe_select' => $customerProbeSelect,
+            'customer_probe_textarea' => $customerProbeTextarea,
+            'customer_probe_checkbox' => $customerProbeCheckbox,
+            'customer_probe_radio' => $customerProbeRadio,
             'firstname' => (new \FormField())
                 ->setName('firstname')
                 ->setType('text'),
-            'opcinvariantprobe_address_checkbox' => (new \FormField())
-                ->setName('opcinvariantprobe_address_checkbox')
-                ->setType('checkbox'),
+            'opcinvariantprobe_address_checkbox' => $addressProbeCheckbox,
             'invoice_address1' => (new \FormField())
                 ->setName('invoice_address1')
                 ->setType('text'),
@@ -426,17 +443,20 @@ class OnePageCheckoutFormTest extends TestCase
             ],
             array_keys($templateVariables['formFields'])
         );
-        self::assertArrayNotHasKey('contactFields', $templateVariables);
-        self::assertArrayNotHasKey('additionalCustomerFields', $templateVariables);
-        self::assertArrayNotHasKey('useSameAddressField', $templateVariables);
-        self::assertArrayNotHasKey('deliveryFields', $templateVariables);
-        self::assertArrayNotHasKey('invoiceFields', $templateVariables);
-        self::assertArrayNotHasKey('invoiceMetaFields', $templateVariables);
+        self::assertArrayHasKey('contactFields', $templateVariables);
+        self::assertArrayHasKey('additionalCustomerFields', $templateVariables);
+        self::assertArrayHasKey('useSameAddressField', $templateVariables);
+        self::assertArrayHasKey('deliveryFields', $templateVariables);
+        self::assertArrayHasKey('invoiceFields', $templateVariables);
+        self::assertArrayHasKey('invoiceMetaFields', $templateVariables);
+        self::assertArrayHasKey('token', $templateVariables);
         self::assertSame('email', $templateVariables['formFields']['email']['name']);
-        self::assertSame('opcinvariantprobe_customer_text', $templateVariables['formFields']['customer_probe_text']['name']);
+        self::assertSame('email', $templateVariables['contactFields']['email']['name']);
+        self::assertSame('opcinvariantprobe_customer_text', $templateVariables['additionalCustomerFields']['customer_probe_text']['name']);
         self::assertSame('use_same_address', $templateVariables['formFields']['use_same_address']['name']);
-        self::assertSame('invoice_address1', $templateVariables['formFields']['invoice_address1']['name']);
-        self::assertSame('id_address_invoice', $templateVariables['formFields']['id_address_invoice']['name']);
+        self::assertSame('firstname', $templateVariables['deliveryFields']['firstname']['name']);
+        self::assertSame('invoice_address1', $templateVariables['invoiceFields']['invoice_address1']['name']);
+        self::assertSame('id_address_invoice', $templateVariables['invoiceMetaFields']['id_address_invoice']['name']);
     }
 
     public function testSubmitPersistsDeliveryAndInvoiceAddressesWhenUseSameAddressIsDisabled(): void
@@ -445,7 +465,7 @@ class OnePageCheckoutFormTest extends TestCase
         $form->forceValidateResult(true);
 
         $this->context->cart = new LightweightCart();
-        $this->context->cart->id = 0;
+        $this->context->cart->id = -1;
 
         $this->customerPersister
             ->expects($this->once())
@@ -513,7 +533,7 @@ class OnePageCheckoutFormTest extends TestCase
         $form->forceValidateResult(true);
 
         $this->context->cart = new LightweightCart();
-        $this->context->cart->id = 0;
+        $this->context->cart->id = -1;
 
         $this->customerPersister
             ->expects($this->once())
@@ -556,6 +576,130 @@ class OnePageCheckoutFormTest extends TestCase
             'id_address_delivery' => 303,
             'id_address_invoice' => 303,
         ], $result);
+    }
+
+    public function testSubmitUsesConnectedCustomerEmailWhenCheckoutPostOmitsIt(): void
+    {
+        $form = $this->createSubmitForm();
+
+        $this->context->customer = new LightweightCustomer();
+        $this->context->customer->id = 77;
+        $this->context->customer->is_guest = 0;
+        $this->context->customer->email = 'registered@example.com';
+        $this->context->cart = new LightweightCart();
+        $this->context->cart->id = -1;
+        $this->context->cart->id_customer = 77;
+
+        $this->customerPersister
+            ->expects($this->never())
+            ->method('save')
+        ;
+
+        $this->addressPersister
+            ->expects($this->once())
+            ->method('save')
+            ->willReturnCallback(static function (\Address $address): bool {
+                $address->id = 404;
+
+                return true;
+            })
+        ;
+
+        $form->fillWith($this->withDefaultCountry([
+            'firstname' => 'Spec',
+            'lastname' => 'FortyTwo',
+            'address1' => '4 Registered street',
+            'city' => 'Nantes',
+            'postcode' => '44000',
+            'psgdpr_privacy' => '1',
+            'compliance_terms' => '1',
+            'communication_channel' => 'email',
+            'use_same_address' => '1',
+        ]));
+
+        $result = $form->submit();
+
+        self::assertSame([
+            'id_address_delivery' => 404,
+            'id_address_invoice' => 404,
+        ], $result);
+        self::assertSame('registered@example.com', (string) $form->getValue('email'));
+    }
+
+    public function testFillWithKeepsSelectedDeliveryAndInvoiceCountriesWithoutManualOverride(): void
+    {
+        $language = new class extends \Language {
+            public function __construct()
+            {
+            }
+        };
+        $language->id = 1;
+
+        $formatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry'])
+            ->getMock()
+        ;
+
+        $formatter
+            ->method('getFormat')
+            ->willReturn([
+                'id_country' => (new \FormField())
+                    ->setName('id_country')
+                    ->setType('select')
+                    ->setRequired(true)
+                    ->setAvailableValues([
+                        ['id' => 8, 'label' => 'France'],
+                        ['id' => 21, 'label' => 'Belgium'],
+                    ]),
+                'invoice_id_country' => (new \FormField())
+                    ->setName('invoice_id_country')
+                    ->setType('select')
+                    ->setRequired(false)
+                    ->setAvailableValues([
+                        ['id' => 8, 'label' => 'France'],
+                        ['id' => 21, 'label' => 'Belgium'],
+                    ]),
+            ])
+        ;
+
+        $defaultCountry = new class extends \Country {
+            public function __construct()
+            {
+            }
+        };
+        $defaultCountry->id = self::DEFAULT_COUNTRY_ID;
+
+        $formatter
+            ->method('getCountry')
+            ->willReturn($defaultCountry)
+        ;
+        $formatter
+            ->method('setCountry')
+            ->willReturnSelf()
+        ;
+        $formatter
+            ->method('setInvoiceCountry')
+            ->willReturnSelf()
+        ;
+
+        $form = new TestableOnePageCheckoutForm(
+            $this->createMock(\Smarty::class),
+            $this->context,
+            $language,
+            $this->translator,
+            $formatter,
+            $this->customerPersister,
+            $this->addressPersister
+        );
+
+        $form->fillWith([
+            'id_country' => '21',
+            'invoice_id_country' => '21',
+        ]);
+
+        self::assertSame('21', (string) $form->getValue('id_country'));
+        self::assertSame('21', (string) $form->getValue('invoice_id_country'));
     }
 
     /**
@@ -731,7 +875,7 @@ class OnePageCheckoutFormTest extends TestCase
 
         $submitFormatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
             ->disableOriginalConstructor()
-            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry'])
+            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry', 'getFieldGroup'])
             ->getMock()
         ;
         $submitFormatter
@@ -758,6 +902,10 @@ class OnePageCheckoutFormTest extends TestCase
             ->method('setInvoiceCountry')
             ->willReturnSelf()
         ;
+        $submitFormatter
+            ->method('getFieldGroup')
+            ->willReturnCallback([$this, 'getFieldGroupForTest'])
+        ;
 
         return new TestableOnePageCheckoutForm(
             $this->createMock(\Smarty::class),
@@ -768,6 +916,13 @@ class OnePageCheckoutFormTest extends TestCase
             $this->customerPersister,
             $this->addressPersister
         );
+    }
+
+    public function getFieldGroupForTest(string $key): ?string
+    {
+        return in_array($key, ['compliance_terms', 'compliance_note', 'communication_channel', 'newsletter_optin'], true)
+            ? OnePageCheckoutFormatter::FIELD_GROUP_CUSTOMER
+            : null;
     }
 
     /**

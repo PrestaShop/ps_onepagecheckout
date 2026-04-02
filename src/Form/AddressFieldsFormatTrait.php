@@ -81,7 +81,7 @@ trait AddressFieldsFormatTrait
                     );
                 } elseif ($field === 'phone') {
                     $formField->setType('tel');
-                } elseif ($field === 'dni' && null !== $this->country) {
+                } elseif ($field === 'dni') {
                     if ($this->country->need_identification_number) {
                         $formField->setRequired(true);
                     }

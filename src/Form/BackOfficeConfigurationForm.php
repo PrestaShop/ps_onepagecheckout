@@ -52,6 +52,12 @@ class BackOfficeConfigurationForm
         $output = '';
 
         if (\Tools::isSubmit(self::FORM_SUBMIT_ACTION)) {
+            if (!$this->isSingleShopContext()) {
+                $this->redirectToConfigurationForm();
+
+                return '';
+            }
+
             $isEnabled = (int) \Tools::getValue($this->configurationKey, 0) === 1;
             $isMaintenanceEnabled = (int) \Tools::getValue(self::MAINTENANCE_INPUT_NAME, 0) === 1;
 

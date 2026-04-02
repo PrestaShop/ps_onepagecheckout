@@ -204,6 +204,16 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertArrayHasKey('ps_onepagecheckout', $module->javascriptDefinitions[0]);
         self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['guestInit']);
         self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['addressForm']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['addressesList']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['states']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['saveAddress']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['deleteAddress']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['carriers']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['selectCarrier']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['paymentMethods']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['selectPayment']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['i18n']['deleteAddressConfirmTitle']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['i18n']['deleteAddressConfirmMessage']);
     }
 
     public function testHookActionFrontControllerSetMediaAssignsFlagAndSkipsAssetsWhenDisabled(): void
@@ -309,6 +319,15 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         $this->registerHookCalls[] = (string) $hookName;
 
         return $this->registerHookResult;
+    }
+
+    public function trans(
+        $id,
+        array $parameters = [],
+        $domain = null,
+        $locale = null,
+    ): string {
+        return (string) $id;
     }
 
     protected function createCheckoutProcessBuilder(): OnePageCheckoutProcessBuilder

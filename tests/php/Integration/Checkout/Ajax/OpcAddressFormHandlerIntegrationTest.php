@@ -32,6 +32,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
     {
         $customer = $this->createCustomer($this->uniqueEmail('opc-address'));
         $address = $this->createAddressForCustomer((int) $customer->id);
+        self::getContext()->customer = $customer;
 
         $formSpy = new IntegrationOpcAddressFormSpy();
         $formSpy->templateVars = ['address_form' => '<form>ok</form>'];
@@ -51,6 +52,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
                 'id_country' => '8',
                 'invoice_id_country' => '8',
                 'use_same_address' => '1',
+                'id_address' => (string) $address->id,
             ],
         ], $formSpy->fillWithPayloads);
         self::assertSame(['address_form' => '<form>ok</form>'], $response);
@@ -87,6 +89,53 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
         self::assertSame([], $formSpy->loadedAddressIds);
         self::assertSame([], $formSpy->fillWithPayloads);
         self::assertSame(['address_form' => '<form>initial</form>'], $response);
+    }
+
+    public function testItPreservesPositiveInvoiceAddressIdInRefreshPayload(): void
+    {
+        $customer = $this->createCustomer($this->uniqueEmail('opc-invoice'));
+        $invoiceAddress = $this->createAddressForCustomer((int) $customer->id);
+        self::getContext()->customer = $customer;
+
+        $formSpy = new IntegrationOpcAddressFormSpy();
+        $formSpy->templateVars = ['address_form' => '<form>invoice</form>'];
+        $handler = new OnePageCheckoutAddressFormHandler($formSpy);
+
+        $response = $handler->getTemplateVariables([
+            'id_address_invoice' => (string) $invoiceAddress->id,
+            'invoice_id_country' => '8',
+        ]);
+
+        self::assertSame([
+            [
+                'invoice_id_country' => '8',
+                'id_address_invoice' => (string) $invoiceAddress->id,
+            ],
+        ], $formSpy->fillWithPayloads);
+        self::assertSame(['address_form' => '<form>invoice</form>'], $response);
+    }
+
+    public function testItRejectsForeignAddressOwnershipDuringRefresh(): void
+    {
+        $owner = $this->createCustomer($this->uniqueEmail('opc-owner'));
+        $foreignCustomer = $this->createCustomer($this->uniqueEmail('opc-foreign'));
+        $foreignAddress = $this->createAddressForCustomer((int) $foreignCustomer->id);
+        self::getContext()->customer = $owner;
+
+        $formSpy = new IntegrationOpcAddressFormSpy();
+        $formSpy->templateVars = ['address_form' => '<form>safe</form>'];
+        $handler = new OnePageCheckoutAddressFormHandler($formSpy);
+
+        $response = $handler->getTemplateVariables([
+            'id_address' => (string) $foreignAddress->id,
+            'id_country' => '8',
+        ]);
+
+        self::assertSame([], $formSpy->loadedAddressIds);
+        self::assertSame([
+            ['id_country' => '8'],
+        ], $formSpy->fillWithPayloads);
+        self::assertSame(['address_form' => '<form>safe</form>'], $response);
     }
 
     private static function resetTables(): void
