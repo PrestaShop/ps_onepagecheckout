@@ -129,10 +129,10 @@ class BackOfficeConfigurationForm
                 'Admin.Design.Feature'
             ),
             'save_button_label' => $this->trans('Save', 'Admin.Actions'),
-            'confirm_modal_title' => $this->trans('Check theme compatibility', 'Modules.Psonepagecheckout.Admin'),
-            'confirm_modal_title_simple' => $this->trans('Change checkout appearance', 'Modules.Psonepagecheckout.Admin'),
-            'confirm_modal_description' => $this->trans('One-page checkout layout requires a Hummingbird-compatible theme.', 'Modules.Psonepagecheckout.Admin'),
-            'confirm_modal_description_simple' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_title' => $this->trans('Change checkout appearance', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_compatibility_title' => $this->trans('Check theme compatibility', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_description' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_compatibility_description' => $this->trans('One-page checkout layout requires a Hummingbird-compatible theme.', 'Modules.Psonepagecheckout.Admin'),
             'confirm_modal_checklist_title' => $this->trans('Before you proceed, please make sure that:', 'Modules.Psonepagecheckout.Admin'),
             'confirm_modal_checklist' => [
                 $this->trans('You are NOT using the "Classic" theme: This layout is incompatible with the legacy Classic theme and will break your storefront.', 'Modules.Psonepagecheckout.Admin'),

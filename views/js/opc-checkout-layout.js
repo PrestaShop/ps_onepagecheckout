@@ -33,22 +33,22 @@ const MODAL_SELECTOR = '#psopc-confirmation-modal';
 const FORM_SELECTOR = '.psopc-configuration form';
 const MAINTENANCE_HIDDEN_SELECTOR = '#psopc-maintenance-hidden';
 const MAINTENANCE_TOGGLE_SELECTOR = '#psopc-maintenance-toggle';
-const OPC_ONLY_SELECTOR = '.psopc-opc-only';
-const SIMPLE_ONLY_SELECTOR = '.psopc-simple-only';
+const COMPATIBILITY_SELECTOR = '[data-psopc-modal="compatibility"]';
+const DIRECT_SELECTOR = '[data-psopc-modal="direct"]';
 
 /**
- * @param {boolean} isToOpc
+ * @param {boolean} isOpc
  */
-function updateModalContent(isToOpc) {
-  const opcElements = document.querySelectorAll(OPC_ONLY_SELECTOR);
-  const simpleElements = document.querySelectorAll(SIMPLE_ONLY_SELECTOR);
+function updateModalContent(isOpc) {
+  const compatibilityElements = document.querySelectorAll(COMPATIBILITY_SELECTOR);
+  const directElements = document.querySelectorAll(DIRECT_SELECTOR);
 
-  opcElements.forEach(function (el) {
-    el.style.display = isToOpc ? '' : 'none';
+  compatibilityElements.forEach(function (el) {
+    el.style.display = isOpc ? '' : 'none';
   });
 
-  simpleElements.forEach(function (el) {
-    el.style.display = isToOpc ? 'none' : '';
+  directElements.forEach(function (el) {
+    el.style.display = isOpc ? 'none' : '';
   });
 }
 
@@ -111,9 +111,9 @@ function initCheckoutLayoutConfiguration() {
 
   saveBtn.addEventListener('click', function () {
     const selectedValue = getCheckedValue(configurationKey);
-    const isToOpc = selectedValue === '1';
+    const isOpc = selectedValue === '1';
 
-    updateModalContent(isToOpc);
+    updateModalContent(isOpc);
 
     if (maintenanceToggle) {
       maintenanceToggle.checked = false;
