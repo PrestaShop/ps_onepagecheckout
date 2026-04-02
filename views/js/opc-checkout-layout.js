@@ -33,6 +33,24 @@ const MODAL_SELECTOR = '#psopc-confirmation-modal';
 const FORM_SELECTOR = '.psopc-configuration form';
 const MAINTENANCE_HIDDEN_SELECTOR = '#psopc-maintenance-hidden';
 const MAINTENANCE_TOGGLE_SELECTOR = '#psopc-maintenance-toggle';
+const OPC_ONLY_SELECTOR = '.psopc-opc-only';
+const SIMPLE_ONLY_SELECTOR = '.psopc-simple-only';
+
+/**
+ * @param {boolean} isToOpc
+ */
+function updateModalContent(isToOpc) {
+  const opcElements = document.querySelectorAll(OPC_ONLY_SELECTOR);
+  const simpleElements = document.querySelectorAll(SIMPLE_ONLY_SELECTOR);
+
+  opcElements.forEach(function (el) {
+    el.style.display = isToOpc ? '' : 'none';
+  });
+
+  simpleElements.forEach(function (el) {
+    el.style.display = isToOpc ? 'none' : '';
+  });
+}
 
 /**
  * @returns {string|null}
@@ -76,7 +94,7 @@ function initCheckoutLayoutConfiguration() {
   const maintenanceHidden = document.querySelector(MAINTENANCE_HIDDEN_SELECTOR);
   const maintenanceToggle = document.querySelector(MAINTENANCE_TOGGLE_SELECTOR);
 
-  if (!saveBtn || !confirmBtn || !form || !maintenanceHidden || !maintenanceToggle) {
+  if (!saveBtn || !confirmBtn || !form || !maintenanceHidden) {
     return;
   }
 
@@ -92,14 +110,23 @@ function initCheckoutLayoutConfiguration() {
   });
 
   saveBtn.addEventListener('click', function () {
-    maintenanceToggle.checked = false;
+    const selectedValue = getCheckedValue(configurationKey);
+    const isToOpc = selectedValue === '1';
+
+    updateModalContent(isToOpc);
+
+    if (maintenanceToggle) {
+      maintenanceToggle.checked = false;
+    }
     maintenanceHidden.value = '0';
     modal.modal('show');
   });
 
-  maintenanceToggle.addEventListener('change', function () {
-    maintenanceHidden.value = this.checked ? '1' : '0';
-  });
+  if (maintenanceToggle) {
+    maintenanceToggle.addEventListener('change', function () {
+      maintenanceHidden.value = this.checked ? '1' : '0';
+    });
+  }
 
   confirmBtn.addEventListener('click', function () {
     modal.modal('hide');

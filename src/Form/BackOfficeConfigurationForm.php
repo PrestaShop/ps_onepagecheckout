@@ -110,12 +110,15 @@ class BackOfficeConfigurationForm
         $onePageLabel = $this->trans('One-page checkout', 'Admin.Design.Feature');
         $fourPageLabel = $this->trans('Four-page checkout', 'Admin.Design.Feature');
 
+        $isMaintenanceEnabled = (int) \Configuration::get('PS_SHOP_ENABLE') === 0;
+
         return [
             'configuration_key' => $this->configurationKey,
             'configuration_form_action' => $this->getConfigurationFormAction(),
             'form_submit_action' => self::FORM_SUBMIT_ACTION,
             'checkout_layout_css_url' => $this->module->getPathUri() . 'views/css/checkout_layout_choice.css',
             'is_single_shop_context' => $this->isSingleShopContext(),
+            'is_maintenance_enabled' => $isMaintenanceEnabled,
             'single_shop_context_warning' => $this->trans(
                 'Note that this page is available in a single shop context only. Switch context to work on it.',
                 'Admin.Notifications.Info'
@@ -127,7 +130,9 @@ class BackOfficeConfigurationForm
             ),
             'save_button_label' => $this->trans('Save', 'Admin.Actions'),
             'confirm_modal_title' => $this->trans('Check theme compatibility', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_title_simple' => $this->trans('Change checkout appearance', 'Modules.Psonepagecheckout.Admin'),
             'confirm_modal_description' => $this->trans('One-page checkout layout requires a Hummingbird-compatible theme.', 'Modules.Psonepagecheckout.Admin'),
+            'confirm_modal_description_simple' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.Psonepagecheckout.Admin'),
             'confirm_modal_checklist_title' => $this->trans('Before you proceed, please make sure that:', 'Modules.Psonepagecheckout.Admin'),
             'confirm_modal_checklist' => [
                 $this->trans('You are NOT using the "Classic" theme: This layout is incompatible with the legacy Classic theme and will break your storefront.', 'Modules.Psonepagecheckout.Admin'),

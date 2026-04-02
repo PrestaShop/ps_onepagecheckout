@@ -89,28 +89,34 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h4 class="modal-title">{{ confirm_modal_title }}</h4>
+            <h4 class="modal-title psopc-opc-only">{{ confirm_modal_title }}</h4>
+            <h4 class="modal-title psopc-simple-only" style="display:none">{{ confirm_modal_title_simple }}</h4>
             <button class="close" type="button" data-dismiss="modal">×</button>
           </div>
           <div class="modal-body">
-            <p class="psopc-modal-intro">{{ confirm_modal_description }}</p>
-            <p class="psopc-modal-checklist-title">{{ confirm_modal_checklist_title }}</p>
-            <ul class="psopc-modal-checklist">
-              {% for item in confirm_modal_checklist %}
-                <li>{{ item }}</li>
-              {% endfor %}
-            </ul>
-            <div class="psopc-modal-warning">
-              <i class="material-icons psopc-modal-warning-icon">warning</i>
-              <span>{{ maintenance_mode_warning|raw }}</span>
+            <p class="psopc-modal-intro psopc-opc-only">{{ confirm_modal_description }}</p>
+            <p class="psopc-modal-intro psopc-simple-only" style="display:none">{{ confirm_modal_description_simple }}</p>
+            <div class="psopc-opc-only">
+              <p class="psopc-modal-checklist-title">{{ confirm_modal_checklist_title }}</p>
+              <ul class="psopc-modal-checklist">
+                {% for item in confirm_modal_checklist %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
             </div>
-            <div class="psopc-maintenance-row">
-              <span>{{ maintenance_mode_label }}</span>
-              <label class="psopc-toggle">
-                <input type="checkbox" id="psopc-maintenance-toggle">
-                <span class="psopc-toggle-slider"></span>
-              </label>
-            </div>
+            {% if not is_maintenance_enabled %}
+              <div class="psopc-modal-warning">
+                <i class="material-icons psopc-modal-warning-icon">warning</i>
+                <span>{{ maintenance_mode_warning|raw }}</span>
+              </div>
+              <div class="psopc-maintenance-row">
+                <span>{{ maintenance_mode_label }}</span>
+                <label class="psopc-toggle">
+                  <input type="checkbox" id="psopc-maintenance-toggle">
+                  <span class="psopc-toggle-slider"></span>
+                </label>
+              </div>
+            {% endif %}
           </div>
           <div class="modal-footer">
             <input type="button" class="btn btn-outline-secondary" data-dismiss="modal" value="{{ cancel_button_label }}"/>
