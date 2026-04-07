@@ -39,7 +39,6 @@ class OnePageCheckoutForm extends \AbstractForm
 {
     use AddressFormValidationTrait;
 
-    protected $template = 'checkout/_partials/one-page-checkout-form.tpl';
 
     private const GUEST_PLACEHOLDER_FIRSTNAME = 'Guest';
     private const GUEST_PLACEHOLDER_LASTNAME = 'Guest';
