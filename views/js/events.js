@@ -11,9 +11,13 @@ const OPC_EVENTS = {
   opcFinalSubmitStarted: 'opcFinalSubmitStarted',
   opcDeliveryAddressUpdated: 'opcDeliveryAddressUpdated',
   opcBillingAddressUpdated: 'opcBillingAddressUpdated',
+  opcDeliveryAddressSelected: 'opcDeliveryAddressSelected',
+  opcBillingAddressSelected: 'opcBillingAddressSelected',
   opcCartSummaryBeforeUpdate: 'opcCartSummaryBeforeUpdate',
   opcCartSummaryUpdated: 'opcCartSummaryUpdated',
   updatedOpcAddressForm: 'updatedOpcAddressForm',
+  opcCarriersRetry: 'opcCarriersRetry',
+  opcPaymentMethodsRetry: 'opcPaymentMethodsRetry',
 };
 
 export default OPC_EVENTS;

@@ -105,6 +105,16 @@ class CheckoutOnePageStepRenderTest extends TestCase
                 return $this->cart;
             }
 
+            public function getIdAddressDelivery()
+            {
+                return 0;
+            }
+
+            public function getIdAddressInvoice()
+            {
+                return 0;
+            }
+
             public function getDeliveryOptions()
             {
                 return [];

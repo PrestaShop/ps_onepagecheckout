@@ -39,7 +39,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
         $handler = new OnePageCheckoutAddressFormHandler($formSpy);
 
         $response = $handler->getTemplateVariables([
-            'id_address' => (string) $address->id,
+            'id_address_delivery' => (string) $address->id,
             'id_country' => '8',
             'invoice_id_country' => '8',
             'use_same_address' => '1',
@@ -48,11 +48,11 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
 
         self::assertSame([(int) $address->id], $formSpy->loadedAddressIds);
         self::assertSame([
+            ['customer_id' => (int) $customer->id],
             [
                 'id_country' => '8',
-                'invoice_id_country' => '8',
                 'use_same_address' => '1',
-                'id_address' => (string) $address->id,
+                'id_address_delivery' => (string) $address->id,
             ],
         ], $formSpy->fillWithPayloads);
         self::assertSame(['address_form' => '<form>ok</form>'], $response);
@@ -65,7 +65,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
         $handler = new OnePageCheckoutAddressFormHandler($formSpy);
 
         $response = $handler->getTemplateVariables([
-            'id_address' => '0',
+            'id_address_delivery' => '0',
             'id_country' => '8',
         ]);
 
@@ -107,6 +107,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
         ]);
 
         self::assertSame([
+            ['customer_id' => (int) $customer->id],
             [
                 'invoice_id_country' => '8',
                 'id_address_invoice' => (string) $invoiceAddress->id,
@@ -127,15 +128,64 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
         $handler = new OnePageCheckoutAddressFormHandler($formSpy);
 
         $response = $handler->getTemplateVariables([
-            'id_address' => (string) $foreignAddress->id,
+            'id_address_delivery' => (string) $foreignAddress->id,
             'id_country' => '8',
         ]);
 
         self::assertSame([], $formSpy->loadedAddressIds);
         self::assertSame([
+            ['customer_id' => (int) $owner->id],
             ['id_country' => '8'],
         ], $formSpy->fillWithPayloads);
         self::assertSame(['address_form' => '<form>safe</form>'], $response);
+    }
+
+    public function testItFallsBackToDefaultCountryWhenCustomerHasNoSavedAddress(): void
+    {
+        $customer = $this->createCustomer($this->uniqueEmail('opc-empty-addresses'));
+        self::getContext()->customer = $customer;
+
+        $formSpy = new IntegrationOpcAddressFormSpy();
+        $formSpy->templateVars = ['address_form' => '<form>default-country</form>'];
+        $handler = new OnePageCheckoutAddressFormHandler($formSpy);
+
+        $response = $handler->getTemplateVariables([
+            'use_same_address' => '1',
+        ]);
+
+        self::assertSame([
+            ['customer_id' => (int) $customer->id],
+            [
+                'use_same_address' => '1',
+                'id_country' => (string) \Configuration::get('PS_COUNTRY_DEFAULT'),
+            ],
+        ], $formSpy->fillWithPayloads);
+        self::assertSame(['address_form' => '<form>default-country</form>'], $response);
+    }
+
+    public function testItIgnoresInvoiceCountryWhenUseSameAddressIsEnabled(): void
+    {
+        $customer = $this->createCustomer($this->uniqueEmail('opc-same-address-country'));
+        self::getContext()->customer = $customer;
+
+        $formSpy = new IntegrationOpcAddressFormSpy();
+        $formSpy->templateVars = ['address_form' => '<form>same-address-country</form>'];
+        $handler = new OnePageCheckoutAddressFormHandler($formSpy);
+
+        $response = $handler->getTemplateVariables([
+            'id_country' => '21',
+            'invoice_id_country' => '8',
+            'use_same_address' => '1',
+        ]);
+
+        self::assertSame([
+            ['customer_id' => (int) $customer->id],
+            [
+                'id_country' => '21',
+                'use_same_address' => '1',
+            ],
+        ], $formSpy->fillWithPayloads);
+        self::assertSame(['address_form' => '<form>same-address-country</form>'], $response);
     }
 
     private static function resetTables(): void
@@ -207,6 +257,15 @@ class IntegrationOpcAddressFormSpy extends OnePageCheckoutForm
     public function fillFromAddress(\Address $address)
     {
         $this->loadedAddressIds[] = (int) $address->id;
+
+        return $this;
+    }
+
+    public function fillFromCustomer(\Customer $customer)
+    {
+        $this->fillWithPayloads[] = [
+            'customer_id' => (int) $customer->id,
+        ];
 
         return $this;
     }

@@ -33,6 +33,19 @@ function getCheckoutForm() {
   return document.querySelector(CHECKOUT_FORM_SELECTOR);
 }
 
+function getSelectedSavedAddressId(listSelector, radioName) {
+  const selectedRadio = document.querySelector(
+    `${listSelector} ${OPC_SELECTORS.opc.addressRadio}[name="${radioName}"]:checked`
+  );
+  const selectedAddressId = selectedRadio ? String(selectedRadio.getAttribute('value') || '') : '';
+
+  if (!selectedAddressId || selectedAddressId === 'new_address') {
+    return '';
+  }
+
+  return selectedAddressId;
+}
+
 function setLoading() {
   const $container = getContainer();
   if (!$container.length) {
@@ -55,6 +68,12 @@ function buildPaymentMethodsUrl(baseUrl) {
     || form.querySelector('[name="delivery_id_country"]')?.value
     || '';
   const invoiceIdCountry = form.querySelector('[name="invoice_id_country"]')?.value || '';
+  const deliveryAddressId = getSelectedSavedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
+    || form.querySelector('[name="id_address_delivery"]')?.value
+    || '';
+  const invoiceAddressId = getSelectedSavedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
+    || form.querySelector('[name="id_address_invoice"]')?.value
+    || '';
 
   if (idCountry) {
     url.searchParams.set('id_country', idCountry);
@@ -62,6 +81,14 @@ function buildPaymentMethodsUrl(baseUrl) {
 
   if (invoiceIdCountry) {
     url.searchParams.set('invoice_id_country', invoiceIdCountry);
+  }
+
+  if (deliveryAddressId) {
+    url.searchParams.set('id_address_delivery', deliveryAddressId);
+  }
+
+  if (invoiceAddressId) {
+    url.searchParams.set('id_address_invoice', invoiceAddressId);
   }
 
   return url.toString();
@@ -113,13 +140,16 @@ $(document).on('click', '[data-opc-action="retry-payment"]', (event) => {
   event.preventDefault();
   fetchPaymentMethods();
 });
+
 prestashop.on(OPC_EVENTS.opcCarrierSelected, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcBillingAddressUpdated, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcGuestInitSuccess, fetchPaymentMethods);
+prestashop.on(OPC_EVENTS.opcPaymentMethodsRetry, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
   fetchGeneration += 1;
   setLoading();
 });
+
 prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
   const $container = getContainer();
 

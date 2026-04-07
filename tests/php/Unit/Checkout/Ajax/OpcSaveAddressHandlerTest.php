@@ -8,38 +8,35 @@ use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutSaveAddressHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 class OpcSaveAddressHandlerTest extends TestCase
 {
-    public function testItReturnsValidationErrorsWhenRequiredFieldsAreMissing(): void
+    public function testItReturnsTechnicalErrorsUnderTheErrorsKeyWhenCustomerCannotBeResolved(): void
     {
         $translator = $this->createMock(TranslatorInterface::class);
-        $context = new class extends \Context {
-            public function __construct()
-            {
-            }
-        };
-        $context->smarty = $this->createMock(\Smarty::class);
-        $context->language = new class extends \Language {
-            public function __construct()
-            {
-            }
-        };
-        $context->language->id = 1;
-        $context->country = new class extends \Country {
-            public function __construct()
-            {
-            }
-        };
-        $context->country->id = 8;
-
         $resolver = $this->createMock(CheckoutCustomerContextResolver::class);
-        $resolver->method('resolveId')->willReturn(42);
+        $resolver->method('resolveId')->willReturn(0);
 
-        $handler = new OnePageCheckoutSaveAddressHandler($context, $translator, $resolver);
+        $handler = $this->createHandler(CheckoutTestFixtures::context(), $translator, $resolver);
         $response = $handler->handle([]);
 
-        self::assertFalse($response['success']);
-        self::assertNotEmpty($response['errors']);
+        self::assertSame(
+            [
+                'success' => false,
+                'errors' => [
+                    '' => ['Unable to resolve checkout customer.'],
+                ],
+            ],
+            $response
+        );
+    }
+
+    private function createHandler(
+        \Context $context,
+        TranslatorInterface $translator,
+        CheckoutCustomerContextResolver $resolver,
+    ): OnePageCheckoutSaveAddressHandler {
+        return new OnePageCheckoutSaveAddressHandler($context, $translator, $resolver);
     }
 }

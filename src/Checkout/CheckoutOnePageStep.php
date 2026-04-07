@@ -188,25 +188,15 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             $this->opcForm->fillFromCustomer($customer);
         }
 
-        $languageId = $this->context->language->id;
-
-        $idAddressDelivery = $session->getIdAddressDelivery();
-        $idAddressInvoice = $session->getIdAddressInvoice();
-
-        $deliveryAddress = $idAddressDelivery ? new \Address($idAddressDelivery, $languageId) : null;
-
-        $invoiceAddress = null;
-        if ($idAddressInvoice && $idAddressInvoice != $idAddressDelivery) {
-            $invoiceAddress = new \Address($idAddressInvoice, $languageId);
-        }
-
-        if ($deliveryAddress || $invoiceAddress) {
-            $this->opcForm->fillFromAddresses($deliveryAddress, $invoiceAddress);
-        }
+        $this->fillOpcFormFromResolvedAddresses(
+            (int) $session->getIdAddressDelivery(),
+            (int) $session->getIdAddressInvoice()
+        );
     }
 
     private function handleOnePageCheckoutSubmit(array $requestParameters): void
     {
+        $requestParameters = $this->normalizeSubmittedRequestParameters($requestParameters);
         $this->hydrateOpcFromSubmittedAddresses($requestParameters);
 
         $validationResult = $this->validateAllSections($requestParameters);
@@ -222,6 +212,23 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             return;
         }
         $this->setComplete(true);
+    }
+
+    /**
+     * Browser form submits omit unchecked checkboxes, but OPC always needs an explicit
+     * same/different-address flag during the final submit flow.
+     *
+     * @param array<string,mixed> $requestParameters
+     *
+     * @return array<string,mixed>
+     */
+    private function normalizeSubmittedRequestParameters(array $requestParameters): array
+    {
+        if (!array_key_exists('use_same_address', $requestParameters)) {
+            $requestParameters['use_same_address'] = '0';
+        }
+
+        return $requestParameters;
     }
 
     /**
@@ -353,30 +360,22 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             }
         }
 
+        $this->fillOpcFormFromResolvedAddresses(
+            (int) $addressIds['id_address_delivery'],
+            (int) $addressIds['id_address_invoice'],
+            null
+        );
+
         return true;
     }
 
     private function hydrateOpcFromSubmittedAddresses(array $requestParameters): void
     {
-        $deliveryAddressId = (int) ($requestParameters['id_address'] ?? 0);
+        $deliveryAddressId = (int) ($requestParameters['id_address_delivery'] ?? 0);
         $invoiceAddressId = (int) ($requestParameters['id_address_invoice'] ?? 0);
         $customerId = (int) ($this->context->customer->id ?? 0);
 
-        if (($deliveryAddressId <= 0 && $invoiceAddressId <= 0) || $customerId <= 0) {
-            return;
-        }
-
-        $languageId = (int) $this->context->language->id;
-        $deliveryAddress = $this->resolveSubmittedAddress($deliveryAddressId, $customerId, $languageId);
-        $invoiceAddress = null;
-
-        if ($invoiceAddressId > 0 && $invoiceAddressId !== $deliveryAddressId) {
-            $invoiceAddress = $this->resolveSubmittedAddress($invoiceAddressId, $customerId, $languageId);
-        }
-
-        if ($deliveryAddress || $invoiceAddress) {
-            $this->opcForm->fillFromAddresses($deliveryAddress, $invoiceAddress);
-        }
+        $this->fillOpcFormFromResolvedAddresses($deliveryAddressId, $invoiceAddressId, $customerId);
     }
 
     /**
@@ -416,6 +415,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             'delivery_option' => $deliveryOptionKey,
             'selected_delivery_option' => $selectedDeliveryOption,
             'payment_options' => $paymentOptions,
+            'is_free' => $isFree,
             'selected_payment_module' => $this->getSelectedPaymentModule(),
             'selected_payment_selection_key' => $this->getSelectedPaymentSelectionKey(),
             'conditions_to_approve' => $conditionsToApprove,
@@ -453,9 +453,31 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         return (string) ($this->context->cookie->__get('opc_selected_payment_selection_key') ?: '');
     }
 
-    private function resolveSubmittedAddress(int $addressId, int $customerId, int $languageId): ?\Address
+    private function fillOpcFormFromResolvedAddresses(int $deliveryAddressId, int $invoiceAddressId, ?int $customerId = null): void
     {
-        if ($addressId <= 0 || !\Customer::customerHasAddress($customerId, $addressId)) {
+        if ($deliveryAddressId <= 0 && $invoiceAddressId <= 0) {
+            return;
+        }
+
+        $languageId = (int) $this->context->language->id;
+        $deliveryAddress = $this->resolveAddressForHydration($deliveryAddressId, $languageId, $customerId);
+        $invoiceAddress = null;
+
+        if ($invoiceAddressId > 0 && $invoiceAddressId !== $deliveryAddressId) {
+            $invoiceAddress = $this->resolveAddressForHydration($invoiceAddressId, $languageId, $customerId);
+        }
+
+        if ($deliveryAddress || $invoiceAddress) {
+            $this->opcForm->fillFromAddresses($deliveryAddress, $invoiceAddress);
+        }
+    }
+
+    private function resolveAddressForHydration(int $addressId, int $languageId, ?int $customerId = null): ?\Address
+    {
+        if (
+            $addressId <= 0
+            || ($customerId !== null && ($customerId <= 0 || !\Customer::customerHasAddress($customerId, $addressId)))
+        ) {
             return null;
         }
 

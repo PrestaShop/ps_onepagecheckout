@@ -11,18 +11,15 @@ class OnePageCheckoutSaveAddressHandler
     private \Context $context;
     private TranslatorInterface $translator;
     private CheckoutCustomerContextResolver $customerResolver;
-    private CheckoutSessionFactory $checkoutSessionFactory;
 
     public function __construct(
         \Context $context,
         TranslatorInterface $translator,
         CheckoutCustomerContextResolver $customerResolver,
-        ?CheckoutSessionFactory $checkoutSessionFactory = null,
     ) {
         $this->context = $context;
         $this->translator = $translator;
         $this->customerResolver = $customerResolver;
-        $this->checkoutSessionFactory = $checkoutSessionFactory ?? new CheckoutSessionFactory($context, $translator);
     }
 
     /**
@@ -39,9 +36,8 @@ class OnePageCheckoutSaveAddressHandler
 
         $addressType = (string) ($requestParameters['address_type'] ?? 'delivery');
         $prefix = $addressType === 'invoice' ? 'invoice_' : '';
-        $addressId = (int) ($requestParameters[$prefix . 'id_address'] ?? $requestParameters['id_address'] ?? 0);
-        $isUpdate = $addressId > 0;
-        $address = $isUpdate ? new \Address($addressId, (int) $this->context->language->id) : new \Address();
+        $addressId = (int) ($requestParameters['id_address'] ?? 0);
+        $address = $addressId > 0 ? new \Address($addressId, (int) $this->context->language->id) : new \Address();
 
         if ($addressId > 0 && (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId)) {
             return CheckoutAjaxResponse::error('Unable to load the requested address.');
@@ -59,35 +55,22 @@ class OnePageCheckoutSaveAddressHandler
             return CheckoutAjaxResponse::error('Unable to save address.');
         }
 
-        $deliveryAddressId = (int) $this->context->cart->id_address_delivery;
-        $invoiceAddressId = (int) $this->context->cart->id_address_invoice;
-
-        if ($addressType === 'invoice') {
-            $invoiceAddressId = (int) $address->id;
-        } else {
-            $deliveryAddressId = (int) $address->id;
-            if ((string) ($requestParameters['use_same_address'] ?? '1') !== '0') {
-                $invoiceAddressId = (int) $address->id;
-            }
-        }
-
         if (\Validate::isLoadedObject($this->context->cart)) {
-            $checkoutSession = $this->checkoutSessionFactory->create();
-            $checkoutSession->setIdAddressDelivery($deliveryAddressId);
-            $checkoutSession->setIdAddressInvoice($invoiceAddressId);
+            if ($addressType === 'invoice') {
+                $this->context->cart->id_address_invoice = (int) $address->id;
+            } else {
+                $this->context->cart->id_address_delivery = (int) $address->id;
+
+                if ((string) ($requestParameters['use_same_address'] ?? '1') !== '0') {
+                    $this->context->cart->id_address_invoice = (int) $address->id;
+                }
+            }
+
+            $this->context->cart->update();
         }
 
         return [
             'success' => true,
-            'id_address' => (int) $address->id,
-            'id_address_delivery' => $deliveryAddressId,
-            'id_address_invoice' => $invoiceAddressId,
-            'address_type' => $addressType,
-            'message' => $this->translator->trans(
-                $isUpdate ? 'Address successfully updated.' : 'Address successfully added.',
-                [],
-                'Shop.Notifications.Success'
-            ),
         ];
     }
 

@@ -28,22 +28,27 @@ class OpcAddressesListHandlerIntegrationTest extends TestCase
         \Configuration::loadConfiguration();
     }
 
-    public function testItReturnsCurrentCheckoutCustomerAddresses(): void
+    public function testItReturnsCurrentCheckoutCustomerAddressListContext(): void
     {
         $customer = $this->createCustomer();
         $firstAddress = $this->createAddressForCustomer((int) $customer->id, 'Home');
-        $this->createAddressForCustomer((int) $customer->id, 'Office');
+        $secondAddress = $this->createAddressForCustomer((int) $customer->id, 'Office');
 
         $context = self::getContext();
         $context->customer = $customer;
         $context->language = new \Language((int) \Configuration::get('PS_LANG_DEFAULT'));
+        $context->cart = new \Cart();
+        $context->cart->id_address_delivery = (int) $secondAddress->id;
+        $context->cart->id_address_invoice = (int) $firstAddress->id;
 
         $handler = new OnePageCheckoutAddressesListHandler($context, new CheckoutCustomerContextResolver($context));
-        $response = $handler->handle(['id_address' => (string) $firstAddress->id]);
+        $response = $handler->handle();
 
         self::assertTrue($response['success']);
-        self::assertCount(2, $response['addresses']);
-        self::assertSame((int) $firstAddress->id, (int) $response['address']['id_address']);
+        self::assertSame(2, $response['address_count']);
+        self::assertSame((int) $secondAddress->id, (int) $response['selected_delivery_address']);
+        self::assertSame((int) $firstAddress->id, (int) $response['selected_invoice_address']);
+        self::assertCount(2, $response['customer']['addresses']);
     }
 
     private function createCustomer(): \Customer

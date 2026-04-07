@@ -160,8 +160,8 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
             ->setValue(true);
 
         // Hidden field to preserve delivery address ID when editing
-        $format['id_address'] = (new \FormField())
-            ->setName('id_address')
+        $format['id_address_delivery'] = (new \FormField())
+            ->setName('id_address_delivery')
             ->setType('hidden');
 
         // Hidden field to preserve invoice address ID when editing
@@ -170,17 +170,19 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
             ->setType('hidden');
 
         // Delivery address fields
-        $format = array_merge($format, $this->getAddressFieldsFormat('', true));
+        $format = array_merge($format, $this->getAddressFieldsFormat('', false));
 
         // Invoice address fields (prefixed with invoice_)
         if ($this->invoiceCountry !== null) {
             $deliveryCountry = $this->getCountry();
             $this->setCountry($this->invoiceCountry);
-            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', true));
+            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', false));
             $this->setCountry($deliveryCountry);
         } else {
-            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', true));
+            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', false));
         }
+
+        $format = $this->sortAddressFields($format);
 
         // Add constraints and max length
         $format = $this->addConstraints(
@@ -220,6 +222,41 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
     protected function getDefinitionKey($name)
     {
         return strpos($name, 'invoice_') === 0 ? substr($name, 8) : $name;
+    }
+
+    /**
+     * @param array<string, \FormField> $fields
+     *
+     * @return array<string, \FormField>
+     */
+    protected function sortAddressFields(array $fields): array
+    {
+        $customOrder = [
+            'id_country' => 1,
+            'alias' => 2,
+            'firstname' => 3,
+            'lastname' => 4,
+            'company' => 5,
+            'vat_number' => 6,
+            'address1' => 7,
+            'address2' => 8,
+            'city' => 9,
+            'postcode' => 10,
+            'id_state' => 11,
+            'phone' => 12,
+        ];
+
+        uksort($fields, static function (string $keyA, string $keyB) use ($customOrder): int {
+            $baseA = str_replace('invoice_', '', $keyA);
+            $baseB = str_replace('invoice_', '', $keyB);
+
+            $positionA = $customOrder[$baseA] ?? 999;
+            $positionB = $customOrder[$baseB] ?? 999;
+
+            return $positionA <=> $positionB;
+        });
+
+        return $fields;
     }
 
     public function getFieldGroup(string $key): ?string

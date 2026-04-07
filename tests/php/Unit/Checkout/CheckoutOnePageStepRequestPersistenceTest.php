@@ -100,6 +100,23 @@ class CheckoutOnePageStepRequestPersistenceTest extends TestCase
         ]);
     }
 
+    public function testSubmitNormalizesMissingUseSameAddressFlag(): void
+    {
+        $this->opcForm->expects($this->once())
+            ->method('fillWith')
+            ->with($this->callback(static function (array $parameters): bool {
+                return isset($parameters['use_same_address'])
+                    && $parameters['use_same_address'] === '0';
+            }))
+            ->willReturnSelf();
+        $this->opcForm->method('validate')->willReturn(false);
+
+        $this->step->handleRequest([
+            'submitOnePageCheckout' => '1',
+            'email' => 'connected@example.com',
+        ]);
+    }
+
     public function testDeliveryOptionNotPersistedOnVirtualCart(): void
     {
         $cart = $this->createMock(\Cart::class);

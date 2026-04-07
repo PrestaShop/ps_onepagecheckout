@@ -11,8 +11,10 @@ namespace Tests\Unit\Checkout\Ajax;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 class OpcAddressFormHandlerTest extends TestCase
 {
@@ -22,23 +24,25 @@ class OpcAddressFormHandlerTest extends TestCase
     {
         $this->opcForm = $this->getMockBuilder(OnePageCheckoutForm::class)
             ->disableOriginalConstructor()
-            ->onlyMethods(['fillFromAddress', 'fillWith', 'getTemplateVariables'])
+            ->onlyMethods(['fillFromCustomer', 'fillFromAddress', 'fillWith', 'getTemplateVariables'])
             ->getMock()
         ;
 
         $context = \Context::getContext();
-        $context->language = new class extends \Language {
-            public function __construct()
-            {
-            }
-        };
-        $context->language->id = 1;
+        $context->language = CheckoutTestFixtures::language();
+        $context->cart = CheckoutTestFixtures::cart();
+        $context->customer = CheckoutTestFixtures::customer();
     }
 
     public function testItBuildsTemplateVariablesFromWhitelistedPayload(): void
     {
-        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm);
+        $resolver = $this->createResolverReturning(null);
+        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm, \Context::getContext(), $resolver);
 
+        $this->opcForm
+            ->expects($this->never())
+            ->method('fillFromCustomer')
+        ;
         $this->opcForm
             ->expects($this->never())
             ->method('fillFromAddress')
@@ -48,7 +52,6 @@ class OpcAddressFormHandlerTest extends TestCase
             ->method('fillWith')
             ->with([
                 'id_country' => '8',
-                'invoice_id_country' => '8',
                 'use_same_address' => '1',
             ])
         ;
@@ -68,10 +71,15 @@ class OpcAddressFormHandlerTest extends TestCase
         self::assertSame(['address_form' => '<form>ok</form>'], $response);
     }
 
-    public function testItIgnoresNonPositiveIdAddressFromPayload(): void
+    public function testItIgnoresNonPositiveDeliveryAddressIdFromPayload(): void
     {
-        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm);
+        $resolver = $this->createResolverReturning(null);
+        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm, \Context::getContext(), $resolver);
 
+        $this->opcForm
+            ->expects($this->never())
+            ->method('fillFromCustomer')
+        ;
         $this->opcForm
             ->expects($this->never())
             ->method('fillFromAddress')
@@ -90,7 +98,7 @@ class OpcAddressFormHandlerTest extends TestCase
         ;
 
         $response = $handler->getTemplateVariables([
-            'id_address' => '0',
+            'id_address_delivery' => '0',
             'id_country' => '8',
         ]);
 
@@ -99,8 +107,13 @@ class OpcAddressFormHandlerTest extends TestCase
 
     public function testItDoesNotFillAddressOrFormWhenPayloadHasNoExpectedKeys(): void
     {
-        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm);
+        $resolver = $this->createResolverReturning(null);
+        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm, \Context::getContext(), $resolver);
 
+        $this->opcForm
+            ->expects($this->never())
+            ->method('fillFromCustomer')
+        ;
         $this->opcForm
             ->expects($this->never())
             ->method('fillFromAddress')
@@ -120,5 +133,52 @@ class OpcAddressFormHandlerTest extends TestCase
         ]);
 
         self::assertSame(['address_form' => '<form>initial</form>'], $response);
+    }
+
+    public function testItIgnoresInvoiceCountryWhenUseSameAddressIsEnabled(): void
+    {
+        $resolver = $this->createResolverReturning(null);
+        $handler = new OnePageCheckoutAddressFormHandler($this->opcForm, \Context::getContext(), $resolver);
+
+        $this->opcForm
+            ->expects($this->never())
+            ->method('fillFromCustomer')
+        ;
+        $this->opcForm
+            ->expects($this->never())
+            ->method('fillFromAddress')
+        ;
+        $this->opcForm
+            ->expects($this->once())
+            ->method('fillWith')
+            ->with([
+                'id_country' => '21',
+                'use_same_address' => '1',
+            ])
+        ;
+        $this->opcForm
+            ->expects($this->once())
+            ->method('getTemplateVariables')
+            ->willReturn(['address_form' => '<form>same-address</form>'])
+        ;
+
+        $response = $handler->getTemplateVariables([
+            'id_country' => '21',
+            'invoice_id_country' => '8',
+            'use_same_address' => '1',
+        ]);
+
+        self::assertSame(['address_form' => '<form>same-address</form>'], $response);
+    }
+
+    private function createResolverReturning(?\Customer $customer): CheckoutCustomerContextResolver
+    {
+        $resolver = $this->getMockBuilder(CheckoutCustomerContextResolver::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['resolve'])
+            ->getMock();
+        $resolver->method('resolve')->willReturn($customer);
+
+        return $resolver;
     }
 }

@@ -31,6 +31,8 @@ use Address;
 use Cart;
 use Country;
 use Customer;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerTemplateBuilder;
 use PrestaShop\PrestaShop\Core\Util\InternationalizedDomainNameConverter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Validate;
@@ -142,7 +144,7 @@ class OnePageCheckoutForm extends \AbstractForm
     {
         $this->address = $address;
         $params = get_object_vars($address);
-        $params['id_address'] = $address->id;
+        $params['id_address_delivery'] = $address->id;
 
         return $this->fillWith($params);
     }
@@ -164,7 +166,7 @@ class OnePageCheckoutForm extends \AbstractForm
                     $params[$key] = $value;
                 }
             }
-            $params['id_address'] = $deliveryAddress->id;
+            $params['id_address_delivery'] = $deliveryAddress->id;
         }
         $deliveryAddressId = $deliveryAddress ? $deliveryAddress->id : 0;
 
@@ -257,41 +259,58 @@ class OnePageCheckoutForm extends \AbstractForm
         $token = \Tools::getToken(true, $this->context);
         $useSameAddress = $this->getField('use_same_address') && $this->getField('use_same_address')->getValue();
 
-        $deliveryAddress = $this->buildAddressFromGroup(
-            $fieldsByGroup['deliveryFields'],
-            (int) \Tools::getValue('id_address') ?: null
+        $deliveryAddress = $this->resolveSelectedCustomerAddress(
+            $this->resolveSelectedDeliveryAddressId(),
+            (int) $customer->id
         );
-        $deliveryAddress->id_customer = $customer->id;
-        if (empty($deliveryAddress->alias)) {
-            $deliveryAddress->alias = $this->translator->trans('My Address', [], 'Shop.Theme.Checkout');
-        }
-        \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$deliveryAddress]);
-        if (!$this->addressPersister->save($deliveryAddress, $token)) {
-            return false;
+
+        if ($deliveryAddress instanceof \Address) {
+            $idAddressDelivery = (int) $deliveryAddress->id;
+        } else {
+            $deliveryAddress = $this->buildAddressFromGroup(
+                $fieldsByGroup['deliveryFields'],
+                null
+            );
+            $deliveryAddress->id_customer = $customer->id;
+            if (empty($deliveryAddress->alias)) {
+                $deliveryAddress->alias = $this->translator->trans('My Address', [], 'Shop.Theme.Checkout');
+            }
+            \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$deliveryAddress]);
+            if (!$this->addressPersister->save($deliveryAddress, $token)) {
+                return false;
+            }
+
+            $idAddressDelivery = (int) $deliveryAddress->id;
         }
 
-        $idAddressDelivery = $deliveryAddress->id;
         $idAddressInvoice = $idAddressDelivery;
 
         // Create/update invoice address if different
         if (!$useSameAddress) {
             $idAddressInvoice = (int) \Tools::getValue('id_address_invoice');
-            $invoiceAddress = $this->buildAddressFromGroup(
-                $fieldsByGroup['invoiceFields'],
-                $idAddressInvoice ?: null,
-                'invoice_'
-            );
-            $invoiceAddress->id_customer = $customer->id;
-            $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans(
-                'Invoice address',
-                [],
-                'Shop.Theme.Checkout'
-            );
-            \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$invoiceAddress]);
-            if (!$this->addressPersister->save($invoiceAddress, $token)) {
-                return false;
+            $invoiceAddress = $this->resolveSelectedCustomerAddress($idAddressInvoice, (int) $customer->id);
+
+            if ($invoiceAddress instanceof \Address) {
+                $idAddressInvoice = (int) $invoiceAddress->id;
+            } else {
+                $invoiceAddress = $this->buildAddressFromGroup(
+                    $fieldsByGroup['invoiceFields'],
+                    null,
+                    'invoice_'
+                );
+                $invoiceAddress->id_customer = $customer->id;
+                $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans(
+                    'Invoice address',
+                    [],
+                    'Shop.Theme.Checkout'
+                );
+                \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$invoiceAddress]);
+                if (!$this->addressPersister->save($invoiceAddress, $token)) {
+                    return false;
+                }
+
+                $idAddressInvoice = (int) $invoiceAddress->id;
             }
-            $idAddressInvoice = $invoiceAddress->id;
         }
 
         return [
@@ -563,7 +582,7 @@ class OnePageCheckoutForm extends \AbstractForm
     {
         $fieldsByGroup = $this->mapFieldsByGroup();
 
-        return $this->buildAddressFromGroup($fieldsByGroup['deliveryFields'], \Tools::getValue('id_address'));
+        return $this->buildAddressFromGroup($fieldsByGroup['deliveryFields'], $this->resolveSelectedDeliveryAddressId());
     }
 
     /**
@@ -591,6 +610,7 @@ class OnePageCheckoutForm extends \AbstractForm
         return [
             'action' => $this->action,
             'errors' => $this->getErrors(),
+            'customer' => $this->buildCheckoutCustomerTemplateVariables(),
             'formFields' => $formFields,
             'contactFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['contactFields']),
             'additionalCustomerFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['additionalCustomerFields']),
@@ -600,6 +620,39 @@ class OnePageCheckoutForm extends \AbstractForm
             'invoiceMetaFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceMetaFields']),
             'token' => \Tools::getToken(true, $this->context),
         ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function buildCheckoutCustomerTemplateVariables(): array
+    {
+        return (new CheckoutCustomerTemplateBuilder(
+            $this->context,
+            new CheckoutCustomerContextResolver($this->context)
+        ))->build();
+    }
+
+    private function resolveSelectedDeliveryAddressId(): ?int
+    {
+        $selectedDeliveryAddressId = (int) \Tools::getValue('id_address_delivery');
+
+        return $selectedDeliveryAddressId > 0 ? $selectedDeliveryAddressId : null;
+    }
+
+    private function resolveSelectedCustomerAddress(?int $addressId, int $customerId): ?\Address
+    {
+        if ($addressId === null || $addressId <= 0 || $customerId <= 0) {
+            return null;
+        }
+
+        $address = new \Address($addressId, (int) $this->language->id);
+
+        if (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId) {
+            return null;
+        }
+
+        return $address;
     }
 
     /**

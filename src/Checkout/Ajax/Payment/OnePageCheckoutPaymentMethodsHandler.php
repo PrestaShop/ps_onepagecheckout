@@ -32,13 +32,44 @@ class OnePageCheckoutPaymentMethodsHandler
         }
 
         $originalCountry = $this->context->country;
+        $resolvedCountry = null;
+        $taxAddressType = (string) \Configuration::get('PS_TAX_ADDRESS_TYPE');
+        $addressIds = $this->resolveCountryAddressCandidates($taxAddressType, $requestParameters);
+
+        foreach ($addressIds as $addressId) {
+            $resolvedCountry = $this->loadCountryFromAddressId($addressId);
+            if ($resolvedCountry instanceof \Country) {
+                break;
+            }
+        }
+
+        if (!$resolvedCountry instanceof \Country) {
+            if ($taxAddressType === 'id_address_invoice') {
+                $resolvedCountryId = (int) ($requestParameters['invoice_id_country'] ?? 0) ?: (int) ($requestParameters['id_country'] ?? 0);
+            } else {
+                $resolvedCountryId = (int) ($requestParameters['id_country'] ?? 0) ?: (int) ($requestParameters['delivery_id_country'] ?? 0);
+            }
+
+            if ($resolvedCountryId > 0) {
+                $candidateCountry = new \Country($resolvedCountryId);
+                if (\Validate::isLoadedObject($candidateCountry)) {
+                    $resolvedCountry = $candidateCountry;
+                }
+            }
+        }
+
+        $countryId = $resolvedCountry instanceof \Country
+            ? (int) $resolvedCountry->id
+            : (\Validate::isLoadedObject($this->context->country) ? (int) $this->context->country->id : 0);
 
         try {
-            $this->resolveCountryContext($requestParameters);
+            if ($resolvedCountry instanceof \Country) {
+                $this->context->country = $resolvedCountry;
+            }
 
             $isFree = 0.0 == (float) $this->context->cart->getOrderTotal(true, \Cart::BOTH);
             $paymentOptions = $this->paymentOptionsFinder->present($isFree);
-            $paymentOptions = $this->filterByCountry($paymentOptions);
+            $paymentOptions = $this->filterByCountry($paymentOptions, $countryId);
             $paymentOptions = $this->selectionKeyBuilder->enrichPaymentOptions($paymentOptions);
             [$selectedPaymentModule, $selectedPaymentSelectionKey] = $this->resolvePersistedSelection($paymentOptions);
 
@@ -55,17 +86,57 @@ class OnePageCheckoutPaymentMethodsHandler
     }
 
     /**
+     * @param array<string,mixed> $requestParameters
+     *
+     * @return int[]
+     */
+    private function resolveCountryAddressCandidates(string $taxAddressType, array $requestParameters): array
+    {
+        $requestAddressKey = $taxAddressType === 'id_address_invoice'
+            ? 'id_address_invoice'
+            : 'id_address_delivery';
+        $requestAddressId = (int) ($requestParameters[$requestAddressKey] ?? 0);
+        $cartAddressId = (int) ($this->context->cart->{$taxAddressType} ?? 0);
+
+        $addressIds = [];
+        if ($requestAddressId > 0) {
+            $addressIds[] = $requestAddressId;
+        }
+
+        if ($cartAddressId > 0 && $cartAddressId !== $requestAddressId) {
+            $addressIds[] = $cartAddressId;
+        }
+
+        return $addressIds;
+    }
+
+    private function loadCountryFromAddressId(int $addressId): ?\Country
+    {
+        if ($addressId <= 0) {
+            return null;
+        }
+
+        $address = new \Address($addressId);
+        if (!\Validate::isLoadedObject($address) || (int) $address->id_country <= 0) {
+            return null;
+        }
+
+        $candidateCountry = new \Country((int) $address->id_country);
+        if (!\Validate::isLoadedObject($candidateCountry)) {
+            return null;
+        }
+
+        return $candidateCountry;
+    }
+
+    /**
      * @param array<int|string, mixed> $paymentOptions
      *
      * @return array<int|string, mixed>
      */
-    private function filterByCountry(array $paymentOptions): array
+    private function filterByCountry(array $paymentOptions, int $countryId): array
     {
-        if ($paymentOptions === []) {
-            return $paymentOptions;
-        }
-
-        if (!\Validate::isLoadedObject($this->context->country)) {
+        if ($paymentOptions === [] || $countryId <= 0) {
             return $paymentOptions;
         }
 
@@ -91,7 +162,7 @@ class OnePageCheckoutPaymentMethodsHandler
             }
 
             $hasRestriction[$moduleName] = true;
-            if ((int) $row['id_country'] === (int) $this->context->country->id) {
+            if ((int) $row['id_country'] === $countryId) {
                 $allowedForCountry[$moduleName] = true;
             }
         }
@@ -103,33 +174,6 @@ class OnePageCheckoutPaymentMethodsHandler
             },
             ARRAY_FILTER_USE_KEY
         );
-    }
-
-    /**
-     * @param array<string,mixed> $requestParameters
-     */
-    private function resolveCountryContext(array $requestParameters): void
-    {
-        $taxAddressType = (string) \Configuration::get('PS_TAX_ADDRESS_TYPE');
-
-        if ((int) ($this->context->cart->{$taxAddressType} ?? 0) > 0) {
-            return;
-        }
-
-        if ($taxAddressType === 'id_address_invoice') {
-            $idCountry = (int) ($requestParameters['invoice_id_country'] ?? 0) ?: (int) ($requestParameters['id_country'] ?? 0);
-        } else {
-            $idCountry = (int) ($requestParameters['id_country'] ?? 0) ?: (int) ($requestParameters['delivery_id_country'] ?? 0);
-        }
-
-        if ($idCountry <= 0) {
-            return;
-        }
-
-        $country = new \Country($idCountry);
-        if (\Validate::isLoadedObject($country)) {
-            $this->context->country = $country;
-        }
     }
 
     private function getSelectedPaymentModule(): string
