@@ -33,21 +33,21 @@ const MODAL_SELECTOR = '#psopc-confirmation-modal';
 const FORM_SELECTOR = '.psopc-configuration form';
 const MAINTENANCE_HIDDEN_SELECTOR = '#psopc-maintenance-hidden';
 const MAINTENANCE_TOGGLE_SELECTOR = '#psopc-maintenance-toggle';
-const THEME_COMPATIBILITY_SELECTOR = '[data-psopc-modal="theme-compatibility"]';
-const DIRECT_SWITCH_SELECTOR = '[data-psopc-modal="direct-switch"]';
+const OPC_ACTIVATION_SELECTOR = '[data-psopc-modal="opc-activation"]';
+const FOUR_PAGE_ACTIVATION_SELECTOR = '[data-psopc-modal="four-page-activation"]';
 
 /**
  * @param {boolean} isOpc
  */
 function updateModalContent(isOpc) {
-  const checkThemeCompatibilitySelectors = document.querySelectorAll(THEME_COMPATIBILITY_SELECTOR);
-  const directSwitchSelectors = document.querySelectorAll(DIRECT_SWITCH_SELECTOR);
+  const opcActivationSelectors = document.querySelectorAll(OPC_ACTIVATION_SELECTOR);
+  const fourPageActivationSelectors = document.querySelectorAll(FOUR_PAGE_ACTIVATION_SELECTOR);
 
-  checkThemeCompatibilitySelectors.forEach(function (el) {
+  opcActivationSelectors.forEach(function (el) {
     el.style.display = isOpc ? '' : 'none';
   });
 
-  directSwitchSelectors.forEach(function (el) {
+  fourPageActivationSelectors.forEach(function (el) {
     el.style.display = isOpc ? 'none' : '';
   });
 }
