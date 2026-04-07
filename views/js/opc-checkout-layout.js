@@ -40,14 +40,14 @@ const DIRECT_SWITCH_SELECTOR = '[data-psopc-modal="direct-switch"]';
  * @param {boolean} isOpc
  */
 function updateModalContent(isOpc) {
-  const checkThemeCompatibilityElements = document.querySelectorAll(THEME_COMPATIBILITY_SELECTOR);
-  const directSwitchElements = document.querySelectorAll(DIRECT_SWITCH_SELECTOR);
+  const checkThemeCompatibilitySelectors = document.querySelectorAll(THEME_COMPATIBILITY_SELECTOR);
+  const directSwitchSelectors = document.querySelectorAll(DIRECT_SWITCH_SELECTOR);
 
-  checkThemeCompatibilityElements.forEach(function (el) {
+  checkThemeCompatibilitySelectors.forEach(function (el) {
     el.style.display = isOpc ? '' : 'none';
   });
 
-  directSwitchElements.forEach(function (el) {
+  directSwitchSelectors.forEach(function (el) {
     el.style.display = isOpc ? 'none' : '';
   });
 }
