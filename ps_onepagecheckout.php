@@ -12,6 +12,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
@@ -66,6 +67,7 @@ class Ps_Onepagecheckout extends Module
             && $this->initializeCheckoutProcessProviderConfiguration()
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
+            && $this->registerHook('actionAdminControllerSetMedia')
             && $this->registerHook('actionFrontControllerSetVariables');
     }
 
@@ -153,6 +155,15 @@ class Ps_Onepagecheckout extends Module
         ]);
 
         $this->registerOpcJavascriptAssets();
+    }
+
+    public function hookActionAdminControllerSetMedia(): void
+    {
+        if (!isset($this->context->controller) || !$this->isBackOfficeConfigurationContext()) {
+            return;
+        }
+
+        $this->bootstrapPhpSegmentClient();
     }
 
     public function hookActionFrontControllerSetVariables(array $params): void
@@ -330,5 +341,28 @@ class Ps_Onepagecheckout extends Module
     protected function uninstallOnePageCheckoutConfiguration(): bool
     {
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
+    }
+
+    protected function bootstrapPhpSegmentClient(): void
+    {
+        // Segment PHP bootstrap is enabled whenever the module is enabled.
+        // Bootstrap is disabled only when the write key is empty.
+        Analytics::bootstrap(true);
+    }
+
+    protected function isBackOfficeConfigurationContext(): bool
+    {
+        $controllerName = (string) Tools::getValue('controller');
+        if ($controllerName === 'AdminPsOnePageCheckout') {
+            return true;
+        }
+
+        $configuredModule = trim((string) Tools::getValue('configure'));
+        if ($configuredModule === $this->name) {
+            return true;
+        }
+
+        return isset($this->context->controller)
+            && in_array(get_class($this->context->controller), ['AdminPsOnePageCheckoutController'], true);
     }
 }

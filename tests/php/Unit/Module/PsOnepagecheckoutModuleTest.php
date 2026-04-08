@@ -28,6 +28,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertSame([
             'actionCheckoutBuildProcess',
             'actionFrontControllerSetMedia',
+            'actionAdminControllerSetMedia',
             'actionFrontControllerSetVariables',
         ], $module->registerHookCalls);
     }
@@ -222,8 +223,23 @@ class PsOnepagecheckoutModuleTest extends TestCase
         /** @var DummySmarty $smarty */
         $smarty = $module->getModuleContext()->smarty;
         self::assertFalse($smarty->assigned['is_one_page_checkout_enabled']);
-        self::assertSame([], $module->javascriptDefinitions);
+        self::assertCount(0, $module->javascriptDefinitions);
         self::assertSame(0, $module->registeredJavascriptAssetsCalls);
+    }
+
+    public function testHookActionAdminControllerSetMediaBootstrapsPhpSegmentOnConfigurationPage(): void
+    {
+        $_GET['configure'] = 'ps_onepagecheckout';
+        $module = $this->createModule();
+        $module->name = 'ps_onepagecheckout';
+        $module->setModuleContext((object) [
+            'controller' => (object) ['php_self' => 'adminmodules'],
+        ]);
+
+        $module->hookActionAdminControllerSetMedia();
+
+        self::assertSame(1, $module->bootstrapPhpSegmentClientCalls);
+        self::assertCount(0, $module->javascriptDefinitions);
     }
 
     public function testMainModuleFileDoesNotContainCustomAutoloaderRegistration(): void
@@ -271,6 +287,7 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     public array $javascriptDefinitions = [];
 
     public int $registeredJavascriptAssetsCalls = 0;
+    public int $bootstrapPhpSegmentClientCalls = 0;
     public bool $isEnabled = true;
     public int $disableCurrentContextCalls = 0;
     public bool $disableCurrentContextResult = true;
@@ -341,6 +358,7 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         return $this->initializeProviderResult;
     }
 
+
     protected function disableOnePageCheckoutConfigurationForCurrentContext(): bool
     {
         ++$this->disableCurrentContextCalls;
@@ -372,6 +390,12 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         ++$this->registeredJavascriptAssetsCalls;
     }
 
+    protected function bootstrapPhpSegmentClient(): void
+    {
+        ++$this->bootstrapPhpSegmentClientCalls;
+        parent::bootstrapPhpSegmentClient();
+    }
+
     protected function disableInParent(bool $forceAll): bool
     {
         $this->disableInParentCalls[] = $forceAll;
@@ -392,6 +416,7 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
 
         return $this->uninstallInParentResult;
     }
+
 }
 
 class DummySmarty
