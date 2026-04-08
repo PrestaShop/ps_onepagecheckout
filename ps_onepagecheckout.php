@@ -67,6 +67,7 @@ class Ps_Onepagecheckout extends Module
             'selectcarrier',
             'paymentmethods',
             'selectpayment',
+            'opcsubmit',
         ];
     }
 
@@ -223,6 +224,15 @@ class Ps_Onepagecheckout extends Module
                     $this->name,
                     'selectpayment',
                     ['ajax' => 1, 'action' => 'opcSelectPayment'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'opcSubmit' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'opcsubmit',
+                    ['ajax' => 1, 'action' => 'opcSubmit'],
                     null,
                     null,
                     null,

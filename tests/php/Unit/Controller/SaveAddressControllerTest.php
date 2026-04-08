@@ -19,9 +19,9 @@ class SaveAddressControllerTest extends TestCase
             {
             }
 
-            public function callHandleSaveAddress(): array
+            public function callHandleOpcRequest(): array
             {
-                return $this->handleSaveAddress();
+                return $this->handleOpcRequest();
             }
 
             protected function buildTechnicalErrorResponse(): array
@@ -40,6 +40,6 @@ class SaveAddressControllerTest extends TestCase
             }
         };
 
-        self::assertSame('technical-error', $controller->callHandleSaveAddress()['error']);
+        self::assertSame('technical-error', $controller->callHandleOpcRequest()['error']);
     }
 }

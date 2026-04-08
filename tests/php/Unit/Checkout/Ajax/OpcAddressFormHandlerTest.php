@@ -68,7 +68,8 @@ class OpcAddressFormHandlerTest extends TestCase
             'ignored_key' => 'ignored',
         ]);
 
-        self::assertSame(['address_form' => '<form>ok</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>ok</form>', $response['address_form']);
     }
 
     public function testItIgnoresNonPositiveDeliveryAddressIdFromPayload(): void
@@ -102,7 +103,8 @@ class OpcAddressFormHandlerTest extends TestCase
             'id_country' => '8',
         ]);
 
-        self::assertSame(['address_form' => '<form>country-only</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>country-only</form>', $response['address_form']);
     }
 
     public function testItDoesNotFillAddressOrFormWhenPayloadHasNoExpectedKeys(): void
@@ -132,7 +134,8 @@ class OpcAddressFormHandlerTest extends TestCase
             'foo' => 'bar',
         ]);
 
-        self::assertSame(['address_form' => '<form>initial</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>initial</form>', $response['address_form']);
     }
 
     public function testItIgnoresInvoiceCountryWhenUseSameAddressIsEnabled(): void
@@ -168,7 +171,8 @@ class OpcAddressFormHandlerTest extends TestCase
             'use_same_address' => '1',
         ]);
 
-        self::assertSame(['address_form' => '<form>same-address</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>same-address</form>', $response['address_form']);
     }
 
     private function createResolverReturning(?\Customer $customer): CheckoutCustomerContextResolver
@@ -180,5 +184,17 @@ class OpcAddressFormHandlerTest extends TestCase
         $resolver->method('resolve')->willReturn($customer);
 
         return $resolver;
+    }
+
+    /**
+     * @param array<string,mixed> $response
+     */
+    private static function assertAddressSectionContext(array $response): void
+    {
+        self::assertArrayHasKey('is_virtual_cart', $response);
+        self::assertArrayHasKey('cart', $response);
+        self::assertIsArray($response['cart']);
+        self::assertArrayHasKey('id_address_delivery', $response['cart']);
+        self::assertArrayHasKey('id_address_invoice', $response['cart']);
     }
 }

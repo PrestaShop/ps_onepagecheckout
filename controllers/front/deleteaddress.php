@@ -28,12 +28,4 @@ class Ps_OnepagecheckoutDeleteAddressModuleFrontController extends Ps_Onepageche
 
         return $handler->handle(Tools::getAllValues());
     }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleDeleteAddress(): array
-    {
-        return $this->handleOpcRequest();
-    }
 }

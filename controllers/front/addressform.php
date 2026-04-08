@@ -46,14 +46,6 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends Ps_Onepagecheck
         }
     }
 
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleAddressFormRefresh(): array
-    {
-        return $this->handleOpcRequest();
-    }
-
     protected function getOpcFormFactory(): OnePageCheckoutFormFactory
     {
         assert($this->module instanceof Ps_Onepagecheckout);

@@ -50,12 +50,4 @@ class Ps_OnepagecheckoutPaymentMethodsModuleFrontController extends Ps_Onepagech
             return $this->buildTechnicalErrorResponse();
         }
     }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handlePaymentMethods(): array
-    {
-        return $this->handleOpcRequest();
-    }
 }

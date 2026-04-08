@@ -14,6 +14,7 @@ const OPC_SELECTORS = {
     deliveryList: '#opc-delivery-address-content-list',
     billingList: '#opc-billing-address-content-list',
     useSameAddress: '[name="use_same_address"]',
+    checkoutFooter: '.one-page-checkout__footer',
     contactSection: '.js-opc-contact-section',
     addressRadio: '.js-opc-address-radio',
     addressItem: '.opc-address-item',

@@ -185,6 +185,31 @@ class OnePageCheckoutForm extends \AbstractForm
         return $this->fillWith($params);
     }
 
+    /**
+     * Restore the last failed submit state after the AJAX submit redirects back to /order.
+     *
+     * @param array<string,mixed> $params
+     * @param array<string,mixed> $errors
+     */
+    public function restoreSubmissionState(array $params, array $errors): self
+    {
+        $this->fillWith($params);
+        $this->errors = ['' => is_array($errors[''] ?? null) ? $errors[''] : []];
+
+        foreach ($errors as $fieldName => $fieldErrors) {
+            if ($fieldName === '' || !is_array($fieldErrors)) {
+                continue;
+            }
+
+            $field = $this->getField((string) $fieldName);
+            if ($field) {
+                $field->setErrors($fieldErrors);
+            }
+        }
+
+        return $this;
+    }
+
     public function validate()
     {
         // When use_same_address, invoice fields are optional (skipped)

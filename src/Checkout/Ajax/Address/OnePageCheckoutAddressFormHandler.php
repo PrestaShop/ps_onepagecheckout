@@ -88,7 +88,7 @@ class OnePageCheckoutAddressFormHandler
             $this->opcForm->fillWith($formParams);
         }
 
-        return $this->opcForm->getTemplateVariables();
+        return $this->buildAddressesSectionTemplateVariables();
     }
 
     /**
@@ -128,5 +128,22 @@ class OnePageCheckoutAddressFormHandler
     private function isOwnedAddressId(int $addressId): bool
     {
         return $this->loadOwnedAddress($addressId) instanceof \Address;
+    }
+
+    /**
+     * The refreshed addresses partial needs the same top-level checkout variables
+     * as the initial step render, not just the form payload.
+     *
+     * @return array<string,mixed>
+     */
+    private function buildAddressesSectionTemplateVariables(): array
+    {
+        return $this->opcForm->getTemplateVariables() + [
+            'is_virtual_cart' => $this->context->cart->isVirtualCart(),
+            'cart' => [
+                'id_address_delivery' => (int) ($this->context->cart->id_address_delivery ?? 0),
+                'id_address_invoice' => (int) ($this->context->cart->id_address_invoice ?? 0),
+            ],
+        ];
     }
 }

@@ -63,12 +63,4 @@ class Ps_OnepagecheckoutAddressesListModuleFrontController extends Ps_Onepageche
             return $this->buildTechnicalErrorResponse();
         }
     }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleAddressesList(): array
-    {
-        return $this->handleOpcRequest();
-    }
 }

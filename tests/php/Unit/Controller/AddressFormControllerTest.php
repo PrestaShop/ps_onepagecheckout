@@ -25,7 +25,7 @@ class AddressFormControllerTest extends TestCase
         $controller = new TestAddressFormController();
         $controller->module = $this->createDisabledModule();
 
-        $response = $controller->callHandleAddressFormRefresh();
+        $response = $controller->callHandleOpcRequest();
 
         self::assertFalse($response['success']);
         self::assertSame('technical-error', $response['error']);
@@ -54,7 +54,7 @@ class AddressFormControllerTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $response = $controller->callHandleAddressFormRefresh();
+        $response = $controller->callHandleOpcRequest();
 
         self::assertSame('rendered:checkout/_partials/one-page-checkout/addresses-section', $response['addresses_section']);
     }
@@ -72,7 +72,7 @@ class AddressFormControllerTest extends TestCase
             return true;
         }, E_WARNING);
         try {
-            $response = $controller->callHandleAddressFormRefresh();
+            $response = $controller->callHandleOpcRequest();
         } finally {
             restore_error_handler();
         }
@@ -129,9 +129,9 @@ class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFron
     {
     }
 
-    public function callHandleAddressFormRefresh(): array
+    public function callHandleOpcRequest(): array
     {
-        return $this->handleAddressFormRefresh();
+        return $this->handleOpcRequest();
     }
 
     public function setTestContext(\Context $context): void

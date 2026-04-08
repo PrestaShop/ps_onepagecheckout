@@ -19,9 +19,9 @@ class StatesControllerTest extends TestCase
             {
             }
 
-            public function callHandleStates(): array
+            public function callHandleOpcRequest(): array
             {
-                return $this->handleStates();
+                return $this->handleOpcRequest();
             }
 
             protected function buildTechnicalErrorResponse(): array
@@ -40,6 +40,6 @@ class StatesControllerTest extends TestCase
             }
         };
 
-        self::assertSame('technical-error', $controller->callHandleStates()['error']);
+        self::assertSame('technical-error', $controller->callHandleOpcRequest()['error']);
     }
 }

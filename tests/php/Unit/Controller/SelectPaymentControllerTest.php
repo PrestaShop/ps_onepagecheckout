@@ -19,9 +19,9 @@ class SelectPaymentControllerTest extends TestCase
             {
             }
 
-            public function callHandleSelectPayment(): array
+            public function callHandleOpcRequest(): array
             {
-                return $this->handleSelectPayment();
+                return $this->handleOpcRequest();
             }
 
             protected function buildTechnicalErrorResponse(): array
@@ -40,6 +40,6 @@ class SelectPaymentControllerTest extends TestCase
             }
         };
 
-        self::assertSame('technical-error', $controller->callHandleSelectPayment()['error']);
+        self::assertSame('technical-error', $controller->callHandleOpcRequest()['error']);
     }
 }

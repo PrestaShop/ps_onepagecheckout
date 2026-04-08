@@ -23,12 +23,4 @@ class Ps_OnepagecheckoutStatesModuleFrontController extends Ps_OnepagecheckoutAb
 
         return $handler->handle(Tools::getAllValues());
     }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleStates(): array
-    {
-        return $this->handleOpcRequest();
-    }
 }

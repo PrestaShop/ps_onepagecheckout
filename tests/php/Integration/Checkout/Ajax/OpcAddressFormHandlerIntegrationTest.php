@@ -55,7 +55,8 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
                 'id_address_delivery' => (string) $address->id,
             ],
         ], $formSpy->fillWithPayloads);
-        self::assertSame(['address_form' => '<form>ok</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>ok</form>', $response['address_form']);
     }
 
     public function testItDoesNotLoadAddressWhenIdIsNotPositive(): void
@@ -73,7 +74,8 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
         self::assertSame([
             ['id_country' => '8'],
         ], $formSpy->fillWithPayloads);
-        self::assertSame(['address_form' => '<form>country-only</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>country-only</form>', $response['address_form']);
     }
 
     public function testItReturnsTemplateVariablesWithoutFormFillWhenPayloadIsIrrelevant(): void
@@ -88,7 +90,8 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
 
         self::assertSame([], $formSpy->loadedAddressIds);
         self::assertSame([], $formSpy->fillWithPayloads);
-        self::assertSame(['address_form' => '<form>initial</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>initial</form>', $response['address_form']);
     }
 
     public function testItPreservesPositiveInvoiceAddressIdInRefreshPayload(): void
@@ -113,7 +116,8 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
                 'id_address_invoice' => (string) $invoiceAddress->id,
             ],
         ], $formSpy->fillWithPayloads);
-        self::assertSame(['address_form' => '<form>invoice</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>invoice</form>', $response['address_form']);
     }
 
     public function testItRejectsForeignAddressOwnershipDuringRefresh(): void
@@ -137,7 +141,8 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
             ['customer_id' => (int) $owner->id],
             ['id_country' => '8'],
         ], $formSpy->fillWithPayloads);
-        self::assertSame(['address_form' => '<form>safe</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>safe</form>', $response['address_form']);
     }
 
     public function testItFallsBackToDefaultCountryWhenCustomerHasNoSavedAddress(): void
@@ -160,7 +165,8 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
                 'id_country' => (string) \Configuration::get('PS_COUNTRY_DEFAULT'),
             ],
         ], $formSpy->fillWithPayloads);
-        self::assertSame(['address_form' => '<form>default-country</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>default-country</form>', $response['address_form']);
     }
 
     public function testItIgnoresInvoiceCountryWhenUseSameAddressIsEnabled(): void
@@ -185,7 +191,8 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
                 'use_same_address' => '1',
             ],
         ], $formSpy->fillWithPayloads);
-        self::assertSame(['address_form' => '<form>same-address-country</form>'], $response);
+        self::assertAddressSectionContext($response);
+        self::assertSame('<form>same-address-country</form>', $response['address_form']);
     }
 
     private static function resetTables(): void
@@ -230,6 +237,18 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
     private function uniqueEmail(string $prefix): string
     {
         return sprintf('%s_%s@example.com', $prefix, uniqid('', true));
+    }
+
+    /**
+     * @param array<string,mixed> $response
+     */
+    private static function assertAddressSectionContext(array $response): void
+    {
+        self::assertArrayHasKey('is_virtual_cart', $response);
+        self::assertArrayHasKey('cart', $response);
+        self::assertIsArray($response['cart']);
+        self::assertArrayHasKey('id_address_delivery', $response['cart']);
+        self::assertArrayHasKey('id_address_invoice', $response['cart']);
     }
 }
 

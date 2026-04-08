@@ -27,10 +27,9 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
-use Address;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitValidationStateStorage;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Validate;
 
 class CheckoutOnePageStep extends \AbstractCheckoutStep
 {
@@ -61,6 +60,8 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
     private $displayTaxesLabel = false;
 
     private $validationErrors = [];
+    private bool $clearPersistedValidationErrorsOnNextSave = false;
+    private OnePageCheckoutSubmitValidationStateStorage $submitValidationStateStorage;
 
     /**
      * @param \Context $context
@@ -77,12 +78,14 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         \PaymentOptionsFinder $paymentOptionsFinder,
         \ConditionsToApproveFinder $conditionsToApproveFinder,
         ?PaymentSelectionKeyBuilder $paymentSelectionKeyBuilder = null,
+        ?OnePageCheckoutSubmitValidationStateStorage $submitValidationStateStorage = null,
     ) {
         parent::__construct($context, $translator);
         $this->opcForm = $opcForm;
         $this->paymentOptionsFinder = $paymentOptionsFinder;
         $this->conditionsToApproveFinder = $conditionsToApproveFinder;
         $this->paymentSelectionKeyBuilder = $paymentSelectionKeyBuilder ?? new PaymentSelectionKeyBuilder();
+        $this->submitValidationStateStorage = $submitValidationStateStorage ?? new OnePageCheckoutSubmitValidationStateStorage($context);
     }
 
     // Delivery options setters (like CheckoutDeliveryStep)
@@ -151,23 +154,15 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         // Step is always reachable (single step)
         $this->setReachable(true);
 
-        // Pre-fill form from session if not submitting
-        if (!isset($requestParameters['submitOnePageCheckout'])) {
-            $this->hydrateOpcFromSession();
-        }
+        $this->hydrateOpcFromSession();
+        $this->restoreLastFailedSubmitState();
 
         if (
             !$this->context->cart->isVirtualCart()
             && isset($requestParameters['delivery_option'])
             && is_array($requestParameters['delivery_option'])
-            && !isset($requestParameters['submitOnePageCheckout'])
         ) {
             $this->getCheckoutSession()->setDeliveryOption($requestParameters['delivery_option']);
-        }
-
-        // Handle submission
-        if (isset($requestParameters['submitOnePageCheckout'])) {
-            $this->handleOnePageCheckoutSubmit($requestParameters);
         }
 
         $this->setTitle(
@@ -194,190 +189,6 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         );
     }
 
-    private function handleOnePageCheckoutSubmit(array $requestParameters): void
-    {
-        $requestParameters = $this->normalizeSubmittedRequestParameters($requestParameters);
-        $this->hydrateOpcFromSubmittedAddresses($requestParameters);
-
-        $validationResult = $this->validateAllSections($requestParameters);
-        if (!$this->isAllSectionsValid($validationResult)) {
-            $this->getCheckoutProcess()->setHasErrors(true);
-            $this->setCurrent(true);
-
-            return;
-        }
-        if (!$this->saveAllSections($requestParameters)) {
-            $this->getCheckoutProcess()->setHasErrors(true);
-
-            return;
-        }
-        $this->setComplete(true);
-    }
-
-    /**
-     * Browser form submits omit unchecked checkboxes, but OPC always needs an explicit
-     * same/different-address flag during the final submit flow.
-     *
-     * @param array<string,mixed> $requestParameters
-     *
-     * @return array<string,mixed>
-     */
-    private function normalizeSubmittedRequestParameters(array $requestParameters): array
-    {
-        if (!array_key_exists('use_same_address', $requestParameters)) {
-            $requestParameters['use_same_address'] = '0';
-        }
-
-        return $requestParameters;
-    }
-
-    /**
-     * Validate all sections (5 validations)
-     *
-     * @param array $requestParameters
-     *
-     * @return array ['identity' => bool, 'address' => bool, 'shipping' => bool, 'payment' => bool, 'conditions' => bool]
-     */
-    private function validateAllSections(array $requestParameters)
-    {
-        $this->validationErrors = [];
-        $result = [
-            'identity' => true,
-            'address' => true,
-            'shipping' => true,
-            'payment' => true,
-            'conditions' => true,
-        ];
-
-        // 1. Identity validation: registered customers reuse the email already stored in session.
-        $customer = $this->context->customer;
-        $email = (string) ($requestParameters['email'] ?? '');
-        if (
-            $email === ''
-            && $customer instanceof \Customer
-            && $customer->isLogged()
-            && !$customer->isGuest()
-        ) {
-            $email = (string) $customer->email;
-        }
-
-        if ($email === '' || !\Validate::isEmail($email)) {
-            $result['identity'] = false;
-            $this->validationErrors['identity'] = [
-                'email' => $this->getTranslator()->trans(
-                    'Invalid email format.',
-                    [],
-                    'Shop.Notifications.Error'
-                ),
-            ];
-        }
-
-        // 2. Address validation: validate form
-        $this->opcForm->fillWith($requestParameters);
-        if (!$this->opcForm->validate()) {
-            $result['address'] = false;
-            $this->validationErrors['address'] = $this->opcForm->getErrors();
-        }
-
-        return $result;
-    }
-
-    /**
-     * Check if all sections are valid
-     *
-     * @param array $validationResult
-     *
-     * @return bool
-     */
-    private function isAllSectionsValid(array $validationResult)
-    {
-        return $validationResult['identity']
-            && $validationResult['address']
-            && $validationResult['shipping']
-            && $validationResult['payment']
-            && $validationResult['conditions'];
-    }
-
-    /**
-     * Save all sections (5 saves)
-     *
-     * @param array $requestParameters
-     *
-     * @return bool
-     */
-    private function saveAllSections(array $requestParameters)
-    {
-        // 1. Identity + Address: save via form (creates/updates customer guest and addresses)
-        $customer = $this->context->customer;
-        $isGuestFlow = !$customer->isLogged() || $customer->isGuest();
-        if ($isGuestFlow) {
-            $hookResult = array_reduce(
-                \Hook::exec('actionSubmitAccountBefore', [], null, true),
-                function ($carry, $item) {
-                    return $carry && $item;
-                },
-                true
-            );
-            if (!$hookResult) {
-                return false;
-            }
-        }
-
-        $addressIds = $this->opcForm->fillWith($requestParameters)->submit();
-        if (!$addressIds) {
-            return false;
-        }
-
-        // Set addresses in session
-        $this->getCheckoutSession()->setIdAddressDelivery($addressIds['id_address_delivery']);
-        $this->getCheckoutSession()->setIdAddressInvoice($addressIds['id_address_invoice']);
-
-        if (isset($requestParameters['delivery_message'])) {
-            $this->getCheckoutSession()->setMessage($requestParameters['delivery_message']);
-        }
-
-        if ($this->isRecyclablePackAllowed()) {
-            $this->getCheckoutSession()->setRecyclable($requestParameters['recyclable'] ?? false);
-        }
-
-        if ($this->isGiftAllowed()) {
-            $useGift = $requestParameters['gift'] ?? false;
-            $this->getCheckoutSession()->setGift(
-                $useGift,
-                $useGift ? ($requestParameters['gift_message'] ?? '') : ''
-            );
-        }
-
-        // Sync customer name from delivery address if needed
-        $customer = $this->getCheckoutSession()->getCustomer();
-        if ($customer && ($customer->isGuest() || empty($customer->firstname) || empty($customer->lastname))) {
-            $address = new \Address($addressIds['id_address_delivery'], $this->context->language->id);
-            if ($address->id && (!empty($address->firstname) || !empty($address->lastname))) {
-                $customer->firstname = $address->firstname;
-                $customer->lastname = $address->lastname;
-                $customer->save();
-                $this->context->updateCustomer($customer);
-            }
-        }
-
-        $this->fillOpcFormFromResolvedAddresses(
-            (int) $addressIds['id_address_delivery'],
-            (int) $addressIds['id_address_invoice'],
-            null
-        );
-
-        return true;
-    }
-
-    private function hydrateOpcFromSubmittedAddresses(array $requestParameters): void
-    {
-        $deliveryAddressId = (int) ($requestParameters['id_address_delivery'] ?? 0);
-        $invoiceAddressId = (int) ($requestParameters['id_address_invoice'] ?? 0);
-        $customerId = (int) ($this->context->customer->id ?? 0);
-
-        $this->fillOpcFormFromResolvedAddresses($deliveryAddressId, $invoiceAddressId, $customerId);
-    }
-
     /**
      * Get validation errors
      *
@@ -386,6 +197,33 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
     public function getValidationErrors()
     {
         return $this->validationErrors;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function getDataToPersist()
+    {
+        // This step still lives inside the Core CheckoutProcess injected by the module hook,
+        // so it must keep the standard AbstractCheckoutStep persistence contract.
+        return [
+            'validation_errors' => $this->clearPersistedValidationErrorsOnNextSave ? [] : $this->validationErrors,
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     *
+     * @return $this
+     */
+    public function restorePersistedData(array $data)
+    {
+        $this->validationErrors = isset($data['validation_errors']) && is_array($data['validation_errors'])
+            ? $data['validation_errors']
+            : [];
+        $this->clearPersistedValidationErrorsOnNextSave = !empty($this->validationErrors);
+
+        return $this;
     }
 
     public function render(array $extraParams = [])
@@ -420,6 +258,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             'selected_payment_selection_key' => $this->getSelectedPaymentSelectionKey(),
             'conditions_to_approve' => $conditionsToApprove,
             'validation_errors' => $this->validationErrors,
+            'validation_error_messages' => $this->getValidationErrorMessages(),
             'recyclable' => $this->getCheckoutSession()->isRecyclable(),
             'recyclablePackAllowed' => $this->isRecyclablePackAllowed(),
             'delivery_message' => $this->getCheckoutSession()->getMessage(),
@@ -451,6 +290,51 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         }
 
         return (string) ($this->context->cookie->__get('opc_selected_payment_selection_key') ?: '');
+    }
+
+    private function restoreLastFailedSubmitState(): void
+    {
+        $submitState = $this->submitValidationStateStorage->consume();
+        if ($submitState === []) {
+            return;
+        }
+
+        $submittedValues = isset($submitState['submitted_values']) && is_array($submitState['submitted_values'])
+            ? $submitState['submitted_values']
+            : [];
+        $formErrors = isset($submitState['form_errors']) && is_array($submitState['form_errors'])
+            ? $submitState['form_errors']
+            : [];
+
+        if ($submittedValues !== [] || $formErrors !== []) {
+            $this->opcForm->restoreSubmissionState($submittedValues, $formErrors);
+        }
+
+        $this->validationErrors = isset($submitState['validation_errors']) && is_array($submitState['validation_errors'])
+            ? $submitState['validation_errors']
+            : [];
+
+        if ($this->validationErrors !== [] || $formErrors !== []) {
+            $this->clearPersistedValidationErrorsOnNextSave = true;
+        }
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function getValidationErrorMessages(): array
+    {
+        $messages = [];
+
+        array_walk_recursive($this->validationErrors, static function ($value) use (&$messages): void {
+            if (!is_string($value) || $value === '') {
+                return;
+            }
+
+            $messages[] = $value;
+        });
+
+        return array_values(array_unique($messages));
     }
 
     private function fillOpcFormFromResolvedAddresses(int $deliveryAddressId, int $invoiceAddressId, ?int $customerId = null): void

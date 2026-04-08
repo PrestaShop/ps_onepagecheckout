@@ -21,8 +21,10 @@ class OpcJavascriptContractTest extends TestCase
         self::assertStringContainsString("opcCarrierSelected: 'opcCarrierSelected'", $events);
         self::assertStringContainsString("opcPaymentMethodsUpdated: 'opcPaymentMethodsUpdated'", $events);
         self::assertStringContainsString("updatedOpcAddressForm: 'updatedOpcAddressForm'", $events);
+        self::assertStringContainsString("opcSubmitFailed: 'opcSubmitFailed'", $events);
         self::assertStringContainsString("deliveryMethods: '#opc-delivery-methods'", $selectors);
         self::assertStringContainsString("paymentMethods: '#opc-payment-methods'", $selectors);
+        self::assertStringContainsString("checkoutFooter: '.one-page-checkout__footer'", $selectors);
         self::assertStringContainsString("address: '#opc-address-modal, #modal-delivery, #modal-invoice'", $selectors);
     }
 
@@ -31,11 +33,22 @@ class OpcJavascriptContractTest extends TestCase
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-submit.js');
         self::assertStringContainsString("import OPC_EVENTS from './events';", $script);
         self::assertStringContainsString("import OPC_SELECTORS from './selectors';", $script);
+        self::assertStringContainsString("import {getConfiguredOpcUrl} from './runtime/opc-runtime';", $script);
         self::assertStringContainsString('prestashop.emit(OPC_EVENTS.opcFinalSubmitStarted)', $script);
         self::assertStringContainsString('const OPC_FORM_ID_SELECTOR = OPC_SELECTORS.opc.form;', $script);
         self::assertStringContainsString('const PAY_BUTTON_SELECTOR = OPC_SELECTORS.opc.payButton;', $script);
         self::assertStringContainsString('prestashop.on(OPC_EVENTS.opcPaymentMethodsLoading', $script);
         self::assertStringContainsString('prestashop.on(OPC_EVENTS.opcPaymentMethodsFailed', $script);
+        self::assertStringContainsString('const OPC_SUBMIT_URL_KEY = \'opcSubmit\';', $script);
+        self::assertStringContainsString('function ajaxCheckCartStillOrderable()', $script);
+        self::assertStringContainsString('HTMLFormElement.prototype.submit.call(innerForm)', $script);
+        self::assertStringContainsString('const optionId = paymentRadio.id;', $script);
+        self::assertStringContainsString('function bindScopedValidationListeners(form)', $script);
+        self::assertStringContainsString('bindChangeValidationListeners(form, DELIVERY_OPTION_SELECTOR', $script);
+        self::assertStringContainsString('bindChangeValidationListeners(paymentContainer, PAYMENT_OPTION_SELECTOR', $script);
+        self::assertStringNotContainsString("document.addEventListener('change'", $script);
+        self::assertStringNotContainsString("payload.set('submitOnePageCheckout', '1')", $script);
+        self::assertStringContainsString('window.location.href = response.checkout_url || window.prestashop.urls.pages.order;', $script);
     }
 
     public function testGuestInitScriptUsesModuleRuntimeContract(): void
