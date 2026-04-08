@@ -24,9 +24,9 @@ class CartPresenterHelper
         // CartLazyArray computes values on first access and caches them.
         // Force tax-sensitive properties now so callers that restore a temporary
         // delivery address in a finally block get correct tax-inclusive values.
-        $cartLazyArray['products'];
-        $cartLazyArray['subtotals'];
-        $cartLazyArray['totals'];
+        $cartLazyArray->offsetGet('products');
+        $cartLazyArray->offsetGet('subtotals');
+        $cartLazyArray->offsetGet('totals');
 
         return $cartLazyArray;
     }
