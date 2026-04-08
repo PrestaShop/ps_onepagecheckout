@@ -358,7 +358,6 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         return $this->initializeProviderResult;
     }
 
-
     protected function disableOnePageCheckoutConfigurationForCurrentContext(): bool
     {
         ++$this->disableCurrentContextCalls;
@@ -416,7 +415,6 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
 
         return $this->uninstallInParentResult;
     }
-
 }
 
 class DummySmarty

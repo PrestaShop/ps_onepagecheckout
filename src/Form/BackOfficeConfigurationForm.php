@@ -41,9 +41,8 @@ class BackOfficeConfigurationForm
 
     public function __construct(
         \Module $module,
-        string $configurationKey
-    )
-    {
+        string $configurationKey,
+    ) {
         $this->module = $module;
         $this->configurationKey = $configurationKey;
     }
