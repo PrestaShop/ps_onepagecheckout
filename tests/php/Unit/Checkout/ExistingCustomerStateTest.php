@@ -34,6 +34,11 @@ class ExistingCustomerStateTest extends TestCase
             public function __construct()
             {
             }
+
+            public function isGuest(): bool
+            {
+                return (bool) $this->is_guest;
+            }
         };
         $customer->id = 42;
         $customer->is_guest = 1;
@@ -51,6 +56,11 @@ class ExistingCustomerStateTest extends TestCase
         $customer = new class extends \Customer {
             public function __construct()
             {
+            }
+
+            public function isGuest(): bool
+            {
+                return (bool) $this->is_guest;
             }
         };
         $customer->id = 99;

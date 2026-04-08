@@ -7,6 +7,7 @@ namespace Tests\Unit\Checkout\Ajax;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutPaymentMethodsHandler;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\PaymentSelectionKeyBuilder;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 class OpcPaymentMethodsHandlerTest extends TestCase
 {
@@ -19,22 +20,11 @@ class OpcPaymentMethodsHandlerTest extends TestCase
         ];
         $selectionKey = (new PaymentSelectionKeyBuilder())->buildSelectionKey($paymentOption);
 
-        $context = new class extends \Context {
-            public function __construct()
-            {
-            }
-        };
-        $context->cart = new class extends \Cart {
-            public function __construct()
-            {
-                $this->id = 1;
-            }
-
-            public function getOrderTotal($withTaxes = true, $type = \Cart::BOTH, $products = null, $id_carrier = null, $use_cache = false, bool $keepOrderPrices = false)
-            {
-                return 42.0;
-            }
-        };
+        $context = CheckoutTestFixtures::context([
+            'cart' => CheckoutTestFixtures::pricedCart(42.0, ['id' => 1]),
+            'country' => CheckoutTestFixtures::country(),
+            'shop' => CheckoutTestFixtures::shop(1),
+        ]);
         $context->cookie = new class($selectionKey) {
             /** @var array<string,string> */
             private array $values;
@@ -85,12 +75,10 @@ class OpcPaymentMethodsHandlerTest extends TestCase
 
     public function testItReturnsStructuredErrorWhenCartIsMissing(): void
     {
-        $context = new class extends \Context {
-            public function __construct()
-            {
-            }
-        };
-        $context->cart = null;
+        $context = CheckoutTestFixtures::context([
+            'cart' => null,
+            'country' => CheckoutTestFixtures::country(),
+        ]);
 
         $handler = new OnePageCheckoutPaymentMethodsHandler($context);
         $response = $handler->handle();

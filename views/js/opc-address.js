@@ -195,7 +195,11 @@ function syncBillingSectionConstraints(addressContainer, useSameAddress) {
 }
 
 function getUseSameAddressState(addressContainer) {
-  return addressContainer.find(SAME_ADDRESS_SELECTOR).is(':checked');
+  return addressContainer.find(SAME_ADDRESS_SELECTOR).first().is(':checked');
+}
+
+function setUseSameAddressState(addressContainer, useSameAddress) {
+  addressContainer.find(SAME_ADDRESS_SELECTOR).first().prop('checked', useSameAddress);
 }
 
 function getAddressSection(addressContainer, sectionSelector, fieldsSelector) {
@@ -239,6 +243,93 @@ function setAddressSectionFieldValue(addressContainer, sectionSelector, fieldsSe
   $field.val(String(value));
 }
 
+function hasMeaningfulFieldValue($field) {
+  const type = getFieldType($field);
+
+  if (type === 'checkbox' || type === 'radio') {
+    return $field.is(':checked');
+  }
+
+  return String($field.val() || '').trim() !== '';
+}
+
+function hasSeparateBillingDraft(addressContainer) {
+  if (getAddressSectionFieldValue(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'id_address_invoice') !== '') {
+    return true;
+  }
+
+  const billingSection = getAddressSection(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR);
+
+  if (!billingSection.length) {
+    return false;
+  }
+
+  let hasDraft = false;
+
+  billingSection.find('input, select, textarea').each(function () {
+    const $field = $(this);
+    const name = String($field.prop('name') || '');
+
+    if (!isClientPreservableField(name, $field)) {
+      return;
+    }
+
+    if (!hasMeaningfulFieldValue($field)) {
+      return;
+    }
+
+    hasDraft = true;
+
+    return false;
+  });
+
+  return hasDraft;
+}
+
+function seedBillingFromDelivery(addressContainer) {
+  const deliveryCountryValue = getAddressSectionFieldValue(
+    addressContainer,
+    DELIVERY_SECTION_SELECTOR,
+    DELIVERY_FIELDS_SELECTOR,
+    'id_country'
+  );
+  const deliveryStateValue = getAddressSectionFieldValue(
+    addressContainer,
+    DELIVERY_SECTION_SELECTOR,
+    DELIVERY_FIELDS_SELECTOR,
+    'id_state'
+  );
+  const billingCountryField = getAddressSection(
+    addressContainer,
+    BILLING_SECTION_SELECTOR,
+    BILLING_FIELDS_SELECTOR
+  ).find('[name="invoice_id_country"]').first();
+  const previousBillingCountryValue = billingCountryField.length
+    ? String(billingCountryField.val() || '')
+    : '';
+
+  setAddressSectionFieldValue(
+    addressContainer,
+    BILLING_SECTION_SELECTOR,
+    BILLING_FIELDS_SELECTOR,
+    'invoice_id_country',
+    deliveryCountryValue
+  );
+
+  if (billingCountryField.length && deliveryCountryValue !== '' && previousBillingCountryValue !== deliveryCountryValue) {
+    billingCountryField.val(deliveryCountryValue).trigger('change');
+    return;
+  }
+
+  setAddressSectionFieldValue(
+    addressContainer,
+    BILLING_SECTION_SELECTOR,
+    BILLING_FIELDS_SELECTOR,
+    'invoice_id_state',
+    deliveryStateValue
+  );
+}
+
 function bindBillingToggleListener(selectors) {
   $('body').on('change', `${selectors.address} ${SAME_ADDRESS_SELECTOR}`, (event) => {
     const addressContainer = $(event.target).closest(selectors.address);
@@ -247,7 +338,13 @@ function bindBillingToggleListener(selectors) {
       return;
     }
 
-    syncBillingSectionConstraints(addressContainer, getUseSameAddressState(addressContainer));
+    const useSameAddress = getUseSameAddressState(addressContainer);
+
+    syncBillingSectionConstraints(addressContainer, useSameAddress);
+
+    if (!useSameAddress && !hasSeparateBillingDraft(addressContainer)) {
+      seedBillingFromDelivery(addressContainer);
+    }
   });
 }
 
@@ -294,11 +391,11 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
     ? String(target.val() || '')
     : getAddressSectionFieldValue(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'invoice_id_country');
   const requestData = {
-    id_address: getAddressSectionFieldValue(addressContainer, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_address'),
+    id_address_delivery: getAddressSectionFieldValue(addressContainer, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_address_delivery'),
     id_address_invoice: getAddressSectionFieldValue(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'id_address_invoice'),
     id_country: deliveryCountryValue,
     invoice_id_country: invoiceCountryValue,
-    use_same_address: addressContainer.find('[name="use_same_address"]').is(':checked') ? '1' : '0',
+    use_same_address: getUseSameAddressState(addressContainer) ? '1' : '0',
   };
   const formFieldsSelector = `${selectors.address} input, ${selectors.address} select, ${selectors.address} textarea`;
 
@@ -327,12 +424,10 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
     addressContainer.html(resp.addresses_section);
 
     restoreAddressFormFields(formFieldsSelector, preservedFields);
-    setAddressSectionFieldValue(addressContainer, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_country', requestData.id_country);
-    setAddressSectionFieldValue(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'invoice_id_country', requestData.invoice_id_country);
 
     // Backend template resets billing toggle; re-apply user choice.
     const useSameAddress = requestData.use_same_address !== '0';
-    addressContainer.find('[name="use_same_address"]').prop('checked', useSameAddress);
+    setUseSameAddressState(addressContainer, useSameAddress);
     syncBillingSectionConstraints(addressContainer, useSameAddress);
 
     prestashop.emit(OPC_EVENTS.updatedOpcAddressForm, {target: addressContainer, resp});

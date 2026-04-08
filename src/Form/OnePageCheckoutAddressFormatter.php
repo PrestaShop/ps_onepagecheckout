@@ -54,7 +54,7 @@ class OnePageCheckoutAddressFormatter implements \FormFormatterInterface
     {
         $format = $this->addConstraints(
             $this->addMaxLength(
-                $this->getAddressFieldsFormat('', true)
+                $this->getAddressFieldsFormat('', false)
             )
         );
 

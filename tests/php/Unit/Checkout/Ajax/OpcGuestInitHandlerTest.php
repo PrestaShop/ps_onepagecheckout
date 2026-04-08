@@ -859,6 +859,20 @@ class LightweightCustomer extends \Customer
     {
     }
 
+    public function isGuest(): bool
+    {
+        return (bool) $this->is_guest;
+    }
+
+    public function isLogged($withGuest = false): bool
+    {
+        if ((int) $this->id <= 0) {
+            return false;
+        }
+
+        return !$this->isGuest() || $withGuest;
+    }
+
     /**
      * @param bool $nullValues
      *

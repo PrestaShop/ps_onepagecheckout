@@ -19,9 +19,9 @@ class SelectCarrierControllerTest extends TestCase
             {
             }
 
-            public function callHandleSelectCarrier(): array
+            public function callHandleOpcRequest(): array
             {
-                return $this->handleSelectCarrier();
+                return $this->handleOpcRequest();
             }
 
             protected function buildTechnicalErrorResponse(): array
@@ -40,6 +40,6 @@ class SelectCarrierControllerTest extends TestCase
             }
         };
 
-        self::assertSame('technical-error', $controller->callHandleSelectCarrier()['error']);
+        self::assertSame('technical-error', $controller->callHandleOpcRequest()['error']);
     }
 }

@@ -364,6 +364,11 @@ function tryGuestInit() {
 
         if (responseCustomerId > 0) {
           guestCustomerId = responseCustomerId;
+          if (window.prestashop) {
+            window.prestashop.customer = window.prestashop.customer || {};
+            window.prestashop.customer.id = responseCustomerId;
+            prestashop.customer = window.prestashop.customer;
+          }
           // Once guest identity exists, dedupe on email only and ignore checkbox toggles.
           lastSubmittedFingerprint = getPayloadFingerprint({email: payload.email});
         } else {

@@ -22,6 +22,9 @@ class OpcPaymentMethodsHandlerIntegrationTest extends TestCase
         DatabaseDump::restoreTables([
             'configuration',
             'module_country',
+            'customer',
+            'customer_group',
+            'address',
         ]);
         \Configuration::loadConfiguration();
     }
@@ -197,6 +200,118 @@ class OpcPaymentMethodsHandlerIntegrationTest extends TestCase
         self::assertSame((int) \Country::getByIso('FR'), (int) $context->country->id);
     }
 
+    public function testItFiltersPaymentOptionsByPersistedDeliveryAddressCountry(): void
+    {
+        $customer = $this->createCustomer('opc-payment-country');
+        $usAddress = $this->createAddressForCustomer((int) $customer->id, 'US');
+
+        $context = self::getContext();
+        $context->cart = new class((int) $usAddress->id) extends \Cart {
+            public function __construct(int $deliveryAddressId)
+            {
+                $this->id = 1;
+                $this->id_address_delivery = $deliveryAddressId;
+            }
+
+            public function getOrderTotal($withTaxes = true, $type = \Cart::BOTH, $products = null, $id_carrier = null, $use_cache = false, bool $keepOrderPrices = false)
+            {
+                return 42.0;
+            }
+        };
+        $context->country = new \Country((int) \Country::getByIso('FR'));
+
+        $finder = new class extends \PaymentOptionsFinder {
+            public function __construct()
+            {
+            }
+
+            public function present($free = false)
+            {
+                return [
+                    'ps_wirepayment' => [[
+                        'module_name' => 'ps_wirepayment',
+                        'call_to_action_text' => 'Wire payment',
+                        'action' => '/module/ps_wirepayment/validation',
+                    ]],
+                    'ps_checkpayment' => [[
+                        'module_name' => 'ps_checkpayment',
+                        'call_to_action_text' => 'Check payment',
+                        'action' => '/module/ps_checkpayment/validation',
+                    ]],
+                ];
+            }
+        };
+
+        $this->configureModuleCountryRestriction('ps_wirepayment', ['FR']);
+        $this->configureModuleCountryRestriction('ps_checkpayment', ['US']);
+
+        $handler = new OnePageCheckoutPaymentMethodsHandler($context, $finder);
+        $response = $handler->handle();
+
+        self::assertArrayNotHasKey('ps_wirepayment', $response['payment_options']);
+        self::assertArrayHasKey('ps_checkpayment', $response['payment_options']);
+        self::assertSame((int) \Country::getByIso('FR'), (int) $context->country->id);
+    }
+
+    public function testItPrefersExplicitDeliveryAddressSelectionWhenTaxesUseDeliveryAddress(): void
+    {
+        \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_delivery');
+
+        $customer = $this->createCustomer('opc-payment-explicit-delivery');
+        $usAddress = $this->createAddressForCustomer((int) $customer->id, 'US');
+
+        $context = self::getContext();
+        $context->cart = new class extends \Cart {
+            public function __construct()
+            {
+                $this->id = 1;
+                $this->id_address_delivery = 0;
+                $this->id_address_invoice = 0;
+            }
+
+            public function getOrderTotal($withTaxes = true, $type = \Cart::BOTH, $products = null, $id_carrier = null, $use_cache = false, bool $keepOrderPrices = false)
+            {
+                return 42.0;
+            }
+        };
+        $context->country = new \Country((int) \Country::getByIso('FR'));
+
+        $finder = new class extends \PaymentOptionsFinder {
+            public function __construct()
+            {
+            }
+
+            public function present($free = false)
+            {
+                return [
+                    'ps_wirepayment' => [[
+                        'module_name' => 'ps_wirepayment',
+                        'call_to_action_text' => 'Wire payment',
+                        'action' => '/module/ps_wirepayment/validation',
+                    ]],
+                    'ps_checkpayment' => [[
+                        'module_name' => 'ps_checkpayment',
+                        'call_to_action_text' => 'Check payment',
+                        'action' => '/module/ps_checkpayment/validation',
+                    ]],
+                ];
+            }
+        };
+
+        $this->configureModuleCountryRestriction('ps_wirepayment', ['FR']);
+        $this->configureModuleCountryRestriction('ps_checkpayment', ['US']);
+
+        $handler = new OnePageCheckoutPaymentMethodsHandler($context, $finder);
+        $response = $handler->handle([
+            'id_address_delivery' => (string) $usAddress->id,
+            'invoice_id_country' => (string) \Country::getByIso('FR'),
+        ]);
+
+        self::assertArrayNotHasKey('ps_wirepayment', $response['payment_options']);
+        self::assertArrayHasKey('ps_checkpayment', $response['payment_options']);
+        self::assertSame((int) \Country::getByIso('FR'), (int) $context->country->id);
+    }
+
     public function testItClearsPersistedPaymentSelectionWhenCountryFilteringMakesItInvalid(): void
     {
         $context = self::getContext();
@@ -300,5 +415,36 @@ class OpcPaymentMethodsHandlerIntegrationTest extends TestCase
                 'id_country' => $countryId,
             ]));
         }
+    }
+
+    private function createCustomer(string $emailPrefix): \Customer
+    {
+        $customer = new \Customer();
+        $customer->firstname = 'Payment';
+        $customer->lastname = 'Customer';
+        $customer->email = sprintf('%s_%s@example.com', $emailPrefix, uniqid('', true));
+        $customer->is_guest = false;
+        $customer->passwd = \Tools::hash('payment-test-password');
+
+        self::assertTrue($customer->save());
+
+        return $customer;
+    }
+
+    private function createAddressForCustomer(int $customerId, string $countryIso): \Address
+    {
+        $address = new \Address();
+        $address->id_customer = $customerId;
+        $address->id_country = (int) \Country::getByIso($countryIso);
+        $address->firstname = 'Payment';
+        $address->lastname = 'Customer';
+        $address->address1 = '1 rue Payment';
+        $address->alias = 'payment_' . uniqid('', true);
+        $address->postcode = $countryIso === 'US' ? '10001' : '75001';
+        $address->city = $countryIso === 'US' ? 'New York' : 'Paris';
+
+        self::assertTrue($address->save());
+
+        return $address;
     }
 }

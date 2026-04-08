@@ -67,6 +67,7 @@ class Ps_Onepagecheckout extends Module
             'selectcarrier',
             'paymentmethods',
             'selectpayment',
+            'opcsubmit',
         ];
     }
 
@@ -228,16 +229,15 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
-            ],
-            'i18n' => [
-                'deleteAddressConfirmTitle' => $this->trans('Delete this address?', [], 'Shop.Theme.Actions'),
-                'deleteAddressConfirmMessage' => $this->trans(
-                    'This action will remove the selected address from your checkout.',
-                    [],
-                    'Shop.Theme.Checkout'
+                'opcSubmit' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'opcsubmit',
+                    ['ajax' => 1, 'action' => 'opcSubmit'],
+                    null,
+                    null,
+                    null,
+                    true
                 ),
-                'deleteAddressConfirmLabel' => $this->trans('Delete', [], 'Shop.Theme.Actions'),
-                'deleteAddressCancelLabel' => $this->trans('Cancel', [], 'Shop.Theme.Actions'),
             ],
         ];
 

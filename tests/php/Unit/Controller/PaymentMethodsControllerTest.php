@@ -24,9 +24,9 @@ class PaymentMethodsControllerTest extends TestCase
             {
             }
 
-            public function callHandlePaymentMethods(): array
+            public function callHandleOpcRequest(): array
             {
-                return $this->handlePaymentMethods();
+                return $this->handleOpcRequest();
             }
 
             protected function buildTechnicalErrorResponse(): array
@@ -45,6 +45,6 @@ class PaymentMethodsControllerTest extends TestCase
             }
         };
 
-        self::assertSame('technical-error', $controller->callHandlePaymentMethods()['error']);
+        self::assertSame('technical-error', $controller->callHandleOpcRequest()['error']);
     }
 }

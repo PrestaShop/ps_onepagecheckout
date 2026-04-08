@@ -28,12 +28,4 @@ class Ps_OnepagecheckoutSaveAddressModuleFrontController extends Ps_Onepagecheck
 
         return $handler->handle(Tools::getAllValues());
     }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleSaveAddress(): array
-    {
-        return $this->handleOpcRequest();
-    }
 }

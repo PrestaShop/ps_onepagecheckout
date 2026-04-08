@@ -13,16 +13,11 @@ class CheckoutCustomerContextResolver
 
     public function resolve(): ?\Customer
     {
-        $persistedOwner = $this->resolvePersistedCartOwner();
-        if ($persistedOwner instanceof \Customer) {
-            return $persistedOwner;
-        }
-
         if (\Validate::isLoadedObject($this->context->customer) && (int) $this->context->customer->id > 0) {
             return $this->context->customer;
         }
 
-        return null;
+        return $this->resolvePersistedCartOwner();
     }
 
     public function resolveId(): int

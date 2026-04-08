@@ -17,12 +17,8 @@ if (!$) {
 const CONTAINER_SELECTOR = OPC_SELECTORS.opc.deliveryMethods;
 const URL_KEY = 'carriers';
 const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
-const DELIVERY_ADDRESS_SECTION_SELECTOR = OPC_SELECTORS.opc.deliverySection;
 const FAILED_EVENT_NAME = OPC_EVENTS.opcCarriersFailed;
-
-function getDeliveryAddressSection() {
-  return document.querySelector(DELIVERY_ADDRESS_SECTION_SELECTOR);
-}
+let selectedDeliveryAddressId = null;
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -34,37 +30,54 @@ function getCheckoutForm() {
   return document.querySelector(CHECKOUT_FORM_SELECTOR);
 }
 
+function getSelectedSavedDeliveryAddressId() {
+  const selectedRadio = document.querySelector(
+    `${OPC_SELECTORS.opc.deliveryList} ${OPC_SELECTORS.opc.addressRadio}[name="id_address_delivery"]:checked`
+  );
+  const selectedAddressId = selectedRadio ? String(selectedRadio.getAttribute('value') || '') : '';
+
+  if (!selectedAddressId || selectedAddressId === 'new_address') {
+    return '';
+  }
+
+  return selectedAddressId;
+}
+
 function getFormValue(form, name) {
-  const deliverySection = getDeliveryAddressSection();
-  const scope = deliverySection || form;
-  const direct = scope.querySelector(`[name="${name}"]`);
-  const prefixed = scope.querySelector(`[name="delivery_${name}"]`);
+  const direct = form.querySelector(`[name="${name}"]`);
+  const prefixed = form.querySelector(`[name="delivery_${name}"]`);
 
   return ((direct && direct.value) || (prefixed && prefixed.value) || '').trim();
 }
 
 function buildCarriersUrl(baseUrl) {
   const form = getCheckoutForm();
-  const deliveryMethodsContainer = document.querySelector(CONTAINER_SELECTOR);
-  const persistedAddressId = (deliveryMethodsContainer && deliveryMethodsContainer.getAttribute('data-id-address'))
-    || getFormValue(form, 'id_address');
 
   if (!form || !baseUrl) {
     return '';
   }
 
+  if (selectedDeliveryAddressId) {
+    const url = new URL(baseUrl, window.location.origin);
+
+    url.searchParams.set('id_address_delivery', selectedDeliveryAddressId);
+
+    return url.toString();
+  }
+
+  const deliveryMethodsContainer = document.querySelector(CONTAINER_SELECTOR);
   const idCountry = getFormValue(form, 'id_country');
-  if (!idCountry && !persistedAddressId) {
+  if (!idCountry) {
     return '';
   }
 
   const url = new URL(baseUrl, window.location.origin);
-  if (idCountry) {
-    url.searchParams.set('id_country', idCountry);
-  }
+  const selectedSavedDeliveryAddressId = getSelectedSavedDeliveryAddressId();
 
-  if (persistedAddressId) {
-    url.searchParams.set('id_address_delivery', persistedAddressId);
+  url.searchParams.set('id_country', idCountry);
+
+  if (selectedSavedDeliveryAddressId) {
+    url.searchParams.set('id_address_delivery', selectedSavedDeliveryAddressId);
   }
 
   const postcode = getFormValue(form, 'postcode');
@@ -120,10 +133,13 @@ function fetchCarriers() {
 
       const checkedCarrier = $container.find(`${OPC_SELECTORS.inputs.deliveryOption}:checked`).get(0);
       if (checkedCarrier) {
+        $container.attr('data-confirmed-delivery-option', String(checkedCarrier.value || ''));
         prestashop.emit(OPC_EVENTS.opcCarrierSelected, {
           carrierId: checkedCarrier.value,
           resp: response,
         });
+      } else {
+        $container.removeAttr('data-confirmed-delivery-option');
       }
     })
     .fail((jqXHR) => {
@@ -134,6 +150,53 @@ function fetchCarriers() {
     });
 }
 
-$(fetchCarriers);
-prestashop.on(OPC_EVENTS.opcDeliveryAddressUpdated, fetchCarriers);
+$(function () {
+  const form = getCheckoutForm();
+
+  if (!form) {
+    return;
+  }
+
+  fetchCarriers();
+});
+
+$(document).on('click', '[data-opc-action="retry-carriers"]', (event) => {
+  event.preventDefault();
+  fetchCarriers();
+});
+
+prestashop.on(OPC_EVENTS.opcCarriersRetry, fetchCarriers);
+
+prestashop.on(OPC_EVENTS.opcDeliveryAddressUpdated, () => {
+  const deliveryMethodsContainer = document.querySelector(CONTAINER_SELECTOR);
+  const selectedSavedDeliveryAddressId = getSelectedSavedDeliveryAddressId();
+
+  if (selectedSavedDeliveryAddressId) {
+    selectedDeliveryAddressId = selectedSavedDeliveryAddressId;
+    if (deliveryMethodsContainer) {
+      deliveryMethodsContainer.setAttribute('data-id-address', selectedSavedDeliveryAddressId);
+    }
+
+    fetchCarriers();
+    return;
+  }
+
+  selectedDeliveryAddressId = null;
+  if (deliveryMethodsContainer) {
+    deliveryMethodsContainer.removeAttribute('data-id-address');
+  }
+
+  fetchCarriers();
+});
+
+prestashop.on(OPC_EVENTS.opcDeliveryAddressSelected, ({idAddress}) => {
+  selectedDeliveryAddressId = String(idAddress || '');
+  fetchCarriers();
+});
+
+const deliveryMethodsContainer = document.querySelector(CONTAINER_SELECTOR);
+const initiallySelectedSavedDeliveryAddressId = getSelectedSavedDeliveryAddressId();
+if (deliveryMethodsContainer && initiallySelectedSavedDeliveryAddressId) {
+  selectedDeliveryAddressId = initiallySelectedSavedDeliveryAddressId;
+}
 }());

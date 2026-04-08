@@ -9,11 +9,18 @@ const OPC_EVENTS = {
   opcPaymentMethodSelected: 'opcPaymentMethodSelected',
   opcGuestInitSuccess: 'opcGuestInitSuccess',
   opcFinalSubmitStarted: 'opcFinalSubmitStarted',
+  opcFormValidated: 'opcFormValidated',
+  opcBillingSectionToggled: 'opcBillingSectionToggled',
+  opcSubmitFailed: 'opcSubmitFailed',
   opcDeliveryAddressUpdated: 'opcDeliveryAddressUpdated',
   opcBillingAddressUpdated: 'opcBillingAddressUpdated',
+  opcDeliveryAddressSelected: 'opcDeliveryAddressSelected',
+  opcBillingAddressSelected: 'opcBillingAddressSelected',
   opcCartSummaryBeforeUpdate: 'opcCartSummaryBeforeUpdate',
   opcCartSummaryUpdated: 'opcCartSummaryUpdated',
   updatedOpcAddressForm: 'updatedOpcAddressForm',
+  opcCarriersRetry: 'opcCarriersRetry',
+  opcPaymentMethodsRetry: 'opcPaymentMethodsRetry',
 };
 
 export default OPC_EVENTS;

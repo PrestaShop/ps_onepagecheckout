@@ -44,12 +44,4 @@ class Ps_OnepagecheckoutCarriersModuleFrontController extends Ps_Onepagecheckout
 
         return $response;
     }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleCarriers(): array
-    {
-        return $this->handleOpcRequest();
-    }
 }

@@ -39,14 +39,6 @@ class Ps_OnepagecheckoutGuestInitModuleFrontController extends Ps_Onepagecheckou
         }
     }
 
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleGuestInit(): array
-    {
-        return $this->handleOpcRequest();
-    }
-
     protected function getOpcFormFactory(): OnePageCheckoutFormFactory
     {
         assert($this->module instanceof Ps_Onepagecheckout);

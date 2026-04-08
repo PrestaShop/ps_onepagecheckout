@@ -19,9 +19,9 @@ class AddressesListControllerTest extends TestCase
             {
             }
 
-            public function callHandleAddressesList(): array
+            public function callHandleOpcRequest(): array
             {
-                return $this->handleAddressesList();
+                return $this->handleOpcRequest();
             }
 
             protected function buildTechnicalErrorResponse(): array
@@ -40,6 +40,6 @@ class AddressesListControllerTest extends TestCase
             }
         };
 
-        self::assertSame('technical-error', $controller->callHandleAddressesList()['error']);
+        self::assertSame('technical-error', $controller->callHandleOpcRequest()['error']);
     }
 }

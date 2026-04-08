@@ -17,6 +17,9 @@ if (!$) {
 const CONTAINER_SELECTOR = OPC_SELECTORS.opc.paymentMethods;
 const URL_KEY = 'selectPayment';
 const EVENT_NAME = OPC_EVENTS.opcPaymentMethodSelected;
+const CONFIRMED_OPTION_ATTRIBUTE = 'data-confirmed-payment-option-id';
+const CONFIRMED_MODULE_ATTRIBUTE = 'data-confirmed-payment-module';
+const CONFIRMED_SELECTION_KEY_ATTRIBUTE = 'data-confirmed-payment-selection-key';
 
 function togglePaymentPanels($container, paymentOptionId) {
   $container.find('.js-additional-information, .js-payment-option-form').hide();
@@ -33,6 +36,44 @@ function togglePaymentPanels($container, paymentOptionId) {
       $container.find(`#pay-with-${paymentOptionId}-form .js-payment-option-input`).prop('disabled', false);
     }
   });
+}
+
+function clearPaymentPanels($container) {
+  $container.find('.js-additional-information, .js-payment-option-form').hide();
+  $container.find('.js-payment-option-input').prop('disabled', true);
+  $container.find(OPC_SELECTORS.inputs.paymentOption).prop('checked', false);
+}
+
+function setConfirmedPaymentSelection($container, paymentOptionId, paymentModuleName, paymentSelectionKey) {
+  if (paymentOptionId) {
+    $container.attr(CONFIRMED_OPTION_ATTRIBUTE, paymentOptionId);
+  } else {
+    $container.removeAttr(CONFIRMED_OPTION_ATTRIBUTE);
+  }
+
+  if (paymentModuleName) {
+    $container.attr(CONFIRMED_MODULE_ATTRIBUTE, paymentModuleName);
+  } else {
+    $container.removeAttr(CONFIRMED_MODULE_ATTRIBUTE);
+  }
+
+  if (paymentSelectionKey) {
+    $container.attr(CONFIRMED_SELECTION_KEY_ATTRIBUTE, paymentSelectionKey);
+  } else {
+    $container.removeAttr(CONFIRMED_SELECTION_KEY_ATTRIBUTE);
+  }
+}
+
+function restoreConfirmedPaymentSelection($container) {
+  const confirmedPaymentOptionId = String($container.attr(CONFIRMED_OPTION_ATTRIBUTE) || '');
+
+  if (confirmedPaymentOptionId) {
+    togglePaymentPanels($container, confirmedPaymentOptionId);
+
+    return;
+  }
+
+  clearPaymentPanels($container);
 }
 
 $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.paymentOption}`, (event) => {
@@ -61,6 +102,7 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.paymentOp
   })
     .done((response) => {
       if (!response || response.success === false) {
+        restoreConfirmedPaymentSelection($container);
         prestashop.emit('handleError', {
           eventType: 'opcSelectPayment',
           resp: normalizeErrorResponse(response, 'Unable to select the payment method.'),
@@ -68,6 +110,8 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.paymentOp
 
         return;
       }
+
+      setConfirmedPaymentSelection($container, paymentOptionId, paymentModuleName, paymentSelectionKey);
 
       prestashop.emit(EVENT_NAME, {
         paymentOptionId,
@@ -77,6 +121,7 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.paymentOp
       });
     })
     .fail((jqXHR) => {
+      restoreConfirmedPaymentSelection($container);
       prestashop.emit('handleError', {
         eventType: 'opcSelectPayment',
         resp: getAjaxErrorResponse(jqXHR, 'Unable to select the payment method.'),
@@ -93,7 +138,11 @@ prestashop.on(OPC_EVENTS.opcPaymentMethodsUpdated, (response) => {
     const $selectedRadio = $container.find(`${OPC_SELECTORS.inputs.paymentOption}[data-selection-key="${selectedSelectionKey}"]`).first();
 
     if ($selectedRadio.length) {
-      togglePaymentPanels($container, String($selectedRadio.val() || ''));
+      const selectedPaymentOptionId = String($selectedRadio.val() || '');
+      const selectedModuleName = String($selectedRadio.data('moduleName') || $selectedRadio.data('module-name') || '');
+
+      togglePaymentPanels($container, selectedPaymentOptionId);
+      setConfirmedPaymentSelection($container, selectedPaymentOptionId, selectedModuleName, selectedSelectionKey);
 
       return;
     }
@@ -106,9 +155,14 @@ prestashop.on(OPC_EVENTS.opcPaymentMethodsUpdated, (response) => {
   const $selectedRadio = $container.find(`${OPC_SELECTORS.inputs.paymentOption}[data-module-name="${selectedModule}"]`).first();
 
   if (!$selectedRadio.length) {
+    setConfirmedPaymentSelection($container, '', '', '');
+
     return;
   }
 
-  togglePaymentPanels($container, String($selectedRadio.val() || ''));
+  const selectedPaymentOptionId = String($selectedRadio.val() || '');
+
+  togglePaymentPanels($container, selectedPaymentOptionId);
+  setConfirmedPaymentSelection($container, selectedPaymentOptionId, selectedModule, String($selectedRadio.data('selectionKey') || $selectedRadio.data('selection-key') || ''));
 });
 }());

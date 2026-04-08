@@ -18,6 +18,7 @@ use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 class OnePageCheckoutFormTest extends TestCase
 {
@@ -27,7 +28,7 @@ class OnePageCheckoutFormTest extends TestCase
     private OnePageCheckoutFormatter|MockObject $formatter;
     private \CustomerPersister|MockObject $customerPersister;
     private \CustomerAddressPersister|MockObject $addressPersister;
-    private \Context|MockObject $context;
+    private LightweightContext $context;
 
     protected function setUp(): void
     {
@@ -46,11 +47,7 @@ class OnePageCheckoutFormTest extends TestCase
             ->method('getFormat')
             ->willReturnCallback([$this, 'getGuestInitFields'])
         ;
-        $defaultCountry = new class extends \Country {
-            public function __construct()
-            {
-            }
-        };
+        $defaultCountry = CheckoutTestFixtures::country();
         $defaultCountry->id = self::DEFAULT_COUNTRY_ID;
         $this->formatter
             ->method('getCountry')
@@ -79,7 +76,7 @@ class OnePageCheckoutFormTest extends TestCase
             ->getMock()
         ;
 
-        $this->context = $this->createMock(\Context::class);
+        $this->context = new LightweightContext();
         $this->context->customer = new LightweightCustomer();
     }
 
@@ -104,17 +101,13 @@ class OnePageCheckoutFormTest extends TestCase
             ->willReturn(true)
         ;
 
-        $this->context
-            ->expects($this->never())
-            ->method('updateCustomer')
-        ;
-
         self::assertTrue($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
             'communication_channel' => 'email',
         ])));
+        self::assertNull($this->context->updatedCustomer);
         self::assertFalse($form->wasModuleValidationCalled());
     }
 
@@ -126,15 +119,11 @@ class OnePageCheckoutFormTest extends TestCase
             ->expects($this->never())
             ->method('save')
         ;
-        $this->context
-            ->expects($this->never())
-            ->method('updateCustomer')
-        ;
-
         self::assertFalse($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
         ])));
+        self::assertNull($this->context->updatedCustomer);
 
         $errors = $form->getErrors();
         self::assertArrayHasKey('compliance_terms', $errors);
@@ -149,16 +138,12 @@ class OnePageCheckoutFormTest extends TestCase
             ->expects($this->never())
             ->method('save')
         ;
-        $this->context
-            ->expects($this->never())
-            ->method('updateCustomer')
-        ;
-
         self::assertFalse($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'not-an-email',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
         ])));
+        self::assertNull($this->context->updatedCustomer);
 
         $errors = $form->getErrors();
         self::assertArrayHasKey('email', $errors);
@@ -174,17 +159,13 @@ class OnePageCheckoutFormTest extends TestCase
             ->method('save')
             ->willReturn(true)
         ;
-        $this->context
-            ->expects($this->never())
-            ->method('updateCustomer')
-        ;
-
         self::assertTrue($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
             'communication_channel' => 'email',
         ])));
+        self::assertNull($this->context->updatedCustomer);
     }
 
     public function testItDoesNotCreateGuestCustomerWhenRequiredCheckboxIsExplicitlyZero(): void
@@ -195,16 +176,12 @@ class OnePageCheckoutFormTest extends TestCase
             ->expects($this->never())
             ->method('save')
         ;
-        $this->context
-            ->expects($this->never())
-            ->method('updateCustomer')
-        ;
-
         self::assertFalse($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '0',
         ])));
+        self::assertNull($this->context->updatedCustomer);
 
         $errors = $form->getErrors();
         self::assertArrayHasKey('compliance_terms', $errors);
@@ -250,17 +227,13 @@ class OnePageCheckoutFormTest extends TestCase
                 'email' => ['Unable to save guest customer'],
             ])
         ;
-        $this->context
-            ->expects($this->never())
-            ->method('updateCustomer')
-        ;
-
         self::assertFalse($form->submitGuestInit($this->withDefaultCountry([
             'email' => 'guest@example.com',
             'psgdpr_privacy' => '1',
             'compliance_terms' => '1',
             'communication_channel' => 'email',
         ])));
+        self::assertNull($this->context->updatedCustomer);
     }
 
     public function testItDoesNotCreateGuestCustomerWhenRequiredRadioConsentIsMissing(): void
@@ -445,11 +418,13 @@ class OnePageCheckoutFormTest extends TestCase
         );
         self::assertArrayHasKey('contactFields', $templateVariables);
         self::assertArrayHasKey('additionalCustomerFields', $templateVariables);
+        self::assertArrayHasKey('customer', $templateVariables);
         self::assertArrayHasKey('useSameAddressField', $templateVariables);
         self::assertArrayHasKey('deliveryFields', $templateVariables);
         self::assertArrayHasKey('invoiceFields', $templateVariables);
         self::assertArrayHasKey('invoiceMetaFields', $templateVariables);
         self::assertArrayHasKey('token', $templateVariables);
+        self::assertArrayHasKey('addresses', $templateVariables['customer']);
         self::assertSame('email', $templateVariables['formFields']['email']['name']);
         self::assertSame('email', $templateVariables['contactFields']['email']['name']);
         self::assertSame('opcinvariantprobe_customer_text', $templateVariables['additionalCustomerFields']['customer_probe_text']['name']);
@@ -475,14 +450,6 @@ class OnePageCheckoutFormTest extends TestCase
 
                 return true;
             })
-        ;
-
-        $this->context
-            ->expects($this->once())
-            ->method('updateCustomer')
-            ->with($this->callback(static function (\Customer $customer): bool {
-                return (int) $customer->id === 42;
-            }))
         ;
 
         $savedAddresses = [];
@@ -518,6 +485,8 @@ class OnePageCheckoutFormTest extends TestCase
             'id_address_delivery' => 101,
             'id_address_invoice' => 202,
         ], $result);
+        self::assertInstanceOf(\Customer::class, $this->context->updatedCustomer);
+        self::assertSame(42, (int) $this->context->updatedCustomer->id);
         self::assertCount(2, $savedAddresses);
         self::assertSame('John', (string) $savedAddresses[0]->firstname);
         self::assertSame('Doe', (string) $savedAddresses[0]->lastname);
@@ -543,11 +512,6 @@ class OnePageCheckoutFormTest extends TestCase
 
                 return true;
             })
-        ;
-
-        $this->context
-            ->expects($this->once())
-            ->method('updateCustomer')
         ;
 
         $this->addressPersister
@@ -576,11 +540,14 @@ class OnePageCheckoutFormTest extends TestCase
             'id_address_delivery' => 303,
             'id_address_invoice' => 303,
         ], $result);
+        self::assertInstanceOf(\Customer::class, $this->context->updatedCustomer);
+        self::assertSame(43, (int) $this->context->updatedCustomer->id);
     }
 
     public function testSubmitUsesConnectedCustomerEmailWhenCheckoutPostOmitsIt(): void
     {
         $form = $this->createSubmitForm();
+        $form->forceValidateResult(true);
 
         $this->context->customer = new LightweightCustomer();
         $this->context->customer->id = 77;
@@ -616,6 +583,7 @@ class OnePageCheckoutFormTest extends TestCase
             'communication_channel' => 'email',
             'use_same_address' => '1',
         ]));
+        self::assertSame('registered@example.com', (string) $form->getValue('email'));
 
         $result = $form->submit();
 
@@ -626,14 +594,40 @@ class OnePageCheckoutFormTest extends TestCase
         self::assertSame('registered@example.com', (string) $form->getValue('email'));
     }
 
+    public function testGetAddressUsesSelectedSavedDeliveryAddressIdFromDeliveryRadioPost(): void
+    {
+        $form = $this->createSubmitForm();
+
+        $previousPost = $_POST ?? [];
+        $previousRequest = $_REQUEST ?? [];
+
+        $_POST['id_address_delivery'] = '505';
+        $_REQUEST['id_address_delivery'] = '505';
+
+        try {
+            $form->fillWith($this->withDefaultCountry([
+                'firstname' => 'Saved',
+                'lastname' => 'Address',
+                'address1' => '5 Existing street',
+                'city' => 'Nantes',
+                'postcode' => '44000',
+                'psgdpr_privacy' => '1',
+                'compliance_terms' => '1',
+                'communication_channel' => 'email',
+                'use_same_address' => '1',
+            ]));
+            $address = $form->getAddress();
+        } finally {
+            $_POST = $previousPost;
+            $_REQUEST = $previousRequest;
+        }
+
+        self::assertSame(505, (int) $address->id);
+    }
+
     public function testFillWithKeepsSelectedDeliveryAndInvoiceCountriesWithoutManualOverride(): void
     {
-        $language = new class extends \Language {
-            public function __construct()
-            {
-            }
-        };
-        $language->id = 1;
+        $language = CheckoutTestFixtures::language(1);
 
         $formatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
             ->disableOriginalConstructor()
@@ -663,11 +657,7 @@ class OnePageCheckoutFormTest extends TestCase
             ])
         ;
 
-        $defaultCountry = new class extends \Country {
-            public function __construct()
-            {
-            }
-        };
+        $defaultCountry = CheckoutTestFixtures::country();
         $defaultCountry->id = self::DEFAULT_COUNTRY_ID;
 
         $formatter
@@ -846,12 +836,7 @@ class OnePageCheckoutFormTest extends TestCase
 
     private function createForm(): OnePageCheckoutForm
     {
-        $language = new class extends \Language {
-            public function __construct()
-            {
-            }
-        };
-        $language->id = 1;
+        $language = CheckoutTestFixtures::language(1);
 
         return new TestableOnePageCheckoutForm(
             $this->createMock(\Smarty::class),
@@ -866,11 +851,7 @@ class OnePageCheckoutFormTest extends TestCase
 
     private function createSubmitForm(): OnePageCheckoutForm
     {
-        $language = new class extends \Language {
-            public function __construct()
-            {
-            }
-        };
+        $language = CheckoutTestFixtures::language();
         $language->id = 1;
 
         $submitFormatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
@@ -883,11 +864,7 @@ class OnePageCheckoutFormTest extends TestCase
             ->willReturn($this->getSubmitFields())
         ;
 
-        $defaultCountry = new class extends \Country {
-            public function __construct()
-            {
-            }
-        };
+        $defaultCountry = CheckoutTestFixtures::country();
         $defaultCountry->id = self::DEFAULT_COUNTRY_ID;
 
         $submitFormatter
@@ -1024,11 +1001,32 @@ class LightweightCustomer extends \Customer
     public function __construct()
     {
     }
+
+    public function isGuest(): bool
+    {
+        return (bool) $this->is_guest;
+    }
 }
 
 class LightweightCart extends \Cart
 {
     public function __construct()
     {
+    }
+}
+
+class LightweightContext extends \Context
+{
+    public ?\Customer $updatedCustomer = null;
+
+    public function __construct()
+    {
+        $this->cart = new LightweightCart();
+    }
+
+    public function updateCustomer(\Customer $customer): void
+    {
+        $this->updatedCustomer = $customer;
+        $this->customer = $customer;
     }
 }

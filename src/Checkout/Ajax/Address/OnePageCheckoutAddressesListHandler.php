@@ -6,40 +6,39 @@ class OnePageCheckoutAddressesListHandler
 {
     private \Context $context;
     private CheckoutCustomerContextResolver $customerResolver;
+    private CheckoutCustomerTemplateBuilder $customerTemplateBuilder;
 
-    public function __construct(\Context $context, CheckoutCustomerContextResolver $customerResolver)
-    {
+    public function __construct(
+        \Context $context,
+        CheckoutCustomerContextResolver $customerResolver,
+        ?CheckoutCustomerTemplateBuilder $customerTemplateBuilder = null,
+    ) {
         $this->context = $context;
         $this->customerResolver = $customerResolver;
+        $this->customerTemplateBuilder = $customerTemplateBuilder ?? new CheckoutCustomerTemplateBuilder(
+            $context,
+            $customerResolver
+        );
     }
 
     /**
-     * @param array<string,mixed> $requestParameters
-     *
      * @return array<string,mixed>
      */
-    public function handle(array $requestParameters = []): array
+    public function handle(): array
     {
         $customer = $this->customerResolver->resolve();
         if (!$customer instanceof \Customer) {
             return CheckoutAjaxResponse::error('Unable to resolve checkout customer.');
         }
 
-        $addresses = $customer->getAddresses((int) $this->context->language->id);
-        $selectedAddressId = (int) ($requestParameters['id_address'] ?? 0);
-        $selectedAddress = null;
-
-        foreach ($addresses as $address) {
-            if ((int) ($address['id_address'] ?? 0) === $selectedAddressId) {
-                $selectedAddress = $address;
-                break;
-            }
-        }
+        $customerTemplate = $this->customerTemplateBuilder->build();
 
         return [
             'success' => true,
-            'addresses' => $addresses,
-            'address' => $selectedAddress,
+            'customer' => $customerTemplate,
+            'address_count' => count($customerTemplate['addresses'] ?? []),
+            'selected_delivery_address' => (int) ($this->context->cart->id_address_delivery ?? 0),
+            'selected_invoice_address' => (int) ($this->context->cart->id_address_invoice ?? 0),
         ];
     }
 }

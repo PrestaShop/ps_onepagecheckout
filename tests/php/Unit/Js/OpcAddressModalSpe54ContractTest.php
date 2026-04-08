@@ -17,10 +17,15 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         self::assertStringContainsString('saveAddress', $script);
         self::assertStringContainsString('deleteAddress', $script);
         self::assertStringContainsString('updatedOpcAddressForm', $script);
-        self::assertStringContainsString('deleteAddressConfirmTitle', $script);
         self::assertStringContainsString("$(document).on('input change', MODAL_FIELD_SELECTOR", $script);
+        self::assertStringContainsString('const $trigger = $(event.relatedTarget);', $script);
         self::assertStringContainsString("$(document).on('shown.bs.modal', MODAL_SELECTOR", $script);
         self::assertStringContainsString('setModalFieldsDisabled($modal, false);', $script);
+        self::assertStringContainsString('const $modal = $(`#${DELETE_CONFIRM_MODAL_ID}`);', $script);
+        self::assertStringNotContainsString('ensureDeleteConfirmModal', $script);
+        self::assertStringNotContainsString('syncDeliveryMethodsContainerAddressId', $script);
+        self::assertStringNotContainsString('syncHiddenAddressIdsFromSavedSelections', $script);
+        self::assertStringNotContainsString('recoverStaleSavedAddressSelections', $script);
         self::assertStringNotContainsString('`${MODAL_SELECTOR} input, ${MODAL_SELECTOR} select, ${MODAL_SELECTOR} textarea`', $script);
         self::assertStringNotContainsString('window.confirm', $script);
     }

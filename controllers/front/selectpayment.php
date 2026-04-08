@@ -23,12 +23,4 @@ class Ps_OnepagecheckoutSelectPaymentModuleFrontController extends Ps_Onepageche
 
         return $handler->handle(Tools::getAllValues());
     }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function handleSelectPayment(): array
-    {
-        return $this->handleOpcRequest();
-    }
 }
