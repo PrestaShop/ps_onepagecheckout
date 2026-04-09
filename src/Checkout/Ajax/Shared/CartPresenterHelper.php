@@ -19,6 +19,15 @@ class CartPresenterHelper
         $this->context->cart->resetProductRelatedStaticCache();
         \Cache::clean('presentedCart_*');
 
-        return (new CartPresenter())->present($this->context->cart, true);
+        $cartLazyArray = (new CartPresenter())->present($this->context->cart, true);
+
+        // CartLazyArray computes values on first access and caches them.
+        // Force tax-sensitive properties now so callers that restore a temporary
+        // delivery address in a finally block get correct tax-inclusive values.
+        $cartLazyArray->offsetGet('products');
+        $cartLazyArray->offsetGet('subtotals');
+        $cartLazyArray->offsetGet('totals');
+
+        return $cartLazyArray;
     }
 }
