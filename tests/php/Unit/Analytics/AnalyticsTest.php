@@ -23,20 +23,32 @@ class AnalyticsTest extends TestCase
 
     public function testBootstrapDoesNothingWhenWriteKeyEnvVarEmpty(): void
     {
-        $envVar = Analytics::SEGMENT_WRITE_KEY_ENV_VAR;
-        $previousValue = getenv($envVar);
-        putenv($envVar . '=');
+        $previousAppEnv = getenv(Analytics::APP_ENV_ENV_VAR);
+        $previousPreprodKey = getenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR);
+        $previousProdKey = getenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR);
 
-        if (trim((string) getenv($envVar)) !== '') {
-            self::markTestSkipped($envVar . ' is set; empty-key path not exercised.');
-        }
+        putenv(Analytics::APP_ENV_ENV_VAR . '=preprod');
+        putenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR . '=');
+        putenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR . '=');
 
         Analytics::bootstrap(true);
 
-        if ($previousValue === false) {
-            putenv($envVar);
+        if ($previousAppEnv === false) {
+            putenv(Analytics::APP_ENV_ENV_VAR);
         } else {
-            putenv($envVar . '=' . $previousValue);
+            putenv(Analytics::APP_ENV_ENV_VAR . '=' . $previousAppEnv);
+        }
+
+        if ($previousPreprodKey === false) {
+            putenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR);
+        } else {
+            putenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR . '=' . $previousPreprodKey);
+        }
+
+        if ($previousProdKey === false) {
+            putenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR);
+        } else {
+            putenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR . '=' . $previousProdKey);
         }
 
         self::assertTrue(true);
