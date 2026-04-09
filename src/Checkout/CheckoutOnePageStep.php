@@ -212,6 +212,16 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
     }
 
     /**
+     * Keep step identifier stable to avoid persistence regressions in checkout_session_data.
+     *
+     * @return string
+     */
+    public function getIdentifier()
+    {
+        return 'checkout-one-page-step';
+    }
+
+    /**
      * @param array<string,mixed> $data
      *
      * @return $this

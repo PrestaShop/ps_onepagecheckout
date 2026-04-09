@@ -75,6 +75,30 @@ class AddressFormValidationTraitTest extends TestCase
         self::assertNotEmpty($invoicePostcode->getErrors());
     }
 
+    public function testItValidatesInvoicePostcodeAgainstDeliveryCountryWhenNoInvoiceCountryIsProvided(): void
+    {
+        $sut = $this->createHarness();
+
+        $deliveryCountry = $this->createCountry([
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNNN',
+            'validZipCodes' => ['75001'],
+        ]);
+
+        $invoicePostcode = (new \FormField())
+            ->setRequired(true)
+            ->setValue('99999');
+
+        $isValid = $sut->exposeValidateAddressPostcode(
+            null,
+            $deliveryCountry,
+            $invoicePostcode
+        );
+
+        self::assertFalse($isValid);
+        self::assertNotEmpty($invoicePostcode->getErrors());
+    }
+
     public function testItSkipsInvoicePostcodeCheckWhenInvoiceCountryDoesNotNeedZipCode(): void
     {
         $sut = $this->createHarness();
