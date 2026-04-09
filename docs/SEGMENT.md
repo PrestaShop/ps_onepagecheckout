@@ -22,6 +22,11 @@ La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) p
 | Environnement | `SEGMENT_PREPROD_KEY` | Write key de la **source PHP** Segment (préprod) — **seule source de vérité** (pas de `configuration`). | `''` |
 | Environnement | `SEGMENT_PROD_KEY` | Write key de la **source PHP** Segment (prod) — **seule source de vérité** (pas de `configuration`). | `''` |
 
+### Règle de sélection de la clé
+
+- Si `APP_ENV` vaut `prod` ou `production` → utilisation de `SEGMENT_PROD_KEY`
+- Sinon → utilisation de `SEGMENT_PREPROD_KEY`
+
 ## Architecture PHP
 
 | Fichier | Rôle |
