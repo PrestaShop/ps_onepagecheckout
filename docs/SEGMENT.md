@@ -4,7 +4,7 @@ Ce document décrit la **configuration** et l’**intégration technique** de Se
 
 **Comportement actuel** : initialisation de `Segment::init()` lorsque les conditions sont réunies. **Aucun** appel `track` / `flush` n’est encore envoyé depuis le module — cela fera l’objet de tickets ultérieurs.
 
-**Résumé** : write key **en dur** dans `Analytics::SEGMENT_CLIENT_KEY_PHP` → `Segment::init()` sur les requêtes BO qui passent par le hook concerné, **dès que le module est activé**.
+**Résumé** : write key lue depuis une **variable d’environnement** (`PS_OPC_SEGMENT_WRITE_KEY`) → `Segment::init()` sur les requêtes BO qui passent par le hook concerné, **dès que le module est activé**.
 
 La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) pour limiter les renommages si le fournisseur change.
 
@@ -18,7 +18,7 @@ La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) p
 
 | Source | Identifiant | Rôle | Défaut |
 |--------|-------------|------|--------|
-| Code PHP | `Analytics::SEGMENT_CLIENT_KEY_PHP` | Write key de la **source PHP** Segment — **seule source de vérité** (pas de `configuration`). | `''` |
+| Environnement | `PS_OPC_SEGMENT_WRITE_KEY` | Write key de la **source PHP** Segment — **seule source de vérité** (pas de `configuration`). | `''` |
 
 ## Architecture PHP
 
@@ -31,7 +31,7 @@ La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) p
 ### Différences notables avec l’ancienne version (navigateur)
 
 - Plus de `window.psopc_segment` ni de `opc-segment-init.bundle.js`.
-- La clé **PHP** (`SEGMENT_CLIENT_KEY_PHP`) n’est pas la même source Segment que l’ancienne clé **JavaScript** ; à configurer dans l’espace Segment (source PHP).
+- La clé **PHP** (`PS_OPC_SEGMENT_WRITE_KEY`) n’est pas la même source Segment que l’ancienne clé **JavaScript** ; à configurer dans l’espace Segment (source PHP).
 
 ## Où cela s’exécute
 
@@ -57,5 +57,5 @@ Pas de clé de configuration dédiée à Segment : l’activation suit l’activ
 
 ## Limites
 
-- La write key en dur dans le dépôt : politique de secret / environnements à définir côté équipe.
+- La write key est fournie par environnement (local / préprod / prod) : à configurer côté plateforme (variable d’environnement / secret).
 - `Segment::init` est appelé dans le contexte des requêtes qui déclenchent le hook (typiquement pages de config du module en BO).

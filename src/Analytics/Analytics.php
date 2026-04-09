@@ -27,17 +27,16 @@ use Segment\Segment;
 
 /**
  * Segment PHP SDK bootstrap, same approach as
- * {@link https://github.com/PrestaShop/autoupgrade/blob/dev/classes/Analytics.php PrestaShop\Module\AutoUpgrade\Analytics}
- * (constant write key).
+ * {@link https://github.com/PrestaShop/autoupgrade/blob/dev/classes/Analytics.php PrestaShop\Module\AutoUpgrade\Analytics}.
  *
  * Event tracking (track) will be added in follow-up work.
  */
 final class Analytics
 {
     /**
-     * Segment PHP source write key — single source of truth (not stored in configuration).
+     * Segment PHP source write key env var — single source of truth (not stored in configuration).
      */
-    public const SEGMENT_CLIENT_KEY_PHP = '';
+    public const SEGMENT_WRITE_KEY_ENV_VAR = 'PS_OPC_SEGMENT_WRITE_KEY';
 
     private static bool $clientInitialized = false;
 
@@ -47,12 +46,22 @@ final class Analytics
             return;
         }
 
-        $writeKey = trim((string) self::SEGMENT_CLIENT_KEY_PHP);
+        $writeKey = self::getWriteKey();
         if ($writeKey === '') {
             return;
         }
 
         Segment::init($writeKey);
         self::$clientInitialized = true;
+    }
+
+    private static function getWriteKey(): string
+    {
+        $value = getenv(self::SEGMENT_WRITE_KEY_ENV_VAR);
+        if ($value === false) {
+            $value = $_ENV[self::SEGMENT_WRITE_KEY_ENV_VAR] ?? '';
+        }
+
+        return trim((string) $value);
     }
 }

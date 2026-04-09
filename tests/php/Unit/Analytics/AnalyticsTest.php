@@ -21,13 +21,23 @@ class AnalyticsTest extends TestCase
         self::assertTrue(true);
     }
 
-    public function testBootstrapDoesNothingWhenWriteKeyConstantEmpty(): void
+    public function testBootstrapDoesNothingWhenWriteKeyEnvVarEmpty(): void
     {
-        if (trim((string) Analytics::SEGMENT_CLIENT_KEY_PHP) !== '') {
-            self::markTestSkipped('SEGMENT_CLIENT_KEY_PHP is set; empty-key path not exercised.');
+        $envVar = Analytics::SEGMENT_WRITE_KEY_ENV_VAR;
+        $previousValue = getenv($envVar);
+        putenv($envVar . '=');
+
+        if (trim((string) getenv($envVar)) !== '') {
+            self::markTestSkipped($envVar . ' is set; empty-key path not exercised.');
         }
 
         Analytics::bootstrap(true);
+
+        if ($previousValue === false) {
+            putenv($envVar);
+        } else {
+            putenv($envVar . '=' . $previousValue);
+        }
 
         self::assertTrue(true);
     }
