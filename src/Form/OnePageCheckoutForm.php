@@ -39,6 +39,7 @@ class OnePageCheckoutForm extends \AbstractForm
 {
     use AddressFormValidationTrait;
 
+
     private const GUEST_PLACEHOLDER_FIRSTNAME = 'Guest';
     private const GUEST_PLACEHOLDER_LASTNAME = 'Guest';
 

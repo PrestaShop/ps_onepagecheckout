@@ -33,6 +33,24 @@ const MODAL_SELECTOR = '#psopc-confirmation-modal';
 const FORM_SELECTOR = '.psopc-configuration form';
 const MAINTENANCE_HIDDEN_SELECTOR = '#psopc-maintenance-hidden';
 const MAINTENANCE_TOGGLE_SELECTOR = '#psopc-maintenance-toggle';
+const OPC_ACTIVATION_SELECTOR = '[data-psopc-modal="opc-activation"]';
+const FOUR_PAGE_ACTIVATION_SELECTOR = '[data-psopc-modal="four-page-activation"]';
+
+/**
+ * @param {boolean} isOpc
+ */
+function updateModalContent(isOpc) {
+  const opcActivationSelectors = document.querySelectorAll(OPC_ACTIVATION_SELECTOR);
+  const fourPageActivationSelectors = document.querySelectorAll(FOUR_PAGE_ACTIVATION_SELECTOR);
+
+  opcActivationSelectors.forEach(function (el) {
+    el.style.display = isOpc ? '' : 'none';
+  });
+
+  fourPageActivationSelectors.forEach(function (el) {
+    el.style.display = isOpc ? 'none' : '';
+  });
+}
 
 /**
  * @returns {string|null}
@@ -76,7 +94,7 @@ function initCheckoutLayoutConfiguration() {
   const maintenanceHidden = document.querySelector(MAINTENANCE_HIDDEN_SELECTOR);
   const maintenanceToggle = document.querySelector(MAINTENANCE_TOGGLE_SELECTOR);
 
-  if (!saveBtn || !confirmBtn || !form || !maintenanceHidden || !maintenanceToggle) {
+  if (!saveBtn || !confirmBtn || !form || !maintenanceHidden) {
     return;
   }
 
@@ -92,14 +110,23 @@ function initCheckoutLayoutConfiguration() {
   });
 
   saveBtn.addEventListener('click', function () {
-    maintenanceToggle.checked = false;
+    const selectedValue = getCheckedValue(configurationKey);
+    const isOpc = selectedValue === '1';
+
+    updateModalContent(isOpc);
+
+    if (maintenanceToggle) {
+      maintenanceToggle.checked = false;
+    }
     maintenanceHidden.value = '0';
     modal.modal('show');
   });
 
-  maintenanceToggle.addEventListener('change', function () {
-    maintenanceHidden.value = this.checked ? '1' : '0';
-  });
+  if (maintenanceToggle) {
+    maintenanceToggle.addEventListener('change', function () {
+      maintenanceHidden.value = this.checked ? '1' : '0';
+    });
+  }
 
   confirmBtn.addEventListener('click', function () {
     modal.modal('hide');
