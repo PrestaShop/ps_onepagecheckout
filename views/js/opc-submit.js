@@ -1,7 +1,6 @@
 import OPC_EVENTS from './events';
 import OPC_SELECTORS from './selectors';
-import {getConfiguredOpcUrl} from './runtime/opc-runtime';
-import {normalizeErrorResponse} from './runtime/opc-runtime';
+import {getConfiguredOpcUrl, normalizeErrorResponse, updatePayAmount} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -627,6 +626,27 @@ $(document).ready(() => {
   prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
     bindScopedValidationListeners(form);
     validateForm();
+  });
+  prestashop.on('updatedCart', () => {
+    const totals = prestashop.cart && prestashop.cart.totals;
+    if (totals) {
+      updatePayAmount(totals);
+      return;
+    }
+    // prestashop.cart is not available (e.g. voucher removal goes through a raw fetch,
+    // so resp.cart is undefined). Fetch totals from the dedicated endpoint instead.
+    const cartTotalsUrl = getConfiguredOpcUrl('cartTotals');
+    if (!cartTotalsUrl) {
+      return;
+    }
+    fetch(cartTotalsUrl, {credentials: 'same-origin'})
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && data.success && data.totals) {
+          updatePayAmount(data.totals);
+        }
+      })
+      .catch(() => {});
   });
 });
 }());
