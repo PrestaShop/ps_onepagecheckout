@@ -4,7 +4,7 @@ Ce document décrit la **configuration** et l’**intégration technique** de Se
 
 **Comportement actuel** : initialisation de `Segment::init()` lorsque les conditions sont réunies. **Aucun** appel `track` / `flush` n’est encore envoyé depuis le module — cela fera l’objet de tickets ultérieurs.
 
-**Résumé** : write key lue depuis un fichier/variables d’environnement (`APP_ENV`, `SEGMENT_PREPROD_KEY`, `SEGMENT_PROD_KEY`) → `Segment::init()` sur les requêtes BO qui passent par le hook concerné, **dès que le module est activé**.
+**Résumé** : write key lue depuis un fichier/variables d’environnement (`SEGMENT_PREPROD_KEY`, `SEGMENT_PROD_KEY`) → `Segment::init()` sur les requêtes BO qui passent par le hook concerné, **dès que le module est activé**.
 
 La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) pour limiter les renommages si le fournisseur change.
 
@@ -18,14 +18,13 @@ La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) p
 
 | Source | Identifiant | Rôle | Défaut |
 |--------|-------------|------|--------|
-| Environnement | `APP_ENV` | Permet de choisir la clé Segment (préprod/prod). | `''` |
 | Environnement | `SEGMENT_PREPROD_KEY` | Write key de la **source PHP** Segment (préprod) — **seule source de vérité** (pas de `configuration`). | `''` |
 | Environnement | `SEGMENT_PROD_KEY` | Write key de la **source PHP** Segment (prod) — **seule source de vérité** (pas de `configuration`). | `''` |
 
 ### Règle de sélection de la clé
 
-- Si `APP_ENV` vaut `prod` ou `production` → utilisation de `SEGMENT_PROD_KEY`
-- Sinon → utilisation de `SEGMENT_PREPROD_KEY`
+- Si `_PS_MODE_DEV_` est `false` → utilisation de `SEGMENT_PROD_KEY`
+- Si `_PS_MODE_DEV_` est `true` → utilisation de `SEGMENT_PREPROD_KEY`
 
 ## Architecture PHP
 

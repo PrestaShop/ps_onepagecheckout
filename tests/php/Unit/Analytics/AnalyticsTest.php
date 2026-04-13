@@ -23,32 +23,24 @@ class AnalyticsTest extends TestCase
 
     public function testBootstrapDoesNothingWhenWriteKeyEnvVarEmpty(): void
     {
-        $previousAppEnv = getenv(Analytics::APP_ENV_ENV_VAR);
-        $previousPreprodKey = getenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR);
-        $previousProdKey = getenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR);
+        $previousPreprodKey = getenv(Analytics::SEGMENT_PREPROD_KEY);
+        $previousProdKey = getenv(Analytics::SEGMENT_PROD_KEY);
 
-        putenv(Analytics::APP_ENV_ENV_VAR . '=preprod');
-        putenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR . '=');
-        putenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR . '=');
+        putenv(Analytics::SEGMENT_PREPROD_KEY . '=');
+        putenv(Analytics::SEGMENT_PROD_KEY . '=');
 
         Analytics::bootstrap(true);
 
-        if ($previousAppEnv === false) {
-            putenv(Analytics::APP_ENV_ENV_VAR);
-        } else {
-            putenv(Analytics::APP_ENV_ENV_VAR . '=' . $previousAppEnv);
-        }
-
         if ($previousPreprodKey === false) {
-            putenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR);
+            putenv(Analytics::SEGMENT_PREPROD_KEY);
         } else {
-            putenv(Analytics::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR . '=' . $previousPreprodKey);
+            putenv(Analytics::SEGMENT_PREPROD_KEY . '=' . $previousPreprodKey);
         }
 
         if ($previousProdKey === false) {
-            putenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR);
+            putenv(Analytics::SEGMENT_PROD_KEY);
         } else {
-            putenv(Analytics::SEGMENT_PROD_WRITE_KEY_ENV_VAR . '=' . $previousProdKey);
+            putenv(Analytics::SEGMENT_PROD_KEY . '=' . $previousProdKey);
         }
 
         self::assertTrue(true);

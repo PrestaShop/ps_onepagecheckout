@@ -34,15 +34,10 @@ use Segment\Segment;
 final class Analytics
 {
     /**
-     * App environment name (used to select the correct write key).
-     */
-    public const APP_ENV_ENV_VAR = 'APP_ENV';
-
-    /**
      * Segment PHP source write keys env vars — single source of truth (not stored in configuration).
      */
-    public const SEGMENT_PREPROD_WRITE_KEY_ENV_VAR = 'SEGMENT_PREPROD_KEY';
-    public const SEGMENT_PROD_WRITE_KEY_ENV_VAR = 'SEGMENT_PROD_KEY';
+    public const SEGMENT_PREPROD_KEY = 'SEGMENT_PREPROD_KEY';
+    public const SEGMENT_PROD_KEY = 'SEGMENT_PROD_KEY';
 
     private static bool $clientInitialized = false;
 
@@ -63,11 +58,8 @@ final class Analytics
 
     private static function getWriteKey(): string
     {
-        $appEnv = self::getEnv(self::APP_ENV_ENV_VAR);
-        $writeKeyEnvVar = self::SEGMENT_PREPROD_WRITE_KEY_ENV_VAR;
-        if (in_array($appEnv, ['prod', 'production'], true)) {
-            $writeKeyEnvVar = self::SEGMENT_PROD_WRITE_KEY_ENV_VAR;
-        }
+        $isDevMode = defined('_PS_MODE_DEV_') && (bool) _PS_MODE_DEV_;
+        $writeKeyEnvVar = $isDevMode ? self::SEGMENT_PREPROD_KEY : self::SEGMENT_PROD_KEY;
 
         return self::getEnv($writeKeyEnvVar);
     }
