@@ -430,7 +430,7 @@ class OnePageCheckoutFormTest extends TestCase
         self::assertSame('opcinvariantprobe_customer_text', $templateVariables['additionalCustomerFields']['customer_probe_text']['name']);
         self::assertSame('use_same_address', $templateVariables['formFields']['use_same_address']['name']);
         self::assertSame('firstname', $templateVariables['deliveryFields']['firstname']['name']);
-        self::assertSame('invoice_address1', $templateVariables['invoiceFields']['invoice_address1']['name']);
+        self::assertSame('address1', $templateVariables['invoiceFields']['address1']['name']);
         self::assertSame('id_address_invoice', $templateVariables['invoiceMetaFields']['id_address_invoice']['name']);
     }
 

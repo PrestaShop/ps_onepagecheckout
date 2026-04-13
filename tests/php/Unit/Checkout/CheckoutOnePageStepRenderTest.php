@@ -74,7 +74,7 @@ class CheckoutOnePageStepRenderTest extends TestCase
                 'additionalCustomerFields' => [],
                 'useSameAddressField' => ['value' => true],
                 'deliveryFields' => ['firstname' => ['name' => 'firstname']],
-                'invoiceFields' => ['invoice_firstname' => ['name' => 'invoice_firstname']],
+                'invoiceFields' => ['firstname' => ['name' => 'firstname']],
                 'invoiceMetaFields' => [],
                 'errors' => ['' => []],
                 'token' => 'token',

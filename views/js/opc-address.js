@@ -42,9 +42,7 @@ const DISABLED_BY_SAME_ADDRESS_ATTRIBUTE = 'data-opc-disabled-by-same-address';
 
 const SERVER_MANAGED_FIELDS = new Set([
   'id_country',
-  'invoice_id_country',
   'id_state',
-  'invoice_id_state',
   'use_same_address',
 ]);
 
@@ -303,7 +301,7 @@ function seedBillingFromDelivery(addressContainer) {
     addressContainer,
     BILLING_SECTION_SELECTOR,
     BILLING_FIELDS_SELECTOR
-  ).find('[name="invoice_id_country"]').first();
+  ).find('[name="id_country"]').first();
   const previousBillingCountryValue = billingCountryField.length
     ? String(billingCountryField.val() || '')
     : '';
@@ -312,7 +310,7 @@ function seedBillingFromDelivery(addressContainer) {
     addressContainer,
     BILLING_SECTION_SELECTOR,
     BILLING_FIELDS_SELECTOR,
-    'invoice_id_country',
+    'id_country',
     deliveryCountryValue
   );
 
@@ -325,7 +323,7 @@ function seedBillingFromDelivery(addressContainer) {
     addressContainer,
     BILLING_SECTION_SELECTOR,
     BILLING_FIELDS_SELECTOR,
-    'invoice_id_state',
+    'id_state',
     deliveryStateValue
   );
 }
@@ -383,13 +381,13 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
   }
 
   // Send both country values so backend rebuilds delivery and billing sections consistently.
-  const targetName = String(target.attr('name') || '');
-  const deliveryCountryValue = targetName === 'id_country'
+  const isBillingTarget = target.closest(BILLING_SECTION_SELECTOR).length > 0;
+  const deliveryCountryValue = !isBillingTarget
     ? String(target.val() || '')
     : getAddressSectionFieldValue(addressContainer, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_country');
-  const invoiceCountryValue = targetName === 'invoice_id_country'
+  const invoiceCountryValue = isBillingTarget
     ? String(target.val() || '')
-    : getAddressSectionFieldValue(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'invoice_id_country');
+    : getAddressSectionFieldValue(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'id_country');
   const requestData = {
     id_address_delivery: getAddressSectionFieldValue(addressContainer, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_address_delivery'),
     id_address_invoice: getAddressSectionFieldValue(addressContainer, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'id_address_invoice'),
@@ -439,7 +437,7 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
 }
 
 function handleOpcCountryChange(selectors) {
-  $('body').on('change', `${OPC_SELECTORS.opc.deliveryFields} select[name="id_country"], ${OPC_SELECTORS.opc.billingFields} select[name="invoice_id_country"]`, (event) => {
+  $('body').on('change', `${OPC_SELECTORS.opc.deliveryFields} select[name="id_country"], ${OPC_SELECTORS.opc.billingFields} select[name="id_country"]`, (event) => {
     refreshOpcAddressFormForCountryChange($(event.target), selectors);
   });
 }

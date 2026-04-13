@@ -45,9 +45,7 @@ const BILLING_FIELDS_SELECTOR = OPC_SELECTORS.opc.billingFields;
 const DISABLED_BY_SAME_ADDRESS_ATTRIBUTE = 'data-opc-disabled-by-same-address';
 const SERVER_MANAGED_FIELDS = new Set([
   'id_country',
-  'invoice_id_country',
   'id_state',
-  'invoice_id_state',
   'use_same_address',
 ]);
 const NON_PRESERVABLE_FIELD_TYPES = new Set(['hidden', 'file', 'submit', 'button', 'image', 'reset']);
@@ -759,7 +757,7 @@ function refreshAddressesSection(options = {}) {
     payload.id_address_delivery = getAddressSectionFieldValue($addressForm, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_address_delivery');
     payload.id_address_invoice = getAddressSectionFieldValue($addressForm, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'id_address_invoice');
     payload.id_country = getAddressSectionFieldValue($addressForm, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_country');
-    payload.invoice_id_country = getAddressSectionFieldValue($addressForm, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'invoice_id_country');
+    payload.invoice_id_country = getAddressSectionFieldValue($addressForm, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'id_country');
   }
 
   const useSameAddress = payload.use_same_address !== '0';
@@ -776,7 +774,7 @@ function refreshAddressesSection(options = {}) {
     syncBillingSectionConstraints($addressForm, useSameAddress);
     if (!resetInlineAddressState) {
       setAddressSectionFieldValue($addressForm, DELIVERY_SECTION_SELECTOR, DELIVERY_FIELDS_SELECTOR, 'id_country', payload.id_country);
-      setAddressSectionFieldValue($addressForm, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'invoice_id_country', payload.invoice_id_country);
+      setAddressSectionFieldValue($addressForm, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'id_country', payload.invoice_id_country);
     }
 
     syncAllSavedAddressItemStyles();

@@ -320,8 +320,7 @@ class OnePageCheckoutForm extends \AbstractForm
             } else {
                 $invoiceAddress = $this->buildAddressFromGroup(
                     $fieldsByGroup['invoiceFields'],
-                    null,
-                    'invoice_'
+                    null
                 );
                 $invoiceAddress->id_customer = $customer->id;
                 $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans(
@@ -619,7 +618,7 @@ class OnePageCheckoutForm extends \AbstractForm
     {
         $fieldsByGroup = $this->mapFieldsByGroup();
 
-        return $this->buildAddressFromGroup($fieldsByGroup['invoiceFields'], null, 'invoice_');
+        return $this->buildAddressFromGroup($fieldsByGroup['invoiceFields'], null);
     }
 
     public function getTemplateVariables()
@@ -716,7 +715,10 @@ class OnePageCheckoutForm extends \AbstractForm
             }
 
             if ($this->isInvoiceField($key)) {
-                $fieldsByGroup['invoiceFields'][$key] = $field;
+                $strippedKey = substr($key, strlen('invoice_'));
+                $clonedField = clone $field;
+                $clonedField->setName($strippedKey);
+                $fieldsByGroup['invoiceFields'][$strippedKey] = $clonedField;
                 continue;
             }
 
@@ -838,22 +840,18 @@ class OnePageCheckoutForm extends \AbstractForm
      * @param array<string, \FormField> $fields
      * @param int|null $idAddress
      */
-    private function buildAddressFromGroup(array $fields, $idAddress, string $prefix = ''): \Address
+    private function buildAddressFromGroup(array $fields, $idAddress): \Address
     {
         $address = new \Address($idAddress ? (int) $idAddress : null, $this->language->id);
 
         foreach ($fields as $formField) {
             $fieldName = $formField->getName();
-            $baseName = $prefix && strpos($fieldName, $prefix) === 0
-                ? substr($fieldName, strlen($prefix))
-                : $fieldName;
-
-            if (property_exists($address, $baseName)) {
-                $address->{$baseName} = $formField->getValue();
+            if (property_exists($address, $fieldName)) {
+                $address->{$fieldName} = $formField->getValue();
             }
         }
 
-        if (!isset($fields[$prefix . 'id_state'])) {
+        if (!isset($fields['id_state'])) {
             $address->id_state = 0;
         }
 
