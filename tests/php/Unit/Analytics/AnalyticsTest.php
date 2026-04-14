@@ -45,4 +45,29 @@ class AnalyticsTest extends TestCase
 
         self::assertTrue(true);
     }
+
+    public function testTrackOpcCriticalErrorDoesNothingWhenWriteKeyEnvVarsEmpty(): void
+    {
+        $previousPreprodKey = getenv(Analytics::SEGMENT_PREPROD_KEY);
+        $previousProdKey = getenv(Analytics::SEGMENT_PROD_KEY);
+
+        putenv(Analytics::SEGMENT_PREPROD_KEY . '=');
+        putenv(Analytics::SEGMENT_PROD_KEY . '=');
+
+        Analytics::trackOpcCriticalError('unknown', 'yes', '1.0.0');
+
+        if ($previousPreprodKey === false) {
+            putenv(Analytics::SEGMENT_PREPROD_KEY);
+        } else {
+            putenv(Analytics::SEGMENT_PREPROD_KEY . '=' . $previousPreprodKey);
+        }
+
+        if ($previousProdKey === false) {
+            putenv(Analytics::SEGMENT_PROD_KEY);
+        } else {
+            putenv(Analytics::SEGMENT_PROD_KEY . '=' . $previousProdKey);
+        }
+
+        self::assertTrue(true);
+    }
 }

@@ -4,6 +4,7 @@
  * AJAX endpoint for module-owned OPC guest initialization.
  */
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutGuestInitHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 
@@ -43,6 +44,14 @@ class Ps_OnepagecheckoutGuestInitModuleFrontController extends ModuleFrontContro
                 (int) $this->module->id,
                 true
             );
+
+            if ($this->module instanceof Ps_Onepagecheckout) {
+                Analytics::trackOpcCriticalError(
+                    'unknown',
+                    (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+                    (string) $this->module->version
+                );
+            }
 
             return $this->buildTechnicalErrorResponse();
         }

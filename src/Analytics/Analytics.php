@@ -29,10 +29,15 @@ use Segment\Segment;
  * Segment PHP SDK bootstrap, same approach as
  * {@link https://github.com/PrestaShop/autoupgrade/blob/dev/classes/Analytics.php PrestaShop\Module\AutoUpgrade\Analytics}.
  *
- * Event tracking (track) will be added in follow-up work.
+ * Event tracking is best-effort and must never break checkout flows.
  */
 final class Analytics
 {
+    /**
+     * Segment event name emitted on critical OPC errors (technical / blocking errors, no PII).
+     */
+    public const EVENT_OPC_CRITICAL_ERROR = '[OPC] Checkout Error Occurred';
+
     /**
      * Segment PHP source write keys env vars — single source of truth (not stored in configuration).
      */
@@ -56,12 +61,89 @@ final class Analytics
         self::$clientInitialized = true;
     }
 
+    /**
+     * Track a critical error encountered in the OPC checkout tunnel.
+     *
+     * Required event properties (payload-specific):
+     * - error_type: string enum (e.g. payment_failure, shipping_unavailable, api_timeout, unknown)
+     * - guest_checkout_active: yes|no
+     *
+     * Common properties are auto-enriched here:
+     * - device_type: mobile|tablet|desktop
+     * - prestashop_version
+     * - module_version
+     */
+    public static function trackOpcCriticalError(string $errorType, string $guestCheckoutActive, string $moduleVersion): void
+    {
+        self::bootstrap(true);
+        if (!self::$clientInitialized) {
+            return;
+        }
+
+        $properties = array_merge(
+            [
+                'error_type' => $errorType,
+                'guest_checkout_active' => $guestCheckoutActive,
+            ],
+            self::buildCommonProps($moduleVersion)
+        );
+
+        try {
+            Segment::track([
+                // One shared user id on purpose: no customer/session identifiers.
+                'userId' => 'ps_onepagecheckout',
+                'event' => self::EVENT_OPC_CRITICAL_ERROR,
+                'properties' => $properties,
+            ]);
+
+            // Best effort: flush immediately so we don't lose rare error events.
+            Segment::flush();
+        } catch (\Throwable) {
+            // Never block checkout because of analytics.
+        }
+    }
+
+    /**
+     * Common analytics props auto-enriched for all events emitted by this module.
+     *
+     * @return array<string, string>
+     */
+    private static function buildCommonProps(string $moduleVersion): array
+    {
+        return [
+            'device_type' => self::detectDeviceType(),
+            'prestashop_version' => defined('_PS_VERSION_') ? (string) _PS_VERSION_ : '',
+            'module_version' => $moduleVersion,
+        ];
+    }
+
     private static function getWriteKey(): string
     {
         $isDevMode = defined('_PS_MODE_DEV_') && (bool) _PS_MODE_DEV_;
         $writeKeyEnvVar = $isDevMode ? self::SEGMENT_PREPROD_KEY : self::SEGMENT_PROD_KEY;
 
         return self::getEnv($writeKeyEnvVar);
+    }
+
+    private static function detectDeviceType(): string
+    {
+        $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $userAgentLower = strtolower($userAgent);
+
+        if ($userAgentLower === '') {
+            return 'desktop';
+        }
+
+        // Basic heuristics (no dependency on core helpers, safe in CLI/tests).
+        if (str_contains($userAgentLower, 'ipad') || str_contains($userAgentLower, 'tablet')) {
+            return 'tablet';
+        }
+
+        if (str_contains($userAgentLower, 'mobi') || str_contains($userAgentLower, 'android')) {
+            return 'mobile';
+        }
+
+        return 'desktop';
     }
 
     private static function getEnv(string $name): string
