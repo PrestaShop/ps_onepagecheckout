@@ -68,8 +68,14 @@ export function updateCartSummary(preview, totals) {
     prestashop.emit(OPC_EVENTS.opcCartSummaryUpdated, {selector: summarySelector});
   }
 
+  updatePayAmount(totals);
+}
+
+export function updatePayAmount(totals) {
+  const prestashop = window.prestashop || null;
+
   const totalValue = totals && typeof totals === 'object'
-    ? (totals.total_including_tax && totals.total_including_tax.value) || (totals.total && totals.total.value) || ''
+    ? (totals.total && totals.total.value) || (totals.total_including_tax && totals.total_including_tax.value) || ''
     : '';
   const configuredPayAmountSelector = prestashop && prestashop.selectors
     && prestashop.selectors.opc

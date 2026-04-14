@@ -238,6 +238,15 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+                'cartTotals' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'carttotals',
+                    ['ajax' => 1, 'action' => 'opcCartTotals'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
             ],
         ];
 
