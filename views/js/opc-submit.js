@@ -338,37 +338,7 @@ function submitPaymentModuleForm(paymentRadio) {
 }
 
 function buildSubmitPayload(form, paymentRadio) {
-  const payload = new FormData();
-  const billingFieldsContainer = form.querySelector(BILLING_FIELDS_SELECTOR);
-  const billingElements = billingFieldsContainer
-    ? new Set(Array.from(billingFieldsContainer.querySelectorAll('input, select, textarea')))
-    : new Set();
-  const BILLING_NO_PREFIX = new Set(['id_address_invoice']);
-
-  Array.from(form.querySelectorAll('input, select, textarea')).forEach((el) => {
-    if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement) && !(el instanceof HTMLTextAreaElement)) {
-      return;
-    }
-
-    if (!el.name) {
-      return;
-    }
-
-    const isBillingField = billingElements.has(el) && !BILLING_NO_PREFIX.has(el.name);
-    const key = isBillingField ? ('invoice_' + el.name) : el.name;
-
-    if (el instanceof HTMLInputElement && el.type === 'checkbox') {
-      if (el.checked) {
-        payload.append(key, el.value);
-      }
-    } else if (el instanceof HTMLInputElement && el.type === 'radio') {
-      if (el.checked) {
-        payload.set(key, el.value);
-      }
-    } else {
-      payload.append(key, String(el.value || ''));
-    }
-  });
+  const payload = new FormData(form);
 
   appendConditionsToApproveToFormData(payload);
 

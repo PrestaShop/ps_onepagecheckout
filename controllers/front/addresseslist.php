@@ -37,7 +37,7 @@ class Ps_OnepagecheckoutAddressesListModuleFrontController extends Ps_Onepageche
                     'checkout/_partials/one-page-checkout/address-list',
                     [
                         'customer' => $response['customer'] ?? [],
-                        'prefix' => '',
+                        'address_type' => 'delivery',
                         'selected_address' => (int) ($response['selected_delivery_address'] ?? 0),
                     ]
                 ),
@@ -45,7 +45,7 @@ class Ps_OnepagecheckoutAddressesListModuleFrontController extends Ps_Onepageche
                     'checkout/_partials/one-page-checkout/address-list',
                     [
                         'customer' => $response['customer'] ?? [],
-                        'prefix' => 'invoice_',
+                        'address_type' => 'invoice',
                         'selected_address' => (int) ($response['selected_invoice_address'] ?? 0),
                     ]
                 ),
