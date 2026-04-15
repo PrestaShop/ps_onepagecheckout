@@ -33,7 +33,7 @@ class OpcJavascriptContractTest extends TestCase
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-submit.js');
         self::assertStringContainsString("import {OPC_EVENTS} from './events';", $script);
         self::assertStringContainsString("import OPC_SELECTORS from './selectors';", $script);
-        self::assertStringContainsString("import {getConfiguredOpcUrl, normalizeErrorResponse, updatePayAmount} from './runtime/opc-runtime';", $script);
+        self::assertStringContainsString("import {getConfiguredOpcUrl, normalizeErrorEventResponse, getConfiguredOpcMessage, updatePayAmount} from './runtime/opc-runtime';", $script);
         self::assertStringContainsString('prestashop.emit(OPC_EVENTS.opcFinalSubmitStarted)', $script);
         self::assertStringContainsString('const OPC_FORM_ID_SELECTOR = OPC_SELECTORS.opc.form;', $script);
         self::assertStringContainsString('const PAY_BUTTON_SELECTOR = OPC_SELECTORS.opc.payButton;', $script);

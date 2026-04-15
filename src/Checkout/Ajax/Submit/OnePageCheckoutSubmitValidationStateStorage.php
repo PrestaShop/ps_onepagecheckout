@@ -99,7 +99,7 @@ class OnePageCheckoutSubmitValidationStateStorage
 
         if (isset($this->context->cart)) {
             // Legacy PrestaShop ObjectModel instances expose table-backed fields dynamically at runtime.
-            /** @phpstan-ignore-next-line */
+            /* @phpstan-ignore-next-line */
             $this->context->cart->checkout_session_data = $encodedCheckoutSessionData ?? '';
         }
 
