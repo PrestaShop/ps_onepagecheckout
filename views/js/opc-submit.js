@@ -1,6 +1,6 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {getConfiguredOpcUrl, normalizeErrorEventResponse, getConfiguredOpcUrl, getConfiguredOpcMessage, normalizeErrorResponse, updatePayAmount} from './runtime/opc-runtime';
+import {getConfiguredOpcUrl, normalizeErrorEventResponse, getConfiguredOpcMessage, updatePayAmount} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
