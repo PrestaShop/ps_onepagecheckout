@@ -248,6 +248,15 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+                'cartTotals' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'carttotals',
+                    ['ajax' => 1, 'action' => 'opcCartTotals'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
             ],
             'messages' => [
                 'missingGuestInitUrl' => $this->trans('Unable to initialize checkout customer.', [], ModuleTranslation::SHOP_DOMAIN),
