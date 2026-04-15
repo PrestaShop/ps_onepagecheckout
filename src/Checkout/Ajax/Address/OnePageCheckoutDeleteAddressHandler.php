@@ -2,6 +2,7 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutDeleteAddressHandler
@@ -32,12 +33,16 @@ class OnePageCheckoutDeleteAddressHandler
     {
         $customer = $this->customerResolver->resolve();
         if (!$customer instanceof \Customer) {
-            return CheckoutAjaxResponse::error('Unable to resolve checkout customer.');
+            return CheckoutAjaxResponse::error(
+                ModuleTranslation::translate($this->translator, 'Unable to resolve checkout customer.')
+            );
         }
 
         $address = $this->loadOwnedAddress($customer, (int) ($requestParameters['id_address'] ?? 0));
         if (!$address instanceof \Address) {
-            return CheckoutAjaxResponse::error('Unable to load the requested address.');
+            return CheckoutAjaxResponse::error(
+                ModuleTranslation::translate($this->translator, 'Unable to load the requested address.')
+            );
         }
 
         $addressId = (int) $address->id;
@@ -48,7 +53,9 @@ class OnePageCheckoutDeleteAddressHandler
             && (int) $this->context->cart->id_address_invoice === $addressId;
 
         if (!$this->buildAddressPersister($customer)->delete($address, \Tools::getToken(true, $this->context))) {
-            return CheckoutAjaxResponse::error('Unable to delete address.');
+            return CheckoutAjaxResponse::error(
+                ModuleTranslation::translate($this->translator, 'Unable to delete address.')
+            );
         }
 
         $remainingAddresses = $customer->getAddresses((int) $this->context->language->id);
@@ -68,11 +75,7 @@ class OnePageCheckoutDeleteAddressHandler
         return [
             'success' => true,
             'id_address' => $addressId,
-            'message' => $this->translator->trans(
-                'Address successfully deleted.',
-                [],
-                'Shop.Notifications.Success'
-            ),
+            'message' => ModuleTranslation::translate($this->translator, 'Address successfully deleted.'),
         ];
     }
 

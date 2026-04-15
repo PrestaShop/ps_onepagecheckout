@@ -2,13 +2,18 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
 class OnePageCheckoutSelectPaymentHandler
 {
     private \Context $context;
+    private TranslatorInterface $translator;
 
-    public function __construct(\Context $context)
+    public function __construct(\Context $context, TranslatorInterface $translator)
     {
         $this->context = $context;
+        $this->translator = $translator;
     }
 
     /**
@@ -23,7 +28,9 @@ class OnePageCheckoutSelectPaymentHandler
         $paymentSelectionKey = $requestParameters['payment_selection_key'] ?? null;
 
         if ($this->hasMissingPaymentSelectionPayload($paymentOption, $paymentModule, $paymentSelectionKey)) {
-            return CheckoutAjaxResponse::error('Missing payment selection payload');
+            return CheckoutAjaxResponse::error(
+                ModuleTranslation::translate($this->translator, 'Missing payment selection payload.')
+            );
         }
 
         $this->context->cookie->__set('opc_selected_payment_option', $paymentOption);

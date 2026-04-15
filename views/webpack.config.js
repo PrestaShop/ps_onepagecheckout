@@ -16,6 +16,7 @@ module.exports = {
     'opc-carrier-select': './js/opc-carrier-select.js',
     'opc-payment-list': './js/opc-payment-list.js',
     'opc-payment-select': './js/opc-payment-select.js',
+    'opc-gift-wrapping': './js/opc-gift-wrapping.js',
   },
   output: {
     path: path.resolve(__dirname, 'public'),

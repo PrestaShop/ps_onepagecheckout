@@ -19,7 +19,7 @@ class Ps_OnepagecheckoutSelectPaymentModuleFrontController extends Ps_Onepageche
             return $this->buildTechnicalErrorResponse();
         }
 
-        $handler = new OnePageCheckoutSelectPaymentHandler($this->context);
+        $handler = new OnePageCheckoutSelectPaymentHandler($this->context, $this->module->getTranslator());
 
         return $handler->handle(Tools::getAllValues());
     }

@@ -43,17 +43,23 @@ class OnePageCheckoutSubmitHandler
             ];
         }
 
+        $persistedState = isset($processingResult['persisted_state']) && is_array($processingResult['persisted_state'])
+            ? $processingResult['persisted_state']
+            : [
+                'validation_errors' => isset($processingResult['validation_errors']) && is_array($processingResult['validation_errors'])
+                    ? $processingResult['validation_errors']
+                    : [],
+                'form_errors' => isset($processingResult['form_errors']) && is_array($processingResult['form_errors'])
+                    ? $processingResult['form_errors']
+                    : [],
+                'submitted_values' => isset($processingResult['submitted_values']) && is_array($processingResult['submitted_values'])
+                    ? $processingResult['submitted_values']
+                    : [],
+            ];
+
         $this->submitValidationStateStorage->save([
-            'validation_errors' => isset($processingResult['validation_errors']) && is_array($processingResult['validation_errors'])
-                ? $processingResult['validation_errors']
-                : [],
-            'form_errors' => isset($processingResult['form_errors']) && is_array($processingResult['form_errors'])
-                ? $processingResult['form_errors']
-                : [],
-            'submitted_values' => isset($processingResult['submitted_values']) && is_array($processingResult['submitted_values'])
-                ? $processingResult['submitted_values']
-                : [],
-        ]);
+            'cart_id' => $this->getCurrentCartId(),
+        ] + $persistedState);
 
         return [
             'success' => false,
@@ -75,5 +81,10 @@ class OnePageCheckoutSubmitHandler
 
         $this->context->cookie->__set('opc_selected_payment_module', $paymentMethod);
         $this->context->cookie->write();
+    }
+
+    private function getCurrentCartId(): int
+    {
+        return isset($this->context->cart) ? (int) ($this->context->cart->id ?? 0) : 0;
     }
 }

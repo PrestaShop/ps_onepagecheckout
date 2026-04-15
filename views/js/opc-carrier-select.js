@@ -1,6 +1,12 @@
-import OPC_EVENTS from './events';
+import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {getAjaxErrorResponse, getConfiguredOpcUrl, normalizeErrorResponse, updateCartSummary} from './runtime/opc-runtime';
+import {
+  getAjaxErrorEventResponse,
+  getConfiguredOpcMessage,
+  getConfiguredOpcUrl,
+  normalizeErrorEventResponse,
+  updateCartSummary,
+} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -19,6 +25,7 @@ const URL_KEY = 'selectCarrier';
 const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const DELIVERY_ADDRESS_SECTION_SELECTOR = OPC_SELECTORS.opc.deliverySection;
 const CONFIRMED_DELIVERY_OPTION_ATTRIBUTE = 'data-confirmed-delivery-option';
+let selectCarrierGeneration = 0;
 
 function getDeliveryAddressSection() {
   return document.querySelector(DELIVERY_ADDRESS_SECTION_SELECTOR);
@@ -84,11 +91,14 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
   const $container = $(CONTAINER_SELECTOR);
   const selectCarrierUrl = getConfiguredOpcUrl(URL_KEY);
   const deliveryOption = String($radio.val() || '');
+  const missingPayloadMessage = getConfiguredOpcMessage('missingCarrierSelectionPayload', 'Missing OPC carrier selection payload.');
+  const selectionFailedMessage = getConfiguredOpcMessage('selectCarrierFailed', 'Unable to select the delivery method.');
 
   if (!selectCarrierUrl || !deliveryOption) {
+    const resp = normalizeErrorEventResponse(null, missingPayloadMessage);
     prestashop.emit('handleError', {
       eventType: 'opcSelectCarrier',
-      resp: normalizeErrorResponse(null, 'Missing OPC carrier selection payload.'),
+      resp,
     });
     return;
   }
@@ -97,14 +107,19 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
     delivery_option: deliveryOption,
     ...($container.attr('data-id-address') ? {} : collectAddressFields()),
   };
+  const generation = ++selectCarrierGeneration;
 
   $.post(selectCarrierUrl, payload)
     .done((response) => {
+      if (generation !== selectCarrierGeneration) {
+        return;
+      }
+
       if (!response || response.success === false) {
         restoreConfirmedDeliveryOption($container);
         prestashop.emit('handleError', {
           eventType: 'opcSelectCarrier',
-          resp: normalizeErrorResponse(response, 'Unable to select the delivery method.'),
+          resp: normalizeErrorEventResponse(response, selectionFailedMessage),
         });
         return;
       }
@@ -116,10 +131,14 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
       prestashop.emit(OPC_EVENTS.opcCarrierSelected, response);
     })
     .fail((jqXHR) => {
+      if (generation !== selectCarrierGeneration) {
+        return;
+      }
+
       restoreConfirmedDeliveryOption($container);
       prestashop.emit('handleError', {
         eventType: 'opcSelectCarrier',
-        resp: getAjaxErrorResponse(jqXHR, 'Unable to select the delivery method.'),
+        resp: getAjaxErrorEventResponse(jqXHR, selectionFailedMessage),
       });
     });
 });

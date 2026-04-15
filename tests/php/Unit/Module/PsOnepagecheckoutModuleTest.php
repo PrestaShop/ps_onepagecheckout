@@ -179,6 +179,10 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['paymentMethods']);
         self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['selectPayment']);
         self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['opcSubmit']);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['messages']['selectCarrierFailed'] ?? null);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['messages']['selectPaymentFailed'] ?? null);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['messages']['statesLoadFailed'] ?? null);
+        self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['messages']['refreshAddressesFailed'] ?? null);
     }
 
     public function testHookActionFrontControllerSetMediaAssignsFlagAndSkipsAssetsWhenDisabled(): void

@@ -4,7 +4,7 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit;
 
 class OnePageCheckoutSubmitValidationStateStorage
 {
-    private const COOKIE_KEY = 'opc_submit_validation_state';
+    private const STORAGE_KEY = '_opc_submit_validation_state';
 
     private \Context $context;
 
@@ -18,17 +18,14 @@ class OnePageCheckoutSubmitValidationStateStorage
      */
     public function save(array $state): void
     {
-        if (!$this->hasCookie()) {
+        if ($this->getCartId() <= 0) {
             return;
         }
 
-        $encodedState = json_encode($state);
-        if ($encodedState === false) {
-            return;
-        }
+        $checkoutSessionData = $this->readCheckoutSessionData();
+        $checkoutSessionData[self::STORAGE_KEY] = $state;
 
-        $this->context->cookie->__set(self::COOKIE_KEY, $encodedState);
-        $this->writeCookie();
+        $this->writeCheckoutSessionData($checkoutSessionData);
     }
 
     /**
@@ -36,46 +33,95 @@ class OnePageCheckoutSubmitValidationStateStorage
      */
     public function consume(): array
     {
-        if (!$this->hasCookie()) {
+        $checkoutSessionData = $this->readCheckoutSessionData();
+        $submitState = $checkoutSessionData[self::STORAGE_KEY] ?? null;
+
+        if (!is_array($submitState)) {
             return [];
         }
 
-        $rawState = (string) ($this->context->cookie->__get(self::COOKIE_KEY) ?: '');
-        $this->clear();
+        unset($checkoutSessionData[self::STORAGE_KEY]);
+        $this->writeCheckoutSessionData($checkoutSessionData);
 
-        if ($rawState === '') {
-            return [];
-        }
-
-        $decodedState = json_decode($rawState, true);
-
-        return is_array($decodedState) ? $decodedState : [];
+        return $submitState;
     }
 
     public function clear(): void
     {
-        if (!$this->hasCookie()) {
+        $checkoutSessionData = $this->readCheckoutSessionData();
+        if (!array_key_exists(self::STORAGE_KEY, $checkoutSessionData)) {
             return;
         }
 
-        if (method_exists($this->context->cookie, '__unset')) {
-            $this->context->cookie->__unset(self::COOKIE_KEY);
-        } else {
-            $this->context->cookie->__set(self::COOKIE_KEY, '');
-        }
-
-        $this->writeCookie();
+        unset($checkoutSessionData[self::STORAGE_KEY]);
+        $this->writeCheckoutSessionData($checkoutSessionData);
     }
 
-    private function hasCookie(): bool
+    /**
+     * @return array<string,mixed>
+     */
+    private function readCheckoutSessionData(): array
     {
-        return isset($this->context->cookie);
+        $rawCheckoutSessionData = '';
+
+        if (isset($this->context->cart->checkout_session_data) && is_string($this->context->cart->checkout_session_data)) {
+            $rawCheckoutSessionData = $this->context->cart->checkout_session_data;
+        } elseif ($this->getCartId() > 0) {
+            $rawCheckoutSessionData = (string) $this->getDb()->getValue(sprintf(
+                'SELECT checkout_session_data FROM %scart WHERE id_cart = %d',
+                _DB_PREFIX_,
+                $this->getCartId()
+            ));
+        }
+
+        if ($rawCheckoutSessionData === '') {
+            return [];
+        }
+
+        $decodedCheckoutSessionData = json_decode($rawCheckoutSessionData, true);
+
+        return is_array($decodedCheckoutSessionData) ? $decodedCheckoutSessionData : [];
     }
 
-    private function writeCookie(): void
+    /**
+     * @param array<string,mixed> $checkoutSessionData
+     */
+    private function writeCheckoutSessionData(array $checkoutSessionData): void
     {
-        if (method_exists($this->context->cookie, 'write')) {
-            $this->context->cookie->write();
+        if ($this->getCartId() <= 0) {
+            return;
         }
+
+        $encodedCheckoutSessionData = $checkoutSessionData === [] ? null : json_encode($checkoutSessionData);
+        if ($checkoutSessionData !== [] && $encodedCheckoutSessionData === false) {
+            return;
+        }
+
+        if (isset($this->context->cart)) {
+            // Legacy PrestaShop ObjectModel instances expose table-backed fields dynamically at runtime.
+            /** @phpstan-ignore-next-line */
+            $this->context->cart->checkout_session_data = $encodedCheckoutSessionData ?? '';
+        }
+
+        $serializedCheckoutSessionData = $encodedCheckoutSessionData === null
+            ? 'NULL'
+            : '"' . $this->getDb()->escape($encodedCheckoutSessionData) . '"';
+
+        $this->getDb()->execute(sprintf(
+            'UPDATE %scart SET checkout_session_data = %s WHERE id_cart = %d',
+            _DB_PREFIX_,
+            $serializedCheckoutSessionData,
+            $this->getCartId()
+        ));
+    }
+
+    private function getCartId(): int
+    {
+        return isset($this->context->cart) ? (int) ($this->context->cart->id ?? 0) : 0;
+    }
+
+    protected function getDb()
+    {
+        return \Db::getInstance();
     }
 }

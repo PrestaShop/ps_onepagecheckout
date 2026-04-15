@@ -23,6 +23,8 @@ class OpcSubmitHandlerTest extends TestCase
     protected function setUp(): void
     {
         $this->context = $this->createMock(\Context::class);
+        $this->context->cart = new \stdClass();
+        $this->context->cart->id = 42;
         $this->context->cookie = new class {
             public array $values = [];
             public bool $written = false;
@@ -106,6 +108,7 @@ class OpcSubmitHandlerTest extends TestCase
         $this->submitValidationStateStorage->expects($this->once())
             ->method('save')
             ->with([
+                'cart_id' => 42,
                 'validation_errors' => [
                     'payment' => ['paymentMethod' => 'Please select a payment method.'],
                 ],

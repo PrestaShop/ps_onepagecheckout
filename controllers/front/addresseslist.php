@@ -23,6 +23,7 @@ class Ps_OnepagecheckoutAddressesListModuleFrontController extends Ps_Onepageche
         try {
             $handler = new OnePageCheckoutAddressesListHandler(
                 $this->context,
+                $this->module->getTranslator(),
                 new CheckoutCustomerContextResolver($this->context)
             );
             $response = $handler->handle();

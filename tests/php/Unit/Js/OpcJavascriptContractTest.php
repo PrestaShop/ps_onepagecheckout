@@ -31,7 +31,7 @@ class OpcJavascriptContractTest extends TestCase
     public function testSubmitScriptEmitsHistoricalFinalSubmitEvent(): void
     {
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-submit.js');
-        self::assertStringContainsString("import OPC_EVENTS from './events';", $script);
+        self::assertStringContainsString("import {OPC_EVENTS} from './events';", $script);
         self::assertStringContainsString("import OPC_SELECTORS from './selectors';", $script);
         self::assertStringContainsString("import {getConfiguredOpcUrl} from './runtime/opc-runtime';", $script);
         self::assertStringContainsString('prestashop.emit(OPC_EVENTS.opcFinalSubmitStarted)', $script);
@@ -55,7 +55,7 @@ class OpcJavascriptContractTest extends TestCase
     {
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-guest-init.js');
         self::assertStringContainsString('import {getConfiguredOpcUrl}', $script);
-        self::assertStringContainsString("import OPC_EVENTS from './events';", $script);
+        self::assertStringContainsString("import {OPC_EVENTS} from './events';", $script);
         self::assertStringContainsString("import OPC_SELECTORS from './selectors';", $script);
         self::assertStringContainsString('getConfiguredOpcUrl(MODULE_GUEST_INIT_URL_KEY)', $script);
         self::assertStringContainsString('prestashop.on(OPC_EVENTS.opcFinalSubmitStarted', $script);
@@ -67,11 +67,32 @@ class OpcJavascriptContractTest extends TestCase
     {
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-address.js');
         self::assertStringContainsString('import {getConfiguredOpcUrl}', $script);
-        self::assertStringContainsString("import OPC_EVENTS from './events';", $script);
+        self::assertStringContainsString("import {OPC_EVENTS} from './events';", $script);
+        self::assertStringContainsString("import {emitAddressUpdate} from './address-events';", $script);
         self::assertStringContainsString("import OPC_SELECTORS from './selectors';", $script);
         self::assertStringContainsString('getConfiguredOpcUrl(MODULE_ADDRESS_FORM_URL_KEY)', $script);
-        self::assertStringContainsString('prestashop.emit(OPC_EVENTS.opcDeliveryAddressUpdated', $script);
-        self::assertStringContainsString('prestashop.emit(OPC_EVENTS.opcBillingAddressUpdated', $script);
+        self::assertStringContainsString("emitAddressUpdate('delivery'", $script);
+        self::assertStringContainsString("emitAddressUpdate('billing'", $script);
+    }
+
+    public function testRuntimeAndDynamicScriptsDelegateErrorDisplayToThemeHandler(): void
+    {
+        $runtimeScript = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/runtime/opc-runtime.js');
+        $carrierScript = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-carrier-select.js');
+        $paymentScript = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-payment-select.js');
+        $addressModalScript = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-address-modal.js');
+
+        self::assertStringContainsString('normalizeErrorEventResponse', $runtimeScript);
+        self::assertStringNotContainsString('collectNestedErrorMessages', $runtimeScript);
+        self::assertStringNotContainsString('showRuntimeNotification', $runtimeScript);
+        self::assertStringNotContainsString('appendFallbackAlert', $runtimeScript);
+        self::assertStringContainsString('normalizeErrorEventResponse', $carrierScript);
+        self::assertStringContainsString('normalizeErrorEventResponse', $paymentScript);
+        self::assertStringContainsString('normalizeErrorEventResponse', $addressModalScript);
+        self::assertStringNotContainsString('showRuntimeErrorNotification', $carrierScript);
+        self::assertStringNotContainsString('showRuntimeErrorNotification', $paymentScript);
+        self::assertStringNotContainsString('showRuntimeErrorNotification', $addressModalScript);
+        self::assertStringNotContainsString('showRuntimeNotification', $addressModalScript);
     }
 
     public function testPaymentScriptsUseModuleRuntimeContracts(): void
@@ -79,7 +100,7 @@ class OpcJavascriptContractTest extends TestCase
         $listScript = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-payment-list.js');
         $selectScript = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-payment-select.js');
 
-        self::assertStringContainsString("import OPC_EVENTS from './events';", $listScript);
+        self::assertStringContainsString("import {CORE_EVENTS, OPC_EVENTS} from './events';", $listScript);
         self::assertStringContainsString("import OPC_SELECTORS from './selectors';", $listScript);
         self::assertStringContainsString('paymentMethods', $listScript);
         self::assertStringContainsString("prestashop.emit('handleError'", $listScript);
@@ -90,7 +111,7 @@ class OpcJavascriptContractTest extends TestCase
         self::assertStringContainsString('fetchGeneration', $listScript);
         self::assertStringNotContainsString("prestashop.on('opcCarriersUpdated'", $listScript);
         self::assertStringNotContainsString("prestashop.on('opcDeliveryAddressUpdated'", $listScript);
-        self::assertStringContainsString("import OPC_EVENTS from './events';", $selectScript);
+        self::assertStringContainsString("import {OPC_EVENTS} from './events';", $selectScript);
         self::assertStringContainsString("import OPC_SELECTORS from './selectors';", $selectScript);
         self::assertStringContainsString('selectPayment', $selectScript);
         self::assertStringContainsString('payment_selection_key', $selectScript);

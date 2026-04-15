@@ -15,8 +15,13 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
      */
     protected function handleOpcRequest(): array
     {
+        $requestParameters = Tools::getAllValues();
+
         if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
+            $response = $this->buildTechnicalErrorResponse();
+            $this->persistReloadErrorStateIfNeeded($response, $requestParameters);
+
+            return $response;
         }
 
         if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -31,7 +36,10 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
         }
 
         try {
-            return $this->createSubmitHandler()->handle(Tools::getAllValues());
+            $response = $this->createSubmitHandler()->handle($requestParameters);
+            $this->persistReloadErrorStateIfNeeded($response, $requestParameters);
+
+            return $response;
         } catch (Throwable $exception) {
             PrestaShopLogger::addLog(
                 sprintf('ps_onepagecheckout opcSubmit runtime exception: %s', $exception->getMessage()),
@@ -42,7 +50,10 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
                 true
             );
 
-            return $this->buildTechnicalErrorResponse();
+            $response = $this->buildTechnicalErrorResponse();
+            $this->persistReloadErrorStateIfNeeded($response, $requestParameters);
+
+            return $response;
         }
     }
 
@@ -67,7 +78,7 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
                 new PaymentOptionsFinder(),
                 new ConditionsToApproveFinder($this->context, $translator)
             ),
-            new OnePageCheckoutSubmitValidationStateStorage($this->context)
+            $this->createSubmitValidationStateStorage()
         );
     }
 
@@ -87,5 +98,33 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
         return isset($this->context->link)
             ? (string) $this->context->link->getPageLink('order')
             : '';
+    }
+
+    /**
+     * @param array<string,mixed> $response
+     * @param array<string,mixed> $requestParameters
+     */
+    private function persistReloadErrorStateIfNeeded(array $response, array $requestParameters): void
+    {
+        if (empty($response['reload']) || !isset($response['errors']) || !is_array($response['errors'])) {
+            return;
+        }
+
+        $this->createSubmitValidationStateStorage()->save([
+            'cart_id' => $this->getCurrentCartId(),
+            'validation_errors' => [],
+            'form_errors' => $response['errors'],
+            'submitted_values' => $requestParameters,
+        ]);
+    }
+
+    protected function createSubmitValidationStateStorage(): OnePageCheckoutSubmitValidationStateStorage
+    {
+        return new OnePageCheckoutSubmitValidationStateStorage($this->context);
+    }
+
+    private function getCurrentCartId(): int
+    {
+        return isset($this->context->cart) ? (int) ($this->context->cart->id ?? 0) : 0;
     }
 }

@@ -14,6 +14,7 @@ use Customer;
 use Db;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\ExistingCustomerState;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use PrestaShop\PrestaShop\Core\Util\InternationalizedDomainNameConverter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -119,11 +120,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->isOnePageCheckoutEnabled) {
             return $this->errorResponse(
                 self::ERROR_FIELD_GLOBAL,
-                $this->translator->trans(
-                    'One-page checkout is not enabled.',
-                    [],
-                    'Shop.Notifications.Error'
-                )
+                ModuleTranslation::translate($this->translator, 'One-page checkout is not enabled.')
             );
         }
 
@@ -136,11 +133,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->isTokenValid($requestParameters)) {
             return $this->errorResponse(
                 self::ERROR_FIELD_TOKEN,
-                $this->translator->trans(
-                    'Invalid security token.',
-                    [],
-                    'Shop.Notifications.Error'
-                ),
+                ModuleTranslation::translate($this->translator, 'Invalid security token.'),
                 false
             );
         }
@@ -480,11 +473,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->customerPersister->save($existingCustomer, '', '', false)) {
             return $this->errorResponse(
                 self::ERROR_FIELD_EMAIL,
-                $this->translator->trans(
-                    self::ERROR_GUEST_EMAIL_UPDATE_FAILED,
-                    [],
-                    'Shop.Notifications.Error'
-                )
+                ModuleTranslation::translate($this->translator, self::ERROR_GUEST_EMAIL_UPDATE_FAILED)
             );
         }
 
@@ -697,11 +686,7 @@ class OnePageCheckoutGuestInitHandler
     {
         return $this->errorResponse(
             self::ERROR_FIELD_GLOBAL,
-            $this->translator->trans(
-                self::ERROR_CART_CUSTOMER_SYNC_FAILED,
-                [],
-                'Shop.Notifications.Error'
-            )
+            ModuleTranslation::translate($this->translator, self::ERROR_CART_CUSTOMER_SYNC_FAILED)
         );
     }
 
