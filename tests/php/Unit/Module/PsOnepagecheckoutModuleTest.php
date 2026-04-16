@@ -28,7 +28,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertSame([
             'actionCheckoutBuildProcess',
             'actionFrontControllerSetMedia',
-            'actionAdminControllerSetMedia',
             'actionFrontControllerSetVariables',
         ], $module->registerHookCalls);
     }
@@ -227,21 +226,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertSame(0, $module->registeredJavascriptAssetsCalls);
     }
 
-    public function testHookActionAdminControllerSetMediaBootstrapsPhpSegmentOnConfigurationPage(): void
-    {
-        $_GET['configure'] = 'ps_onepagecheckout';
-        $module = $this->createModule();
-        $module->name = 'ps_onepagecheckout';
-        $module->setModuleContext((object) [
-            'controller' => (object) ['php_self' => 'adminmodules'],
-        ]);
-
-        $module->hookActionAdminControllerSetMedia();
-
-        self::assertSame(1, $module->bootstrapPhpSegmentClientCalls);
-        self::assertCount(0, $module->javascriptDefinitions);
-    }
-
     public function testMainModuleFileDoesNotContainCustomAutoloaderRegistration(): void
     {
         $mainFile = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/ps_onepagecheckout.php');
@@ -287,7 +271,6 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     public array $javascriptDefinitions = [];
 
     public int $registeredJavascriptAssetsCalls = 0;
-    public int $bootstrapPhpSegmentClientCalls = 0;
     public bool $isEnabled = true;
     public int $disableCurrentContextCalls = 0;
     public bool $disableCurrentContextResult = true;
@@ -387,12 +370,6 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     protected function registerOpcJavascriptAssets(): void
     {
         ++$this->registeredJavascriptAssetsCalls;
-    }
-
-    protected function bootstrapPhpSegmentClient(): void
-    {
-        ++$this->bootstrapPhpSegmentClientCalls;
-        parent::bootstrapPhpSegmentClient();
     }
 
     protected function disableInParent(bool $forceAll): bool

@@ -29,10 +29,15 @@ use Segment\Segment;
  * Segment PHP SDK bootstrap, same approach as
  * {@link https://github.com/PrestaShop/autoupgrade/blob/dev/classes/Analytics.php PrestaShop\Module\AutoUpgrade\Analytics}.
  *
- * Event tracking (track) will be added in follow-up work.
+ * Event tracking is best-effort and must never break checkout flows.
  */
 final class Analytics
 {
+    /**
+     * Shared user identifier used by module events to avoid any customer/session identifiers (no PII).
+     */
+    private const SHARED_USER_ID = 'ps_onepagecheckout';
+
     /**
      * Segment PHP source write keys env vars — single source of truth (not stored in configuration).
      */
@@ -54,6 +59,33 @@ final class Analytics
 
         Segment::init($writeKey);
         self::$clientInitialized = true;
+    }
+
+    /**
+     * Generic Segment tracking helper.
+     *
+     * - Initializes Segment client on-demand (no dependency on PrestaShop hooks).
+     * - Best effort: never throws and must never block checkout.
+     *
+     * @param array<string, mixed> $properties
+     */
+    public static function trackEvent(string $eventName, array $properties): void
+    {
+        self::bootstrap(true);
+        if (!self::$clientInitialized) {
+            return;
+        }
+
+        try {
+            Segment::track([
+                'userId' => self::SHARED_USER_ID,
+                'event' => $eventName,
+                'properties' => $properties,
+            ]);
+            Segment::flush();
+        } catch (\Throwable) {
+            // Never block checkout because of analytics.
+        }
     }
 
     private static function getWriteKey(): string

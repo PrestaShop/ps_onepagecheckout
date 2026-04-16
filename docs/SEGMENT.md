@@ -4,7 +4,7 @@ Ce document décrit la **configuration** et l’**intégration technique** de Se
 
 **Comportement actuel** : initialisation de `Segment::init()` lorsque les conditions sont réunies. **Aucun** appel `track` / `flush` n’est encore envoyé depuis le module — cela fera l’objet de tickets ultérieurs.
 
-**Résumé** : write key lue depuis un fichier/variables d’environnement (`SEGMENT_PREPROD_KEY`, `SEGMENT_PROD_KEY`) → `Segment::init()` sur les requêtes BO qui passent par le hook concerné, **dès que le module est activé**.
+**Résumé** : write key lue depuis un fichier/variables d’environnement (`SEGMENT_PREPROD_KEY`, `SEGMENT_PROD_KEY`) → `Segment::init()` est exécuté **à la demande**, lors du **premier appel de tracking** (pas de dépendance à un hook).
 
 La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) pour limiter les renommages si le fournisseur change.
 
@@ -30,9 +30,9 @@ La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) p
 
 | Fichier | Rôle |
 |---------|------|
-| `src/Analytics/Analytics.php` | `bootstrap(bool $moduleSegmentEnabled)` : vérifie activation module, clé non vide, puis `Segment\Segment::init($writeKey)`. Garde statique pour n’initialiser qu’une fois par requête. |
+| `src/Analytics/Analytics.php` | `bootstrap(bool $moduleSegmentEnabled)` : vérifie activation module, clé non vide, puis `Segment\Segment::init($writeKey)`. `trackEvent(...)` initialise Segment à la volée et envoie l’event en best-effort. |
 
-`ps_onepagecheckout.php` appelle `Analytics::bootstrap(true)` depuis `bootstrapPhpSegmentClient()` (Segment activé tant que le module est activé), invoqué dans `hookActionAdminControllerSetMedia` lorsque `isBackOfficeConfigurationContext()` est vrai.
+Le module ne dépend plus d’un hook pour initialiser Segment : le client est initialisé à la demande (au premier `trackEvent`).
 
 ### Différences notables avec l’ancienne version (navigateur)
 
@@ -41,7 +41,7 @@ La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) p
 
 ## Où cela s’exécute
 
-Hook **`actionAdminControllerSetMedia`**, uniquement sur la **configuration du module** en BO (`AdminPsOnePageCheckout`, `configure=ps_onepagecheckout`, ou `AdminPsOnePageCheckoutController`), comme auparavant pour le chargement JS — sauf qu’il ne s’agit plus que d’initialiser le client PHP.
+`Segment::init()` est déclenché au premier tracking (via `Analytics::trackEvent(...)`) si une write key est présente.
 
 ## Configuration Back Office
 
@@ -58,7 +58,6 @@ Pas de clé de configuration dédiée à Segment : l’activation suit l’activ
 ## Fichiers utiles
 
 - `src/Analytics/Analytics.php`
-- `ps_onepagecheckout.php` — `hookActionAdminControllerSetMedia`, `bootstrapPhpSegmentClient()`
 - `composer.json` — dépendance `segmentio/analytics-php`
 
 ## Limites
