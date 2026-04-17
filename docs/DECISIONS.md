@@ -59,8 +59,8 @@
 
 ### D-012
 - Context: BO tab was historically stored as `AdminPsOnepagecheckout` in existing databases.
-- Decision: add module upgrade `1.0.1` to rename tab class name in DB to `AdminPsOnePageCheckout`.
-- Impact: naming conventions are respected without breaking existing installs.
+- Decision: do not ship a module-owned `upgrade/` migration for this rename yet, because the module has not been released and there is no released-to-released upgrade path to support at this stage.
+- Impact: no speculative upgrade file is added before it is needed, but module-owned `upgrade/` scripts remain expected later whenever a real released version transition requires a migration.
 
 ### D-013
 - Context: module targets PrestaShop `9.2.0`, where BO rendering is Twig-first.

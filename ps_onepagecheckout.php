@@ -12,6 +12,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
@@ -34,7 +35,7 @@ class Ps_Onepagecheckout extends Module
 
         $tabNames = [];
         foreach (Language::getLanguages(true) as $lang) {
-            $tabNames[$lang['locale']] = $this->trans('One-page checkout', [], 'Modules.Psonepagecheckout.Admin', $lang['locale']);
+            $tabNames[$lang['locale']] = $this->trans('Checkout', [], 'Modules.Psonepagecheckout.Admin', $lang['locale']);
         }
         $this->tabs = [
             [
@@ -42,7 +43,7 @@ class Ps_Onepagecheckout extends Module
                 'visible' => true,
                 'name' => $tabNames,
                 'parent_class_name' => 'AdminParentThemes',
-                'wording' => 'One-page checkout',
+                'wording' => 'Checkout',
                 'wording_domain' => 'Modules.Psonepagecheckout.Admin',
             ],
         ];
@@ -459,4 +460,6 @@ class Ps_Onepagecheckout extends Module
     {
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }
+
+    // Segment PHP client is initialized lazily on the first tracked event (see Analytics::trackEvent()).
 }
