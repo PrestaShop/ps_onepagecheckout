@@ -118,4 +118,14 @@ class OnePageCheckoutFormFactory
             \Tools::getToken(true, $this->context)
         );
     }
+
+    public function createCustomerAddressFormatter(): OnePageCheckoutFormatter
+    {
+        return $this->createFormatter($this->getAvailableCountries());
+    }
+
+    public function createCustomerAddressForm(): OnePageCheckoutForm
+    {
+        return $this->create();
+    }
 }

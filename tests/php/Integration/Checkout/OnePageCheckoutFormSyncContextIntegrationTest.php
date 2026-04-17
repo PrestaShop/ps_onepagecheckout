@@ -54,7 +54,7 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         self::assertTrue((bool) $context->customer->is_guest);
     }
 
-    public function testItDoesNotHydrateWhenFreshCartOwnerIsRegistered(): void
+    public function testItHydratesWhenFreshCartOwnerIsRegistered(): void
     {
         $registeredOwner = $this->createCustomer($this->uniqueEmail('registered-owner'), false);
         $cart = $this->createPersistedCart((int) $registeredOwner->id);
@@ -66,10 +66,11 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
 
-        self::assertSame(0, (int) $context->customer->id);
+        self::assertSame((int) $registeredOwner->id, (int) $context->customer->id);
+        self::assertFalse((bool) $context->customer->is_guest);
     }
 
-    public function testItKeepsAlreadyHydratedContextCustomer(): void
+    public function testItResynchronizesAlreadyHydratedContextCustomerToFreshCartOwner(): void
     {
         $guestOwner = $this->createCustomer($this->uniqueEmail('owner-guest'), true);
         $existingContextCustomer = $this->createCustomer($this->uniqueEmail('existing-customer'), true);
@@ -82,7 +83,7 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
 
-        self::assertSame((int) $existingContextCustomer->id, (int) $context->customer->id);
+        self::assertSame((int) $guestOwner->id, (int) $context->customer->id);
     }
 
     public function testItHydratesFromFreshOwnerWhenContextCartSnapshotOwnerIsZero(): void
@@ -103,7 +104,7 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         self::assertTrue((bool) $context->customer->is_guest);
     }
 
-    public function testItDoesNothingWhenContextCustomerIdIsPositiveButStale(): void
+    public function testItResynchronizesWhenContextCustomerIdIsPositiveButStale(): void
     {
         $guestOwner = $this->createCustomer($this->uniqueEmail('stale-context-guest-owner'), true);
         $cart = $this->createPersistedCart((int) $guestOwner->id);
@@ -116,7 +117,7 @@ class OnePageCheckoutFormSyncContextIntegrationTest extends TestCase
         $form = $this->createFormWithoutConstructor($context);
         $this->invokeSyncContextCustomerFromCart($form);
 
-        self::assertSame(999999, (int) $context->customer->id);
+        self::assertSame((int) $guestOwner->id, (int) $context->customer->id);
     }
 
     public function testItDoesNothingWhenCartHasNoOwner(): void

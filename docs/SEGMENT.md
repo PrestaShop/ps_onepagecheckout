@@ -1,67 +1,66 @@
-# Segment dans `ps_onepagecheckout`
+# Segment in `ps_onepagecheckout`
 
-Ce document décrit la **configuration** et l’**intégration technique** de Segment via le **SDK PHP** (`segmentio/analytics-php`), sur le même principe que le module [PrestaShop autoupgrade](https://github.com/PrestaShop/autoupgrade) (classe [`Analytics`](https://github.com/PrestaShop/autoupgrade/blob/dev/classes/Analytics.php)).
+This document describes the **configuration** and **technical integration** of Segment via the **PHP SDK** (`segmentio/analytics-php`), following the same approach as the [PrestaShop autoupgrade](https://github.com/PrestaShop/autoupgrade) module ([`Analytics`](https://github.com/PrestaShop/autoupgrade/blob/dev/classes/Analytics.php) class).
 
-**Comportement actuel** : initialisation de `Segment::init()` lorsque les conditions sont réunies. **Aucun** appel `track` / `flush` n’est encore envoyé depuis le module — cela fera l’objet de tickets ultérieurs.
+**Current behavior**: `Segment::init()` is initialized when conditions are met. **No** `track` / `flush` calls are sent from the module yet — this will be addressed in future tickets.
 
-**Résumé** : write key lue depuis un fichier/variables d’environnement (`SEGMENT_PREPROD_KEY`, `SEGMENT_PROD_KEY`) → `Segment::init()` sur les requêtes BO qui passent par le hook concerné, **dès que le module est activé**.
+**Summary**: write key read from a file/environment variables (`SEGMENT_PREPROD_KEY`, `SEGMENT_PROD_KEY`) → `Segment::init()` is executed **on demand**, on the **first tracking call** (no hook dependency).
 
-La classe PHP s’appelle **`Analytics`** (nom volontairement **générique**) pour limiter les renommages si le fournisseur change.
+The PHP class is named **`Analytics`** (intentionally **generic**) to minimize renames if the provider changes.
 
-**Front office** : aucun chargement du SDK navigateur (`analytics.js`) ; l’ancien bundle `opc-segment-init` a été retiré.
+**Front office**: no browser SDK loaded (`analytics.js`); the old `opc-segment-init` bundle has been removed.
 
-## Dépendance Composer
+## Composer Dependency
 
-- `segmentio/analytics-php` (voir `composer.json`). Après clone : `composer install` à la racine du module pour disposer du vendeur et de l’autoload.
+- `segmentio/analytics-php` (see `composer.json`). After cloning: run `composer install` at the module root to get the vendor directory and autoload.
 
-## Clés et constantes
+## Keys and Constants
 
-| Source | Identifiant | Rôle | Défaut |
-|--------|-------------|------|--------|
-| Environnement | `SEGMENT_PREPROD_KEY` | Write key de la **source PHP** Segment (préprod) — **seule source de vérité** (pas de `configuration`). | `''` |
-| Environnement | `SEGMENT_PROD_KEY` | Write key de la **source PHP** Segment (prod) — **seule source de vérité** (pas de `configuration`). | `''` |
+| Source | Identifier | Role | Default |
+|--------|------------|------|---------|
+| Environment | `SEGMENT_PREPROD_KEY` | Write key for the Segment **PHP source** (preprod) — **single source of truth** (no `configuration`). | `''` |
+| Environment | `SEGMENT_PROD_KEY` | Write key for the Segment **PHP source** (prod) — **single source of truth** (no `configuration`). | `''` |
 
-### Règle de sélection de la clé
+### Key Selection Rule
 
-- Si `_PS_MODE_DEV_` est `false` → utilisation de `SEGMENT_PROD_KEY`
-- Si `_PS_MODE_DEV_` est `true` → utilisation de `SEGMENT_PREPROD_KEY`
+- If `_PS_MODE_DEV_` is `false` → uses `SEGMENT_PROD_KEY`
+- If `_PS_MODE_DEV_` is `true` → uses `SEGMENT_PREPROD_KEY`
 
-## Architecture PHP
+## PHP Architecture
 
-| Fichier | Rôle |
-|---------|------|
-| `src/Analytics/Analytics.php` | `bootstrap(bool $moduleSegmentEnabled)` : vérifie activation module, clé non vide, puis `Segment\Segment::init($writeKey)`. Garde statique pour n’initialiser qu’une fois par requête. |
+| File | Role |
+|------|------|
+| `src/Analytics/Analytics.php` | `bootstrap(bool $moduleSegmentEnabled)`: checks module activation and non-empty key, then calls `Segment\Segment::init($writeKey)`. `trackEvent(...)` initializes Segment on the fly and sends the event on a best-effort basis. |
 
-`ps_onepagecheckout.php` appelle `Analytics::bootstrap(true)` depuis `bootstrapPhpSegmentClient()` (Segment activé tant que le module est activé), invoqué dans `hookActionAdminControllerSetMedia` lorsque `isBackOfficeConfigurationContext()` est vrai.
+The module no longer depends on a hook to initialize Segment: the client is initialized on demand (on the first `trackEvent`).
 
-### Différences notables avec l’ancienne version (navigateur)
+### Notable Differences from the Old (Browser) Version
 
-- Plus de `window.psopc_segment` ni de `opc-segment-init.bundle.js`.
-- Les clés **PHP** (`SEGMENT_PREPROD_KEY` / `SEGMENT_PROD_KEY`) ne sont pas la même source Segment que l’ancienne clé **JavaScript** ; à configurer dans l’espace Segment (source PHP).
+- No more `window.psopc_segment` or `opc-segment-init.bundle.js`.
+- The **PHP** keys (`SEGMENT_PREPROD_KEY` / `SEGMENT_PROD_KEY`) are not the same Segment source as the old **JavaScript** key; configure it in the Segment workspace (PHP source).
 
-## Où cela s’exécute
+## Execution Context
 
-Hook **`actionAdminControllerSetMedia`**, uniquement sur la **configuration du module** en BO (`AdminPsOnePageCheckout`, `configure=ps_onepagecheckout`, ou `AdminPsOnePageCheckoutController`), comme auparavant pour le chargement JS — sauf qu’il ne s’agit plus que d’initialiser le client PHP.
+`Segment::init()` is triggered on the first tracking call (via `Analytics::trackEvent(...)`) if a write key is present.
 
-## Configuration Back Office
+## Back Office Configuration
 
-Segment est considéré **activé** tant que le module est activé (et si la write key est non vide).
+Segment is considered **enabled** as long as the module is enabled (and a non-empty write key is provided).
 
-## Événements (`track`) — à venir
+## Events (`track`) — Coming Soon
 
-Les appels `Segment::track()` / `flush()` seront ajoutés dans de futurs tickets, une fois les événements métier définis.
+`Segment::track()` / `flush()` calls will be added in future tickets, once the business events are defined.
 
-## Cycle de vie du module
+## Module Lifecycle
 
-Pas de clé de configuration dédiée à Segment : l’activation suit l’activation du module.
+No dedicated Segment configuration key: activation follows module activation.
 
-## Fichiers utiles
+## Useful Files
 
 - `src/Analytics/Analytics.php`
-- `ps_onepagecheckout.php` — `hookActionAdminControllerSetMedia`, `bootstrapPhpSegmentClient()`
-- `composer.json` — dépendance `segmentio/analytics-php`
+- `composer.json` — `segmentio/analytics-php` dependency
 
-## Limites
+## Limitations
 
-- La write key est fournie par environnement (local / préprod / prod) : à configurer côté plateforme (variable d’environnement / secret).
-- `Segment::init` est appelé dans le contexte des requêtes qui déclenchent le hook (typiquement pages de config du module en BO).
+- The write key is provided via environment (local / preprod / prod): configure it at the platform level (environment variable / secret).
+- `Segment::init` is called in the context of requests that trigger the hook (typically module config pages in the back office).

@@ -16,6 +16,7 @@ if (!defined('_DB_PREFIX_')) {
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 class AddressFormControllerTest extends TestCase
 {
@@ -24,7 +25,7 @@ class AddressFormControllerTest extends TestCase
         $controller = new TestAddressFormController();
         $controller->module = $this->createDisabledModule();
 
-        $response = $controller->callHandleAddressFormRefresh();
+        $response = $controller->callHandleOpcRequest();
 
         self::assertFalse($response['success']);
         self::assertSame('technical-error', $response['error']);
@@ -34,6 +35,7 @@ class AddressFormControllerTest extends TestCase
     {
         $controller = new TestAddressFormController();
         $controller->module = $this->createEnabledModule();
+        $controller->setTestContext($this->createControllerContext());
 
         $handler = $this->getMockBuilder(OnePageCheckoutAddressFormHandler::class)
             ->disableOriginalConstructor()
@@ -52,9 +54,9 @@ class AddressFormControllerTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $response = $controller->callHandleAddressFormRefresh();
+        $response = $controller->callHandleOpcRequest();
 
-        self::assertSame('rendered:checkout/_partials/one-page-checkout-form', $response['address_form']);
+        self::assertSame('rendered:checkout/_partials/one-page-checkout/addresses-section', $response['addresses_section']);
     }
 
     public function testHandleAddressFormRefreshReturnsTechnicalErrorOnRuntimeException(): void
@@ -70,7 +72,7 @@ class AddressFormControllerTest extends TestCase
             return true;
         }, E_WARNING);
         try {
-            $response = $controller->callHandleAddressFormRefresh();
+            $response = $controller->callHandleOpcRequest();
         } finally {
             restore_error_handler();
         }
@@ -88,6 +90,33 @@ class AddressFormControllerTest extends TestCase
     {
         return new DisabledPsOnepagecheckoutModuleForAddressForm();
     }
+
+    private function createControllerContext(): \Context
+    {
+        return CheckoutTestFixtures::context([
+            'smarty' => CheckoutTestFixtures::smarty(),
+            'customer' => CheckoutTestFixtures::customer(
+                [
+                    [
+                        'id' => 0,
+                        'alias' => 'Home',
+                    ],
+                ],
+                false,
+                true,
+                [
+                    'id' => 42,
+                    'firstname' => 'Alice',
+                    'lastname' => 'Doe',
+                    'id_gender' => 0,
+                    'id_risk' => 0,
+                    'is_guest' => true,
+                ]
+            ),
+            'language' => CheckoutTestFixtures::language(1),
+            'cart' => CheckoutTestFixtures::cart(),
+        ]);
+    }
 }
 
 class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFrontController
@@ -100,9 +129,14 @@ class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFron
     {
     }
 
-    public function callHandleAddressFormRefresh(): array
+    public function callHandleOpcRequest(): array
     {
-        return $this->handleAddressFormRefresh();
+        return $this->handleOpcRequest();
+    }
+
+    public function setTestContext(\Context $context): void
+    {
+        $this->context = $context;
     }
 
     protected function createAddressFormHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutAddressFormHandler

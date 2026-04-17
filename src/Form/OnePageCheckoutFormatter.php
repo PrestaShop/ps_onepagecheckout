@@ -35,10 +35,17 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
 {
     use AddressFieldsFormatTrait;
 
+    public const FIELD_GROUP_CUSTOMER = 'customer';
+    public const FIELD_GROUP_ADDRESS = 'address';
+
     protected $country;
     protected $translator;
     protected $availableCountries;
     protected $definition;
+    /**
+     * @var array<string, string>
+     */
+    private array $fieldGroups = [];
 
     /**
      * Separate country for the billing (invoice) address section.
@@ -88,6 +95,7 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
     public function getFormat()
     {
         $format = [];
+        $this->fieldGroups = [];
 
         // Identity section: email only
         $format['email'] = (new \FormField())
@@ -130,8 +138,10 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
                         continue;
                     }
 
+                    $fieldKey = $moduleName . '_' . $formField->getName();
                     $formField->moduleName = $moduleName;
-                    $format[$moduleName . '_' . $formField->getName()] = $formField;
+                    $this->fieldGroups[$fieldKey] = self::FIELD_GROUP_CUSTOMER;
+                    $format[$fieldKey] = $formField;
                 }
             }
         }
@@ -149,23 +159,30 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
             )
             ->setValue(true);
 
+        // Hidden field to preserve delivery address ID when editing
+        $format['id_address_delivery'] = (new \FormField())
+            ->setName('id_address_delivery')
+            ->setType('hidden');
+
         // Hidden field to preserve invoice address ID when editing
         $format['id_address_invoice'] = (new \FormField())
             ->setName('id_address_invoice')
             ->setType('hidden');
 
         // Delivery address fields
-        $format = array_merge($format, $this->getAddressFieldsFormat('', true));
+        $format = array_merge($format, $this->getAddressFieldsFormat('', false));
 
         // Invoice address fields (prefixed with invoice_)
         if ($this->invoiceCountry !== null) {
             $deliveryCountry = $this->getCountry();
             $this->setCountry($this->invoiceCountry);
-            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', true));
+            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', false));
             $this->setCountry($deliveryCountry);
         } else {
-            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', true));
+            $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', false));
         }
+
+        $format = $this->sortAddressFields($format);
 
         // Add constraints and max length
         $format = $this->addConstraints(
@@ -184,8 +201,10 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
                         continue;
                     }
 
+                    $fieldKey = $moduleName . '_' . $formField->getName();
                     $formField->moduleName = $moduleName;
-                    $format[$moduleName . '_' . $formField->getName()] = $formField;
+                    $this->fieldGroups[$fieldKey] = self::FIELD_GROUP_ADDRESS;
+                    $format[$fieldKey] = $formField;
                 }
             }
         }
@@ -203,5 +222,45 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
     protected function getDefinitionKey($name)
     {
         return strpos($name, 'invoice_') === 0 ? substr($name, 8) : $name;
+    }
+
+    /**
+     * @param array<string, \FormField> $fields
+     *
+     * @return array<string, \FormField>
+     */
+    protected function sortAddressFields(array $fields): array
+    {
+        $customOrder = [
+            'id_country' => 1,
+            'alias' => 2,
+            'firstname' => 3,
+            'lastname' => 4,
+            'company' => 5,
+            'vat_number' => 6,
+            'address1' => 7,
+            'address2' => 8,
+            'city' => 9,
+            'postcode' => 10,
+            'id_state' => 11,
+            'phone' => 12,
+        ];
+
+        uksort($fields, static function (string $keyA, string $keyB) use ($customOrder): int {
+            $baseA = str_replace('invoice_', '', $keyA);
+            $baseB = str_replace('invoice_', '', $keyB);
+
+            $positionA = $customOrder[$baseA] ?? 999;
+            $positionB = $customOrder[$baseB] ?? 999;
+
+            return $positionA <=> $positionB;
+        });
+
+        return $fields;
+    }
+
+    public function getFieldGroup(string $key): ?string
+    {
+        return $this->fieldGroups[$key] ?? null;
     }
 }

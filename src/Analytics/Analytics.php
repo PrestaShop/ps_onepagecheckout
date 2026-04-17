@@ -39,6 +39,11 @@ final class Analytics
     public const EVENT_OPC_CRITICAL_ERROR = '[OPC] Checkout Error Occurred';
 
     /**
+     * Shared user identifier used by module events to avoid any customer/session identifiers (no PII).
+     */
+    private const SHARED_USER_ID = 'ps_onepagecheckout';
+
+    /**
      * Segment PHP source write keys env vars — single source of truth (not stored in configuration).
      */
     public const SEGMENT_PREPROD_KEY = 'SEGMENT_PREPROD_KEY';
@@ -75,28 +80,36 @@ final class Analytics
      */
     public static function trackOpcCriticalError(string $errorType, string $guestCheckoutActive, string $moduleVersion): void
     {
-        self::bootstrap(true);
-        if (!self::$clientInitialized) {
-            return;
-        }
-
-        $properties = array_merge(
+        self::trackEvent(self::EVENT_OPC_CRITICAL_ERROR, array_merge(
             [
                 'error_type' => $errorType,
                 'guest_checkout_active' => $guestCheckoutActive,
             ],
             self::buildCommonProps($moduleVersion)
-        );
+        ));
+    }
+
+    /**
+     * Generic Segment tracking helper.
+     *
+     * - Initializes Segment client on-demand (no dependency on PrestaShop hooks).
+     * - Best effort: never throws and must never block checkout.
+     *
+     * @param array<string, mixed> $properties
+     */
+    public static function trackEvent(string $eventName, array $properties): void
+    {
+        self::bootstrap(true);
+        if (!self::$clientInitialized) {
+            return;
+        }
 
         try {
             Segment::track([
-                // One shared user id on purpose: no customer/session identifiers.
-                'userId' => 'ps_onepagecheckout',
-                'event' => self::EVENT_OPC_CRITICAL_ERROR,
+                'userId' => self::SHARED_USER_ID,
+                'event' => $eventName,
                 'properties' => $properties,
             ]);
-
-            // Best effort: flush immediately so we don't lose rare error events.
             Segment::flush();
         } catch (\Throwable) {
             // Never block checkout because of analytics.

@@ -20,6 +20,10 @@ class AdminPsOnePageCheckoutController extends ModuleAdminController
     {
         parent::initContent();
 
+        if (!$this->viewAccess()) {
+            return;
+        }
+
         $configurationContent = $this->getBackOfficeConfigurationContent();
         if ($configurationContent !== '') {
             $this->content .= $configurationContent;
@@ -36,6 +40,11 @@ class AdminPsOnePageCheckoutController extends ModuleAdminController
         return $this->module->getBackOfficeConfigurationContent();
     }
 
+    public function viewAccess($disable = false)
+    {
+        return $this->hasLegacyViewAccess((bool) $disable) && $this->hasModuleConfigurePermission();
+    }
+
     public function getTwig(): ?Environment
     {
         try {
@@ -49,5 +58,15 @@ class AdminPsOnePageCheckoutController extends ModuleAdminController
         }
 
         return $legacyControllerContext->getTwig();
+    }
+
+    protected function hasLegacyViewAccess(bool $disable = false): bool
+    {
+        return parent::viewAccess($disable);
+    }
+
+    protected function hasModuleConfigurePermission(): bool
+    {
+        return $this->module->getPermission('configure', $this->context->employee ?? null);
     }
 }

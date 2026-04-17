@@ -8,8 +8,14 @@ const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   entry: {
+    'opc-submit': './js/opc-submit.js',
     'opc-guest-init': './js/opc-guest-init.js',
     'opc-address': './js/opc-address.js',
+    'opc-address-modal': './js/opc-address-modal.js',
+    'opc-carrier-list': './js/opc-carrier-list.js',
+    'opc-carrier-select': './js/opc-carrier-select.js',
+    'opc-payment-list': './js/opc-payment-list.js',
+    'opc-payment-select': './js/opc-payment-select.js',
   },
   output: {
     path: path.resolve(__dirname, 'public'),

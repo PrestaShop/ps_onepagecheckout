@@ -28,7 +28,8 @@
     },
     "classmap": [
       "ps_onepagecheckout.php",
-      "controllers/"
+      "controllers/",
+      "src/Checkout/Ajax/"
     ]
   },
   "scripts": {
