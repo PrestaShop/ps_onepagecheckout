@@ -37,10 +37,29 @@ class AdminPsOnePageCheckoutControllerTest extends TestCase
 
         self::assertSame('', $controller->callGetBackOfficeConfigurationContent());
     }
+
+    public function testViewAccessRequiresLegacyViewAndModuleConfigurePermission(): void
+    {
+        $controller = new TestAdminPsOnePageCheckoutController();
+        $controller->legacyViewAccess = true;
+        $controller->moduleConfigurePermission = true;
+
+        self::assertTrue($controller->viewAccess());
+
+        $controller->moduleConfigurePermission = false;
+        self::assertFalse($controller->viewAccess());
+
+        $controller->legacyViewAccess = false;
+        $controller->moduleConfigurePermission = true;
+        self::assertFalse($controller->viewAccess());
+    }
 }
 
 class TestAdminPsOnePageCheckoutController extends \AdminPsOnePageCheckoutController
 {
+    public bool $legacyViewAccess = true;
+    public bool $moduleConfigurePermission = true;
+
     public function __construct()
     {
     }
@@ -48,5 +67,15 @@ class TestAdminPsOnePageCheckoutController extends \AdminPsOnePageCheckoutContro
     public function callGetBackOfficeConfigurationContent(): string
     {
         return $this->getBackOfficeConfigurationContent();
+    }
+
+    protected function hasLegacyViewAccess(bool $disable = false): bool
+    {
+        return $this->legacyViewAccess;
+    }
+
+    protected function hasModuleConfigurePermission(): bool
+    {
+        return $this->moduleConfigurePermission;
     }
 }

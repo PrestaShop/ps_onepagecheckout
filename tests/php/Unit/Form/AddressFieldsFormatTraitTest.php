@@ -17,16 +17,12 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Form\AddressFieldsFormatTrait;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
 class AddressFieldsFormatTraitTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        $this->defineGlobalStubs();
-    }
-
     public function testItBuildsExpectedAddressFieldsFormatAndAppliesDefinitionMetadata(): void
     {
         \AddressFormat::$orderedFields = [
@@ -61,23 +57,15 @@ class AddressFieldsFormatTraitTest extends TestCase
             ],
         ];
 
-        $country = new \Country();
-        $country->id = 33;
-        $country->need_zip_code = true;
-        $country->zip_code_format = 'NNNNN';
-        $country->need_identification_number = true;
-        $country->contains_states = true;
-
-        $translator = new class {
-            public function trans(string $message, array $parameters = [], string $domain = ''): string
-            {
-                return $message;
-            }
-        };
-
-        $sut = new AddressFieldsFormatTraitHarness(
-            $country,
-            $translator,
+        $sut = $this->createHarness(
+            $this->createCountry([
+                'id' => 33,
+                'need_zip_code' => true,
+                'zip_code_format' => 'NNNNN',
+                'need_identification_number' => true,
+                'contains_states' => true,
+            ]),
+            CheckoutTestFixtures::translator(static fn (string $message): string => $message),
             [
                 ['id_country' => 33, 'name' => 'France'],
                 ['id_country' => 34, 'name' => 'Spain'],
@@ -122,17 +110,12 @@ class AddressFieldsFormatTraitTest extends TestCase
         \AddressFormat::$orderedFields = [];
         \AddressFormat::$requiredFields = [];
 
-        $country = new \Country();
-        $country->id = 1;
-
-        $translator = new class {
-            public function trans(string $message, array $parameters = [], string $domain = ''): string
-            {
-                return $message;
-            }
-        };
-
-        $sut = new AddressFieldsFormatTraitHarness($country, $translator, [], []);
+        $sut = $this->createHarness(
+            $this->createCountry(['id' => 1]),
+            CheckoutTestFixtures::translator(static fn (string $message): string => $message),
+            [],
+            []
+        );
         $format = $sut->exposeGetAddressFieldsFormat('', false);
 
         self::assertArrayHasKey('alias', $format);
@@ -145,16 +128,12 @@ class AddressFieldsFormatTraitTest extends TestCase
      */
     public function testItReturnsExpectedFieldLabels(string $field, string $expected): void
     {
-        $country = new \Country();
-        $country->id = 1;
-        $translator = new class {
-            public function trans(string $message, array $parameters = [], string $domain = ''): string
-            {
-                return $message;
-            }
-        };
-
-        $sut = new AddressFieldsFormatTraitHarness($country, $translator, [], []);
+        $sut = $this->createHarness(
+            $this->createCountry(['id' => 1]),
+            CheckoutTestFixtures::translator(static fn (string $message): string => $message),
+            [],
+            []
+        );
 
         self::assertSame($expected, $sut->exposeGetFieldLabel($field));
     }
@@ -182,95 +161,25 @@ class AddressFieldsFormatTraitTest extends TestCase
         yield 'fallback' => ['custom_field', 'custom_field'];
     }
 
-    private function defineGlobalStubs(): void
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    private function createCountry(array $overrides): \Country
     {
-        if (!class_exists('FormField', false)) {
-            eval(<<<'PHP'
-class FormField
-{
-    public ?string $moduleName = null;
-    private string $name = '';
-    private string $type = 'text';
-    private bool $required = false;
-    private string $label = '';
-    private $value = null;
-    private array $availableValues = [];
-    private ?int $minLength = null;
-    private ?int $maxLength = null;
-    private array $constraints = [];
-
-    public function setName($name) { $this->name = (string) $name; return $this; }
-    public function getName() { return $this->name; }
-    public function setType($type) { $this->type = (string) $type; return $this; }
-    public function getType() { return $this->type; }
-    public function setRequired($required) { $this->required = (bool) $required; return $this; }
-    public function isRequired() { return $this->required; }
-    public function setLabel($label) { $this->label = (string) $label; return $this; }
-    public function getLabel() { return $this->label; }
-    public function setValue($value) { $this->value = $value; return $this; }
-    public function getValue() { return $this->value; }
-    public function addAvailableValue($value, $label = null) { $this->availableValues[$value] = $label ?? $value; return $this; }
-    public function getAvailableValues() { return $this->availableValues; }
-    public function setMinLength($minLength) { $this->minLength = (int) $minLength; return $this; }
-    public function getMinLength() { return $this->minLength; }
-    public function setMaxLength($maxLength) { $this->maxLength = (int) $maxLength; return $this; }
-    public function getMaxLength() { return $this->maxLength; }
-    public function addConstraint($constraint) { $this->constraints[] = $constraint; return $this; }
-    public function getConstraints() { return $this->constraints; }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Country', false)) {
-            eval(<<<'PHP'
-class Country
-{
-    public int $id = 0;
-    public bool $need_zip_code = false;
-    public string $zip_code_format = '';
-    public bool $need_identification_number = false;
-    public bool $contains_states = false;
-}
-PHP
-            );
-        }
-
-        if (!class_exists('AddressFormat', false)) {
-            eval(<<<'PHP'
-class AddressFormat
-{
-    public static array $orderedFields = [];
-    public static array $requiredFields = [];
-
-    public static function getOrderedAddressFields($idCountry = 0, $splitAll = false, $cleaned = false)
-    {
-        return self::$orderedFields;
+        return CheckoutTestFixtures::country($overrides);
     }
 
-    public static function getFieldsRequired()
-    {
-        return self::$requiredFields;
-    }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('State', false)) {
-            eval(<<<'PHP'
-class State
-{
-    public static array $statesByCountry = [];
-
-    public static function getStatesByIdCountry($idCountry, $active = false, $orderBy = null, $sort = 'ASC')
-    {
-        return self::$statesByCountry[(int) $idCountry] ?? [];
-    }
-}
-PHP
-            );
-        }
+    /**
+     * @param array<int, array<string, mixed>> $availableCountries
+     * @param array<string, array<string, mixed>> $definition
+     */
+    private function createHarness(
+        \Country $country,
+        object $translator,
+        array $availableCountries,
+        array $definition,
+    ): AddressFieldsFormatTraitHarness {
+        return new AddressFieldsFormatTraitHarness($country, $translator, $availableCountries, $definition);
     }
 }
 

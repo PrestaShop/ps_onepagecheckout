@@ -4,28 +4,20 @@
  * AJAX endpoint for module-owned OPC address form refresh.
  */
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 
-class Ps_OnepagecheckoutAddressFormModuleFrontController extends ModuleFrontController
+require_once __DIR__ . '/AbstractOpcJsonFrontController.php';
+
+class Ps_OnepagecheckoutAddressFormModuleFrontController extends Ps_OnepagecheckoutAbstractOpcJsonFrontController
 {
-    /** @var bool */
-    public $ssl = true;
-
-    public function initContent()
-    {
-        parent::initContent();
-
-        $response = $this->handleAddressFormRefresh();
-        $this->renderJsonResponse($response);
-    }
-
     /**
      * @return array<string,mixed>
      */
-    protected function handleAddressFormRefresh(): array
+    protected function handleOpcRequest(): array
     {
-        if (!$this->module instanceof Ps_Onepagecheckout || !$this->module->isOnePageCheckoutEnabled()) {
+        if (!$this->isOpcAvailable()) {
             return $this->buildTechnicalErrorResponse();
         }
 
@@ -35,8 +27,8 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends ModuleFrontCont
             $templateVariables = $handler->getTemplateVariables(Tools::getAllValues());
 
             return [
-                'address_form' => $this->render(
-                    'checkout/_partials/one-page-checkout-form',
+                'addresses_section' => $this->render(
+                    'checkout/_partials/one-page-checkout/addresses-section',
                     $templateVariables
                 ),
             ];
@@ -63,34 +55,10 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends ModuleFrontCont
 
     protected function createAddressFormHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutAddressFormHandler
     {
-        return new OnePageCheckoutAddressFormHandler($opcFormFactory->create());
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
-    protected function buildTechnicalErrorResponse(): array
-    {
-        return [
-            'success' => false,
-            'errors' => [
-                '' => [
-                    $this->trans('One-page checkout is currently unavailable.', [], 'Shop.Notifications.Error'),
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * @param array<string,mixed> $response
-     */
-    protected function renderJsonResponse(array $response): void
-    {
-        if (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-
-        header('Content-Type: application/json');
-        $this->ajaxRender(json_encode($response));
+        return new OnePageCheckoutAddressFormHandler(
+            $opcFormFactory->create(),
+            $this->context,
+            new CheckoutCustomerContextResolver($this->context)
+        );
     }
 }

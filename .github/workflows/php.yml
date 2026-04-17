@@ -62,9 +62,9 @@ jobs:
       matrix:
         prestashop:
           # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
-          - label: latest
-            image_tag: latest
-            core_ref: ''
+          - label: 9.1.0
+            image_tag: 9.1.0
+            core_ref: 9.1.0
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -74,15 +74,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout PrestaShop core (default branch)
-        if: ${{ matrix.prestashop.core_ref == '' }}
-        uses: actions/checkout@v5
-        with:
-          repository: PrestaShop/PrestaShop
-          path: prestashop-core
-
       - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
-        if: ${{ matrix.prestashop.core_ref != '' }}
         uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop
@@ -106,9 +98,9 @@ jobs:
       matrix:
         prestashop:
           # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
-          - label: latest
-            image_tag: latest
-            core_ref: ''
+          - label: 9.1.0
+            image_tag: 9.1.0
+            core_ref: 9.1.0
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -118,15 +110,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout PrestaShop core (default branch)
-        if: ${{ matrix.prestashop.core_ref == '' }}
-        uses: actions/checkout@v5
-        with:
-          repository: PrestaShop/PrestaShop
-          path: prestashop-core
-
       - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
-        if: ${{ matrix.prestashop.core_ref != '' }}
         uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop

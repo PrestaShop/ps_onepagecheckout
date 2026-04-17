@@ -1,3 +1,7 @@
+import OPC_EVENTS from './events';
+import OPC_SELECTORS from './selectors';
+import {getConfiguredOpcUrl} from './runtime/opc-runtime';
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -30,10 +34,12 @@ const prestashop = window.prestashop || {};
 
 const CREATE_DEBOUNCE_MS = 250;
 const UPDATE_DEBOUNCE_MS = 900;
-const OPC_FORM_SELECTOR = '.one-page-checkout';
-const OPC_ADDRESS_FORM_SELECTOR = '.js-opc-address-form';
-const EMAIL_FIELD_SELECTOR = 'input[name="email"]';
+const OPC_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
+const OPC_CONTACT_SECTION_SELECTOR = OPC_SELECTORS.opc.contactSection;
+const EMAIL_FIELD_SELECTOR = OPC_SELECTORS.inputs.email;
+const INPUT_FIELD_SELECTOR = 'input, select, textarea';
 const CHECKBOX_FIELD_SELECTOR = 'input[type="checkbox"]';
+const ADDRESS_MODAL_SELECTOR = OPC_SELECTORS.modals.address;
 const REQUEST_COMPLETED = 4;
 const MODULE_GUEST_INIT_URL_KEY = 'guestInit';
 
@@ -50,7 +56,7 @@ let isFinalSubmitInProgress = false;
  * @property {string} [token]
  * @property {string} [static_token]
  *
- * Additional checkbox fields are sent as `'1'` / `'0'`.
+ * Additional personal-information fields are serialized when relevant.
  */
 
 /**
@@ -62,24 +68,6 @@ let isFinalSubmitInProgress = false;
  * @property {string} [token]
  * @property {string} [static_token]
  */
-
-function getOpcRuntimeConfiguration() {
-  if (!window || typeof window.ps_onepagecheckout !== 'object' || !window.ps_onepagecheckout) {
-    return null;
-  }
-
-  return window.ps_onepagecheckout;
-}
-
-function getConfiguredOpcUrl(urlKey) {
-  const runtimeConfiguration = getOpcRuntimeConfiguration();
-
-  if (runtimeConfiguration && runtimeConfiguration.urls && runtimeConfiguration.urls[urlKey]) {
-    return String(runtimeConfiguration.urls[urlKey]);
-  }
-
-  return '';
-}
 
 function getCustomerIdFromContext() {
   const {customer} = prestashop;
@@ -141,8 +129,12 @@ function isGuestUpdateMode() {
   return guestCustomerId > 0 || hasPersistedGuestContext();
 }
 
-function getOpcAddressContainer() {
-  return $(OPC_ADDRESS_FORM_SELECTOR).first();
+function getOpcContactContainer() {
+  return $(OPC_CONTACT_SECTION_SELECTOR).first();
+}
+
+function isFieldInsideAddressModal(element) {
+  return $(element).closest(ADDRESS_MODAL_SELECTOR).length > 0;
 }
 
 function getEmailField($container) {
@@ -160,7 +152,7 @@ function isGuestInitApplicable() {
     return false;
   }
 
-  return $(OPC_FORM_SELECTOR).length > 0 && getOpcAddressContainer().length > 0;
+  return $(OPC_FORM_SELECTOR).length > 0 && getOpcContactContainer().length > 0;
 }
 
 function isEmailValid($emailField) {
@@ -201,14 +193,32 @@ function collectPayload($container) {
     payload.static_token = securityToken;
   }
 
-  $container.find(CHECKBOX_FIELD_SELECTOR).each((_, checkbox) => {
-    const fieldName = checkbox.name;
+  $container.find(INPUT_FIELD_SELECTOR).each((_, element) => {
+    const fieldName = element.name;
+    const inputType = String(element.type || '').toLowerCase();
 
-    if (!fieldName) {
+    if (!fieldName || fieldName === 'email' || element.disabled || isFieldInsideAddressModal(element)) {
       return;
     }
 
-    payload[fieldName] = checkbox.checked ? '1' : '0';
+    if (['hidden', 'submit', 'button', 'image', 'reset', 'file'].includes(inputType)) {
+      return;
+    }
+
+    if (inputType === 'checkbox') {
+      payload[fieldName] = element.checked ? '1' : '0';
+      return;
+    }
+
+    if (inputType === 'radio') {
+      if (element.checked) {
+        payload[fieldName] = String(element.value || '');
+      }
+
+      return;
+    }
+
+    payload[fieldName] = String($(element).val() || '').trim();
   });
 
   return payload;
@@ -220,7 +230,7 @@ function collectRequiredCheckboxState($container) {
   $container.find(`${CHECKBOX_FIELD_SELECTOR}[required]`).each((_, checkbox) => {
     const fieldName = checkbox.name;
 
-    if (!fieldName) {
+    if (!fieldName || isFieldInsideAddressModal(checkbox)) {
       return;
     }
 
@@ -247,7 +257,7 @@ function setInitialGuestEmailFingerprint() {
     return;
   }
 
-  const $container = getOpcAddressContainer();
+  const $container = getOpcContactContainer();
   const $emailField = getEmailField($container);
 
   if (!isEmailValid($emailField)) {
@@ -273,6 +283,14 @@ function stopGuestInitForFinalSubmit() {
   }
 }
 
+function abortPendingGuestInit() {
+  pendingFingerprint = '';
+
+  if (inFlightRequest && inFlightRequest.readyState !== REQUEST_COMPLETED) {
+    inFlightRequest.abort();
+  }
+}
+
 function tryGuestInit() {
   if (isFinalSubmitInProgress) {
     return;
@@ -282,10 +300,11 @@ function tryGuestInit() {
     return;
   }
 
-  const $container = getOpcAddressContainer();
+  const $container = getOpcContactContainer();
   const $emailField = getEmailField($container);
 
   if (!isEmailValid($emailField)) {
+    abortPendingGuestInit();
     return;
   }
 
@@ -294,6 +313,7 @@ function tryGuestInit() {
   const guestUpdateMode = isGuestUpdateMode();
 
   if (!guestUpdateMode && hasMissingRequiredConsent(requiredCheckboxState)) {
+    abortPendingGuestInit();
     return;
   }
 
@@ -344,12 +364,17 @@ function tryGuestInit() {
 
         if (responseCustomerId > 0) {
           guestCustomerId = responseCustomerId;
+          if (window.prestashop) {
+            window.prestashop.customer = window.prestashop.customer || {};
+            window.prestashop.customer.id = responseCustomerId;
+            prestashop.customer = window.prestashop.customer;
+          }
           // Once guest identity exists, dedupe on email only and ignore checkbox toggles.
           lastSubmittedFingerprint = getPayloadFingerprint({email: payload.email});
         } else {
           lastSubmittedFingerprint = payloadFingerprint;
         }
-        prestashop.emit('opcGuestInitSuccess', {resp});
+        prestashop.emit(OPC_EVENTS.opcGuestInitSuccess, {resp});
       } else if (resp && resp.errors && Array.isArray(resp.errors.token) && resp.errors.token.length > 0) {
         // Token errors need fresh context, avoid retry loops while payload stays unchanged.
         lastSubmittedFingerprint = payloadFingerprint;
@@ -389,18 +414,19 @@ $(() => {
 
   setInitialGuestEmailFingerprint();
 
-  $('body').on('input change', `${OPC_ADDRESS_FORM_SELECTOR} ${EMAIL_FIELD_SELECTOR}`, () => {
+  $('body').on('input change', `${OPC_CONTACT_SECTION_SELECTOR} ${EMAIL_FIELD_SELECTOR}`, () => {
     scheduleGuestInit();
   });
 
-  $('body').on('change', `${OPC_ADDRESS_FORM_SELECTOR} ${CHECKBOX_FIELD_SELECTOR}`, () => {
+  $('body').on('change', `${OPC_CONTACT_SECTION_SELECTOR} ${INPUT_FIELD_SELECTOR}`, (event) => {
+    if (isFieldInsideAddressModal(event.currentTarget)) {
+      return;
+    }
+
     scheduleGuestInit();
   });
 
-  prestashop.on('updatedOpcAddressForm', () => {
-    scheduleGuestInit();
-  });
-  prestashop.on('opcFinalSubmitStarted', () => {
+  prestashop.on(OPC_EVENTS.opcFinalSubmitStarted, () => {
     stopGuestInitForFinalSubmit();
   });
 
