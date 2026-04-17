@@ -78,13 +78,20 @@ class Ps_Onepagecheckout extends Module
             && $this->initializeCheckoutProcessProviderConfiguration()
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
-            && $this->registerHook('actionFrontControllerSetVariables');
+            && $this->registerHook('actionFrontControllerSetVariables')
+            && $this->registerHook('actionModuleUpgradeAfter');
     }
 
     public function enable($force_all = false)
     {
-        return $this->enableInParent((bool) $force_all)
+        $result = $this->enableInParent((bool) $force_all)
             && $this->initializeCheckoutProcessProviderConfiguration();
+
+        if ($result) {
+            Analytics::trackEvent('[OPC] Module Enabled', Analytics::buildCommonProps($this->version));
+        }
+
+        return $result;
     }
 
     /**
@@ -96,16 +103,41 @@ class Ps_Onepagecheckout extends Module
      */
     public function disable($force_all = false)
     {
-        return $this->disableOnePageCheckoutConfigurationForCurrentContext()
+        $result = $this->disableOnePageCheckoutConfigurationForCurrentContext()
             && $this->clearCheckoutProcessProviderConfigurationForCurrentContext()
             && $this->disableInParent((bool) $force_all);
+
+        if ($result) {
+            Analytics::trackEvent('[OPC] Module Disabled', Analytics::buildCommonProps($this->version));
+        }
+
+        return $result;
     }
 
     public function uninstall()
     {
-        return $this->uninstallOnePageCheckoutConfiguration()
+        $result = $this->uninstallOnePageCheckoutConfiguration()
             && $this->clearCheckoutProcessProviderConfigurationForCurrentModule()
             && $this->uninstallInParent();
+
+        if ($result) {
+            Analytics::trackEvent('[OPC] Module Uninstalled', Analytics::buildCommonProps($this->version));
+        }
+
+        return $result;
+    }
+
+    public function hookActionModuleUpgradeAfter(array $params): void
+    {
+        if (!isset($params['object']) || !($params['object'] instanceof Module)) {
+            return;
+        }
+
+        if ($params['object']->name !== $this->name) {
+            return;
+        }
+
+        Analytics::trackEvent('[OPC] Module Updated', Analytics::buildCommonProps($this->version));
     }
 
     public function getContent()

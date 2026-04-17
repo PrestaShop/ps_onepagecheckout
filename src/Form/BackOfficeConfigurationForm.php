@@ -29,6 +29,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use Twig\Environment;
 
 class BackOfficeConfigurationForm
@@ -63,6 +64,11 @@ class BackOfficeConfigurationForm
             $isEnabled = (int) \Tools::getValue($this->configurationKey, 0) === 1;
             $isMaintenanceEnabled = (int) \Tools::getValue(self::MAINTENANCE_INPUT_NAME, 0) === 1;
 
+            Analytics::trackEvent('[OPC] Checkout Layout Selected', array_merge(
+                ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)],
+                Analytics::buildCommonProps($this->module->version)
+            ));
+
             if ($isMaintenanceEnabled && !$this->enableMaintenanceMode()) {
                 return $this->module->displayError(
                     $this->trans('Unable to enable maintenance mode. Checkout layout was not changed.', 'Modules.PsOnePageCheckout.Admin')
@@ -70,6 +76,10 @@ class BackOfficeConfigurationForm
             }
 
             $this->persistConfigurationValue((int) $isEnabled);
+            Analytics::trackEvent('[OPC] Checkout Layout Published', array_merge(
+                ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)],
+                Analytics::buildCommonProps($this->module->version)
+            ));
 
             if ($isMaintenanceEnabled) {
                 $this->storeMaintenanceFlash();
@@ -97,6 +107,11 @@ class BackOfficeConfigurationForm
 
     private function renderConfigurationForm(): string
     {
+        Analytics::trackEvent('[OPC] Module Configured', array_merge(
+            ['checkout_type' => $this->resolveCheckoutTypeLabel($this->getCurrentConfigurationValue())],
+            Analytics::buildCommonProps($this->module->version)
+        ));
+
         $this->registerBackOfficeAssets();
         $templateVariables = $this->buildTemplateVariables();
         $twig = $this->resolveTwigEnvironment();
@@ -264,6 +279,11 @@ class BackOfficeConfigurationForm
     private function isSingleShopContext(): bool
     {
         return \Shop::getContext() === \Shop::CONTEXT_SHOP;
+    }
+
+    private function resolveCheckoutTypeLabel(int $value): string
+    {
+        return $value === 1 ? 'one_page' : 'four_steps';
     }
 
     protected function persistConfigurationValue(int $value): void

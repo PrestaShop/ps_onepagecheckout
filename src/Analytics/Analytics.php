@@ -125,7 +125,7 @@ final class Analytics
      *
      * @return array<string, string>
      */
-    private static function buildCommonProps(string $moduleVersion): array
+    public static function buildCommonProps(string $moduleVersion): array
     {
         return [
             'device_type' => self::detectDeviceType(),
