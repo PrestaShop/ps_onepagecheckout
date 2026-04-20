@@ -38,9 +38,15 @@ class OnePageCheckoutAddressForm extends \AbstractForm
     {
         $this->syncFormatterCountryFromRequest($requestParameters, $prefix);
 
+        if (!$this->formFields) {
+            $this->formFields = $this->formatter->getFormat();
+        }
+
         $params = [];
-        foreach ($this->getAllowedFieldNames() as $fieldName) {
-            $params[$fieldName] = $requestParameters[$prefix . $fieldName] ?? $requestParameters[$fieldName] ?? null;
+        foreach ($this->formFields as $key => $field) {
+            $fieldName = $field->getName();
+            $params[$fieldName] = $requestParameters[$prefix . $fieldName] ?? $requestParameters[$fieldName]
+                ?? $requestParameters[$prefix . $key] ?? $requestParameters[$key] ?? null;
         }
 
         return $this->fillWith($params);
