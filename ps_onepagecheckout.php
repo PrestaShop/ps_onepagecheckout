@@ -12,7 +12,6 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
@@ -461,5 +460,4 @@ class Ps_Onepagecheckout extends Module
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }
 
-    // Segment PHP client is initialized lazily on the first tracked event (see Analytics::trackEvent()).
 }
