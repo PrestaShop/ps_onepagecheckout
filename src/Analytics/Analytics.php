@@ -43,6 +43,10 @@ final class Analytics
      */
     private const SHARED_USER_ID = 'ps_onepagecheckout';
 
+    private const DEVICE_TYPE_DESKTOP = 'desktop';
+    private const DEVICE_TYPE_TABLET = 'tablet';
+    private const DEVICE_TYPE_MOBILE = 'mobile';
+
     /**
      * Segment PHP source write keys env vars — single source of truth (not stored in configuration).
      */
@@ -144,19 +148,19 @@ final class Analytics
         $userAgentLower = strtolower($userAgent);
 
         if ($userAgentLower === '') {
-            return 'desktop';
+            return self::DEVICE_TYPE_DESKTOP;
         }
 
         // Basic heuristics (no dependency on core helpers, safe in CLI/tests).
         if (str_contains($userAgentLower, 'ipad') || str_contains($userAgentLower, 'tablet')) {
-            return 'tablet';
+            return self::DEVICE_TYPE_TABLET;
         }
 
         if (str_contains($userAgentLower, 'mobi') || str_contains($userAgentLower, 'android')) {
-            return 'mobile';
+            return self::DEVICE_TYPE_MOBILE;
         }
 
-        return 'desktop';
+        return self::DEVICE_TYPE_DESKTOP;
     }
 
     private static function getEnv(string $name): string
