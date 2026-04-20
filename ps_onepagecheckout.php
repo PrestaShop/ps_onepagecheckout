@@ -12,6 +12,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
@@ -135,6 +136,11 @@ class Ps_Onepagecheckout extends Module
         if (!$isOnePageCheckoutEnabled) {
             return;
         }
+
+        Analytics::trackCheckoutStarted(
+            (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+            (string) $this->version
+        );
 
         $opcRuntimeConfiguration = [
             'enabled' => true,
