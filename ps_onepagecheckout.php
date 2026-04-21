@@ -459,5 +459,5 @@ class Ps_Onepagecheckout extends Module
     {
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }
-
+    // Segment PHP client is initialized lazily on the first tracked event (see Analytics::trackEvent()).
 }
