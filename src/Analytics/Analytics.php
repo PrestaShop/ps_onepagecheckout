@@ -34,9 +34,18 @@ use Segment\Segment;
 final class Analytics
 {
     /**
+     * Segment event name emitted on critical OPC errors (technical / blocking errors, no PII).
+     */
+    public const EVENT_OPC_CRITICAL_ERROR = '[OPC] Checkout Error Occurred';
+
+    /**
      * Shared user identifier used by module events to avoid any customer/session identifiers (no PII).
      */
     private const SHARED_USER_ID = 'ps_onepagecheckout';
+
+    private const DEVICE_TYPE_DESKTOP = 'desktop';
+    private const DEVICE_TYPE_TABLET = 'tablet';
+    private const DEVICE_TYPE_MOBILE = 'mobile';
 
     /**
      * Segment PHP source write keys env vars — single source of truth (not stored in configuration).
@@ -59,6 +68,29 @@ final class Analytics
 
         Segment::init($writeKey);
         self::$clientInitialized = true;
+    }
+
+    /**
+     * Track a critical error encountered in the OPC checkout tunnel.
+     *
+     * Required event properties (payload-specific):
+     * - error_type: string enum (e.g. payment_failure, shipping_unavailable, api_timeout, unknown)
+     * - guest_checkout_active: yes|no
+     *
+     * Common properties are auto-enriched here:
+     * - device_type: mobile|tablet|desktop
+     * - prestashop_version
+     * - module_version
+     */
+    public static function trackOpcCriticalError(string $errorType, string $guestCheckoutActive, string $moduleVersion): void
+    {
+        self::trackEvent(self::EVENT_OPC_CRITICAL_ERROR, array_merge(
+            [
+                'error_type' => $errorType,
+                'guest_checkout_active' => $guestCheckoutActive,
+            ],
+            self::buildCommonProps($moduleVersion)
+        ));
     }
 
     /**
@@ -88,12 +120,47 @@ final class Analytics
         }
     }
 
+    /**
+     * Common analytics props auto-enriched for all events emitted by this module.
+     *
+     * @return array<string, string>
+     */
+    private static function buildCommonProps(string $moduleVersion): array
+    {
+        return [
+            'device_type' => self::detectDeviceType(),
+            'prestashop_version' => defined('_PS_VERSION_') ? (string) _PS_VERSION_ : '',
+            'module_version' => $moduleVersion,
+        ];
+    }
+
     private static function getWriteKey(): string
     {
         $isDevMode = defined('_PS_MODE_DEV_') && (bool) _PS_MODE_DEV_;
         $writeKeyEnvVar = $isDevMode ? self::SEGMENT_PREPROD_KEY : self::SEGMENT_PROD_KEY;
 
         return self::getEnv($writeKeyEnvVar);
+    }
+
+    private static function detectDeviceType(): string
+    {
+        $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $userAgentLower = strtolower($userAgent);
+
+        if ($userAgentLower === '') {
+            return self::DEVICE_TYPE_DESKTOP;
+        }
+
+        // Basic heuristics (no dependency on core helpers, safe in CLI/tests).
+        if (str_contains($userAgentLower, 'ipad') || str_contains($userAgentLower, 'tablet')) {
+            return self::DEVICE_TYPE_TABLET;
+        }
+
+        if (str_contains($userAgentLower, 'mobi') || str_contains($userAgentLower, 'android')) {
+            return self::DEVICE_TYPE_MOBILE;
+        }
+
+        return self::DEVICE_TYPE_DESKTOP;
     }
 
     private static function getEnv(string $name): string
