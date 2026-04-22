@@ -33,8 +33,8 @@ use Segment\Segment;
  */
 final class Analytics
 {
-    public const EVENT_OPC_CHECKOUT_STARTED = '[OPC] Checkout Started';
-    public const EVENT_OPC_CHECKOUT_COMPLETED = '[OPC] Checkout Completed';
+    private const EVENT_OPC_CHECKOUT_STARTED = '[OPC] Checkout Started';
+    private const EVENT_OPC_CHECKOUT_COMPLETED = '[OPC] Checkout Completed';
 
     /**
      * Segment event name emitted on critical OPC errors (technical / blocking errors, no PII).
