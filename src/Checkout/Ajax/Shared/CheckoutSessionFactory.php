@@ -2,8 +2,12 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\PrestaShop\Adapter\Presenter\Cart\CartPresenter;
 use PrestaShop\PrestaShop\Adapter\Presenter\Object\ObjectPresenter;
 use PrestaShop\PrestaShop\Adapter\Product\PriceFormatter;
+use PrestaShop\PrestaShop\Adapter\Shipment\DeliveryOptionsProvider;
+use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
+use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagStateCheckerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutSessionFactory
@@ -30,10 +34,20 @@ class CheckoutSessionFactory
         );
     }
 
-    public function createDeliveryOptionsFinder(): \DeliveryOptionsFinder
+    public function createDeliveryOptionsFinder(): \DeliveryOptionsFinderCore
     {
         if ($this->deliveryOptionsFinder) {
             return $this->deliveryOptionsFinder;
+        }
+
+        if ($this->isImprovedShipmentEnabled()) {
+            return new DeliveryOptionsProvider(
+                $this->context,
+                $this->translator,
+                new ObjectPresenter(),
+                new PriceFormatter(),
+                new CartPresenter()
+            );
         }
 
         return new \DeliveryOptionsFinder(
@@ -42,5 +56,21 @@ class CheckoutSessionFactory
             new ObjectPresenter(),
             new PriceFormatter()
         );
+    }
+
+    private function isImprovedShipmentEnabled(): bool
+    {
+        try {
+            $controller = $this->context->controller ?? null;
+            if ($controller instanceof \Controller) {
+                /** @var FeatureFlagStateCheckerInterface $checker */
+                $checker = $controller->get(FeatureFlagStateCheckerInterface::class);
+
+                return $checker->isEnabled(FeatureFlagSettings::FEATURE_FLAG_IMPROVED_SHIPMENT);
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return false;
     }
 }
