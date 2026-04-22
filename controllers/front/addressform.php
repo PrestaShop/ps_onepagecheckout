@@ -4,6 +4,7 @@
  * AJAX endpoint for module-owned OPC address form refresh.
  */
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
@@ -41,6 +42,14 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends Ps_Onepagecheck
                 (int) $this->module->id,
                 true
             );
+
+            if ($this->module instanceof Ps_Onepagecheckout) {
+                Analytics::trackOpcCriticalError(
+                    'unknown',
+                    (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+                    (string) $this->module->version
+                );
+            }
 
             return $this->buildTechnicalErrorResponse();
         }
