@@ -34,6 +34,9 @@ use Twig\Environment;
 
 class BackOfficeConfigurationForm
 {
+    public const CHECKOUT_TYPE_ONE_PAGE = 'one_page';
+    public const CHECKOUT_TYPE_FOUR_STEPS = 'four_steps';
+
     private const FORM_SUBMIT_ACTION = 'submitPsOnePageCheckoutConfiguration';
     private const SUCCESS_FLASH_COOKIE_KEY = 'psopc_bo_configuration_saved';
     private const MAINTENANCE_FLASH_COOKIE_KEY = 'psopc_bo_maintenance_enabled';
@@ -274,7 +277,7 @@ class BackOfficeConfigurationForm
 
     private function resolveCheckoutTypeLabel(int $value): string
     {
-        return $value === 1 ? 'one_page' : 'four_steps';
+        return $value === 1 ? self::CHECKOUT_TYPE_ONE_PAGE : self::CHECKOUT_TYPE_FOUR_STEPS;
     }
 
     protected function persistConfigurationValue(int $value): void
