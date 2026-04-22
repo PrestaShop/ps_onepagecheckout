@@ -66,7 +66,7 @@ class BackOfficeConfigurationForm
 
             Analytics::trackEvent('[OPC] Checkout Layout Selected', array_merge(
                 ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)],
-                Analytics::buildCommonProps($this->module->version)
+                Analytics::buildCommonProps((string) $this->module->version)
             ));
 
             if ($isMaintenanceEnabled && !$this->enableMaintenanceMode()) {
@@ -78,7 +78,7 @@ class BackOfficeConfigurationForm
             $this->persistConfigurationValue((int) $isEnabled);
             Analytics::trackEvent('[OPC] Checkout Layout Published', array_merge(
                 ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)],
-                Analytics::buildCommonProps($this->module->version)
+                Analytics::buildCommonProps((string) $this->module->version)
             ));
 
             if ($isMaintenanceEnabled) {
@@ -109,7 +109,7 @@ class BackOfficeConfigurationForm
     {
         Analytics::trackEvent('[OPC] Module Configured', array_merge(
             ['checkout_type' => $this->resolveCheckoutTypeLabel($this->getCurrentConfigurationValue())],
-            Analytics::buildCommonProps($this->module->version)
+            Analytics::buildCommonProps((string) $this->module->version)
         ));
 
         $this->registerBackOfficeAssets();
