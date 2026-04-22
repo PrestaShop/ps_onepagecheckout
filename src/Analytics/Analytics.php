@@ -33,9 +33,13 @@ use Segment\Segment;
  */
 final class Analytics
 {
-    /**
-     * Segment event name emitted on critical OPC errors (technical / blocking errors, no PII).
-     */
+    public const EVENT_MODULE_ENABLED = '[OPC] Module Enabled';
+    public const EVENT_MODULE_DISABLED = '[OPC] Module Disabled';
+    public const EVENT_MODULE_UNINSTALLED = '[OPC] Module Uninstalled';
+    public const EVENT_MODULE_UPDATED = '[OPC] Module Updated';
+    public const EVENT_MODULE_CONFIGURED = '[OPC] Module Configured';
+    public const EVENT_CHECKOUT_LAYOUT_SELECTED = '[OPC] Checkout Layout Selected';
+    public const EVENT_CHECKOUT_LAYOUT_PUBLISHED = '[OPC] Checkout Layout Published';
     public const EVENT_OPC_CRITICAL_ERROR = '[OPC] Checkout Error Occurred';
 
     /**

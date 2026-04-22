@@ -88,7 +88,7 @@ class Ps_Onepagecheckout extends Module
             && $this->initializeCheckoutProcessProviderConfiguration();
 
         if ($result) {
-            Analytics::trackEvent('[OPC] Module Enabled', [], (string) $this->version);
+            Analytics::trackEvent(Analytics::EVENT_MODULE_ENABLED, [], (string) $this->version);
         }
 
         return $result;
@@ -108,7 +108,7 @@ class Ps_Onepagecheckout extends Module
             && $this->disableInParent((bool) $force_all);
 
         if ($result) {
-            Analytics::trackEvent('[OPC] Module Disabled', [], (string) $this->version);
+            Analytics::trackEvent(Analytics::EVENT_MODULE_DISABLED, [], (string) $this->version);
         }
 
         return $result;
@@ -121,7 +121,7 @@ class Ps_Onepagecheckout extends Module
             && $this->uninstallInParent();
 
         if ($result) {
-            Analytics::trackEvent('[OPC] Module Uninstalled', [], (string) $this->version);
+            Analytics::trackEvent(Analytics::EVENT_MODULE_UNINSTALLED, [], (string) $this->version);
         }
 
         return $result;
@@ -137,7 +137,7 @@ class Ps_Onepagecheckout extends Module
             return;
         }
 
-        Analytics::trackEvent('[OPC] Module Updated', [], (string) $this->version);
+        Analytics::trackEvent(Analytics::EVENT_MODULE_UPDATED, [], (string) $this->version);
     }
 
     public function getContent()

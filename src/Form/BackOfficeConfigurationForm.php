@@ -64,7 +64,7 @@ class BackOfficeConfigurationForm
             $isEnabled = (int) \Tools::getValue($this->configurationKey, 0) === 1;
             $isMaintenanceEnabled = (int) \Tools::getValue(self::MAINTENANCE_INPUT_NAME, 0) === 1;
 
-            Analytics::trackEvent('[OPC] Checkout Layout Selected', ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)], (string) $this->module->version);
+            Analytics::trackEvent(Analytics::EVENT_CHECKOUT_LAYOUT_SELECTED, ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)], (string) $this->module->version);
 
             if ($isMaintenanceEnabled && !$this->enableMaintenanceMode()) {
                 return $this->module->displayError(
@@ -73,7 +73,7 @@ class BackOfficeConfigurationForm
             }
 
             $this->persistConfigurationValue((int) $isEnabled);
-            Analytics::trackEvent('[OPC] Checkout Layout Published', ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)], (string) $this->module->version);
+            Analytics::trackEvent(Analytics::EVENT_CHECKOUT_LAYOUT_PUBLISHED, ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)], (string) $this->module->version);
 
             if ($isMaintenanceEnabled) {
                 $this->storeMaintenanceFlash();
@@ -101,7 +101,7 @@ class BackOfficeConfigurationForm
 
     private function renderConfigurationForm(): string
     {
-        Analytics::trackEvent('[OPC] Module Configured', ['checkout_type' => $this->resolveCheckoutTypeLabel($this->getCurrentConfigurationValue())], (string) $this->module->version);
+        Analytics::trackEvent(Analytics::EVENT_MODULE_CONFIGURED, ['checkout_type' => $this->resolveCheckoutTypeLabel($this->getCurrentConfigurationValue())], (string) $this->module->version);
 
         $this->registerBackOfficeAssets();
         $templateVariables = $this->buildTemplateVariables();
