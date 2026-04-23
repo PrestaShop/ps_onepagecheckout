@@ -169,6 +169,11 @@ class Ps_Onepagecheckout extends Module
             return;
         }
 
+        Analytics::trackCheckoutStarted(
+            (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+            (string) $this->version
+        );
+
         $opcRuntimeConfiguration = [
             'enabled' => true,
             'urls' => [
