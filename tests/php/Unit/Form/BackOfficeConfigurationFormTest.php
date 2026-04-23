@@ -85,6 +85,28 @@ class BackOfficeConfigurationFormTest extends TestCase
         self::assertSame([], $form->updatedConfigurationValues);
         self::assertSame(1, $form->redirectCalls);
     }
+
+    public function testEnableMaintenanceModeIsCalledWhenRequested(): void
+    {
+        $form = new SpyBackOfficeConfigurationForm($this->createMock(\Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
+        $form->setMaintenanceModeResult(true);
+
+        $result = $form->callEnableMaintenanceMode();
+
+        self::assertTrue($result);
+        self::assertSame(1, $form->enableMaintenanceModeCalls);
+    }
+
+    public function testEnableMaintenanceModeReturnsFalseOnFailure(): void
+    {
+        $form = new SpyBackOfficeConfigurationForm($this->createMock(\Module::class), 'PS_ONE_PAGE_CHECKOUT_ENABLED');
+        $form->setMaintenanceModeResult(false);
+
+        $result = $form->callEnableMaintenanceMode();
+
+        self::assertFalse($result);
+        self::assertSame(1, $form->enableMaintenanceModeCalls);
+    }
 }
 
 class SpyBackOfficeConfigurationForm extends BackOfficeConfigurationForm
@@ -96,12 +118,19 @@ class SpyBackOfficeConfigurationForm extends BackOfficeConfigurationForm
 
     public int $readConfigurationCalls = 0;
     public int $redirectCalls = 0;
+    public int $enableMaintenanceModeCalls = 0;
 
     private int $nextReadValue = 0;
+    private bool $maintenanceModeResult = true;
 
     public function setNextReadValue(int $value): void
     {
         $this->nextReadValue = $value;
+    }
+
+    public function setMaintenanceModeResult(bool $result): void
+    {
+        $this->maintenanceModeResult = $result;
     }
 
     public function callPersistConfigurationValue(int $value): void
@@ -112,6 +141,11 @@ class SpyBackOfficeConfigurationForm extends BackOfficeConfigurationForm
     public function callGetCurrentConfigurationValue(): int
     {
         return $this->getCurrentConfigurationValue();
+    }
+
+    public function callEnableMaintenanceMode(): bool
+    {
+        return $this->enableMaintenanceMode();
     }
 
     protected function updateConfigurationValue(int $value): void
@@ -129,5 +163,12 @@ class SpyBackOfficeConfigurationForm extends BackOfficeConfigurationForm
     protected function redirectToConfigurationForm(): void
     {
         ++$this->redirectCalls;
+    }
+
+    protected function enableMaintenanceMode(): bool
+    {
+        ++$this->enableMaintenanceModeCalls;
+
+        return $this->maintenanceModeResult;
     }
 }

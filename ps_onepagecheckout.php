@@ -35,7 +35,7 @@ class Ps_Onepagecheckout extends Module
 
         $tabNames = [];
         foreach (Language::getLanguages(true) as $lang) {
-            $tabNames[$lang['locale']] = $this->trans('One-page checkout', [], ModuleTranslation::ADMIN_DOMAIN, $lang['locale']);
+            $tabNames[$lang['locale']] = $this->trans('Checkout', [], ModuleTranslation::ADMIN_DOMAIN, $lang['locale']);
         }
         $this->tabs = [
             [
@@ -43,8 +43,8 @@ class Ps_Onepagecheckout extends Module
                 'visible' => true,
                 'name' => $tabNames,
                 'parent_class_name' => 'AdminParentThemes',
-                'wording' => 'One-page checkout',
-                'wording_domain' => ModuleTranslation::ADMIN_DOMAIN,
+                'wording' => 'Checkout',
+                'wording_domain' => ModuleTranslation::ADMIN_DOMAIN
             ],
         ];
 
@@ -489,4 +489,5 @@ class Ps_Onepagecheckout extends Module
     {
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }
+    // Segment PHP client is initialized lazily on the first tracked event (see Analytics::trackEvent()).
 }

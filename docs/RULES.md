@@ -11,6 +11,10 @@ The migration reference document is [`docs/CORE_PORTING_PLAYBOOK.md`](./CORE_POR
 2. The module must not use custom autoloaders.
 3. Runtime class loading must rely on namespaced classes and Composer autoload.
 4. No module-side legacy fallback logic (`fallback_url`, `error_code`, redirect to legacy checkout).
+5. Release metadata must stay aligned across `ps_onepagecheckout.php`, `config.xml`, and `config_fr.xml`.
+6. The public Composer package for native baseline inclusion is `prestashop/ps_onepagecheckout`.
+7. Initial baseline inclusion in the Core happens through Composer/Packagist; later module upgrades are exposed through `distribution-api`.
+8. Add module-owned `upgrade/` scripts when a released-to-released version transition requires a migration; do not add speculative upgrade files before they are needed.
 
 ## Back Office
 
@@ -59,3 +63,4 @@ Both entry points must render the same module-owned configuration flow (no redir
 3. Decision log updated for every architectural choice.
 4. E2E preflight and troubleshooting must be kept up to date in `docs/E2E_RUNBOOK.md`.
 5. Module PHPUnit entrypoints must stay reproducible between local and CI through `./scripts/run-tests.sh`.
+6. Module tests must cover only module-owned lifecycle logic; external distribution concerns such as archive retrieval and upgrade execution through `distribution-api`, or Packagist publication, remain documented but out of PHPUnit scope.
