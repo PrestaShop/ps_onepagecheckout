@@ -43,6 +43,7 @@ function syncGiftWrappingSummary() {
         updateCartSummary(response.preview, response.totals);
       }
 
+      prestashop.emit(OPC_EVENTS.opcCarriersRetry, { eventType: OPC_EVENTS.opcGiftWrapping });
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsRetry, { eventType: OPC_EVENTS.opcGiftWrapping });
     })
     .fail((jqXHR) => {
