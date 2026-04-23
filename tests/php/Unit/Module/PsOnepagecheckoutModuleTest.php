@@ -29,6 +29,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
             'actionCheckoutBuildProcess',
             'actionFrontControllerSetMedia',
             'actionFrontControllerSetVariables',
+            'actionModuleUpgradeAfter',
         ], $module->registerHookCalls);
     }
 

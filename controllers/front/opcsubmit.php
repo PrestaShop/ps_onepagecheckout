@@ -1,5 +1,6 @@
 <?php
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitHandler;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitProcessor;
@@ -38,7 +39,13 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
         try {
             $response = $this->createSubmitHandler()->handle($requestParameters);
             $this->persistReloadErrorStateIfNeeded($response, $requestParameters);
-
+            if (($response['success'] ?? false) === true && $this->module instanceof Ps_Onepagecheckout) {
+                Analytics::trackCheckoutCompleted(
+                    (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+                    trim((string) (Tools::getValue('paymentMethod') ?? '')),
+                    (string) $this->module->version
+                );
+            }
             return $response;
         } catch (Throwable $exception) {
             PrestaShopLogger::addLog(
