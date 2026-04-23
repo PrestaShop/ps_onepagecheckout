@@ -14,14 +14,13 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
-use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
-use Symfony\Contracts\Translation\TranslatorInterface;
+use PrestaShop\PrestaShop\Adapter\Order\Checkout\CheckoutProcessProviderInterface;
 
 class Ps_Onepagecheckout extends Module
 {
     public const CONFIG_ONE_PAGE_CHECKOUT_ENABLED = 'PS_ONE_PAGE_CHECKOUT_ENABLED';
-    public const CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE = 'PS_CHECKOUT_PROCESS_PROVIDER_MODULE';
     private ?BackOfficeConfigurationForm $backOfficeConfigurationForm = null;
 
     public function __construct()
@@ -76,7 +75,6 @@ class Ps_Onepagecheckout extends Module
     {
         return $this->installInParent()
             && $this->installOnePageCheckoutConfiguration()
-            && $this->initializeCheckoutProcessProviderConfiguration()
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('actionFrontControllerSetVariables')
@@ -85,9 +83,7 @@ class Ps_Onepagecheckout extends Module
 
     public function enable($force_all = false)
     {
-        $result = $this->enableInParent((bool) $force_all)
-            && $this->initializeCheckoutProcessProviderConfiguration();
-
+        $result = $this->enableInParent((bool) $force_all);
         if ($result) {
             Analytics::trackEvent(Analytics::EVENT_MODULE_ENABLED, [], (string) $this->version);
         }
@@ -105,7 +101,6 @@ class Ps_Onepagecheckout extends Module
     public function disable($force_all = false)
     {
         $result = $this->disableOnePageCheckoutConfigurationForCurrentContext()
-            && $this->clearCheckoutProcessProviderConfigurationForCurrentContext()
             && $this->disableInParent((bool) $force_all);
 
         if ($result) {
@@ -118,7 +113,6 @@ class Ps_Onepagecheckout extends Module
     public function uninstall()
     {
         $result = $this->uninstallOnePageCheckoutConfiguration()
-            && $this->clearCheckoutProcessProviderConfigurationForCurrentModule()
             && $this->uninstallInParent();
 
         if ($result) {
@@ -151,9 +145,9 @@ class Ps_Onepagecheckout extends Module
         return $this->getBackOfficeConfigurationForm()->renderBackOfficeConfiguration();
     }
 
-    public function hookActionCheckoutBuildProcess(array $params): ?CheckoutProcess
+    public function hookActionCheckoutBuildProcess(array $params = []): CheckoutProcessProviderInterface
     {
-        return $this->buildCheckoutProcessFromHookParams($params);
+        return new OnePageCheckoutProcessProvider($this->context, $this);
     }
 
     public function hookActionFrontControllerSetMedia(): void
@@ -310,13 +304,7 @@ class Ps_Onepagecheckout extends Module
 
     public function isOnePageCheckoutEnabled(): bool
     {
-        if (!$this->isCurrentShopCheckoutProvider()) {
-            return false;
-        }
-
-        $availability = new OnePageCheckoutAvailability(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
-
-        return $availability->isEnabled();
+        return (new OnePageCheckoutAvailability(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED))->isEnabled();
     }
 
     protected function registerOpcJavascriptAssets(): void
@@ -375,46 +363,6 @@ class Ps_Onepagecheckout extends Module
         Media::addJsDef($javascriptDefinition);
     }
 
-    protected function createCheckoutProcessBuilder(): OnePageCheckoutProcessBuilder
-    {
-        return new OnePageCheckoutProcessBuilder($this->context, $this);
-    }
-
-    protected function buildCheckoutProcessFromHookParams(array $params): ?CheckoutProcess
-    {
-        if (!$this->isOnePageCheckoutEnabled()) {
-            return null;
-        }
-
-        if (!isset($params['checkoutSession']) || !$params['checkoutSession'] instanceof CheckoutSession) {
-            return null;
-        }
-
-        if (!isset($params['translator']) || !$params['translator'] instanceof TranslatorInterface) {
-            return null;
-        }
-
-        try {
-            $checkoutProcessBuilder = $this->createCheckoutProcessBuilder();
-            $moduleCheckoutProcess = $checkoutProcessBuilder->build($params['checkoutSession'], $params['translator']);
-
-            return $moduleCheckoutProcess instanceof CheckoutProcess
-                ? $moduleCheckoutProcess
-                : null;
-        } catch (Throwable $exception) {
-            PrestaShopLogger::addLog(
-                sprintf('ps_onepagecheckout: unable to build module checkout process (%s)', $exception->getMessage()),
-                3,
-                null,
-                'Module',
-                (int) $this->id,
-                true
-            );
-        }
-
-        return null;
-    }
-
     protected function installInParent(): bool
     {
         return parent::install();
@@ -455,42 +403,6 @@ class Ps_Onepagecheckout extends Module
     protected function disableOnePageCheckoutConfigurationForCurrentContext(): bool
     {
         return Configuration::updateValue(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED, 0, false);
-    }
-
-    protected function initializeCheckoutProcessProviderConfiguration(): bool
-    {
-        return Configuration::updateValue(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE, $this->name, false);
-    }
-
-    protected function isCurrentShopCheckoutProvider(): bool
-    {
-        return trim((string) Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE)) === $this->name;
-    }
-
-    protected function clearCheckoutProcessProviderConfigurationForCurrentContext(): bool
-    {
-        $configuredProvider = trim((string) Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE));
-        if ($configuredProvider !== $this->name) {
-            return true;
-        }
-
-        return Configuration::updateValue(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE, '', false);
-    }
-
-    protected function clearCheckoutProcessProviderConfigurationForCurrentModule(): bool
-    {
-        return Db::getInstance()->update(
-            'configuration',
-            [
-                'value' => '',
-                'date_upd' => date('Y-m-d H:i:s'),
-            ],
-            sprintf(
-                '`name` = "%s" AND `value` = "%s"',
-                pSQL(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE),
-                pSQL($this->name)
-            )
-        );
     }
 
     protected function uninstallOnePageCheckoutConfiguration(): bool

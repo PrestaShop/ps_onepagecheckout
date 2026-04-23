@@ -41,9 +41,9 @@ class OnePageCheckoutProcessBuilder
      * @param \CheckoutSession $checkoutSession
      * @param TranslatorInterface $translator
      *
-     * @return \CheckoutProcess|null
+     * @return \CheckoutProcess
      */
-    public function build(\CheckoutSession $checkoutSession, TranslatorInterface $translator): ?\CheckoutProcess
+    public function build(\CheckoutSession $checkoutSession, TranslatorInterface $translator): \CheckoutProcess
     {
         $checkoutProcess = new OnePageCheckoutProcess(
             $this->context,
