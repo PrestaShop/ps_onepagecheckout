@@ -44,7 +44,7 @@ class Ps_Onepagecheckout extends Module
                 'name' => $tabNames,
                 'parent_class_name' => 'AdminParentThemes',
                 'wording' => 'Checkout',
-                'wording_domain' => ModuleTranslation::ADMIN_DOMAIN
+                'wording_domain' => ModuleTranslation::ADMIN_DOMAIN,
             ],
         ];
 
