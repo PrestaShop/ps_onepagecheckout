@@ -12,6 +12,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
@@ -78,13 +79,20 @@ class Ps_Onepagecheckout extends Module
             && $this->initializeCheckoutProcessProviderConfiguration()
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
-            && $this->registerHook('actionFrontControllerSetVariables');
+            && $this->registerHook('actionFrontControllerSetVariables')
+            && $this->registerHook('actionModuleUpgradeAfter');
     }
 
     public function enable($force_all = false)
     {
-        return $this->enableInParent((bool) $force_all)
+        $result = $this->enableInParent((bool) $force_all)
             && $this->initializeCheckoutProcessProviderConfiguration();
+
+        if ($result) {
+            Analytics::trackEvent(Analytics::EVENT_MODULE_ENABLED, [], (string) $this->version);
+        }
+
+        return $result;
     }
 
     /**
@@ -96,16 +104,41 @@ class Ps_Onepagecheckout extends Module
      */
     public function disable($force_all = false)
     {
-        return $this->disableOnePageCheckoutConfigurationForCurrentContext()
+        $result = $this->disableOnePageCheckoutConfigurationForCurrentContext()
             && $this->clearCheckoutProcessProviderConfigurationForCurrentContext()
             && $this->disableInParent((bool) $force_all);
+
+        if ($result) {
+            Analytics::trackEvent(Analytics::EVENT_MODULE_DISABLED, [], (string) $this->version);
+        }
+
+        return $result;
     }
 
     public function uninstall()
     {
-        return $this->uninstallOnePageCheckoutConfiguration()
+        $result = $this->uninstallOnePageCheckoutConfiguration()
             && $this->clearCheckoutProcessProviderConfigurationForCurrentModule()
             && $this->uninstallInParent();
+
+        if ($result) {
+            Analytics::trackEvent(Analytics::EVENT_MODULE_UNINSTALLED, [], (string) $this->version);
+        }
+
+        return $result;
+    }
+
+    public function hookActionModuleUpgradeAfter(array $params): void
+    {
+        if (!isset($params['object']) || !($params['object'] instanceof Module)) {
+            return;
+        }
+
+        if ($params['object']->name !== $this->name) {
+            return;
+        }
+
+        Analytics::trackEvent(Analytics::EVENT_MODULE_UPDATED, [], (string) $this->version);
     }
 
     public function getContent()
@@ -459,5 +492,4 @@ class Ps_Onepagecheckout extends Module
     {
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }
-    // Segment PHP client is initialized lazily on the first tracked event (see Analytics::trackEvent()).
 }
