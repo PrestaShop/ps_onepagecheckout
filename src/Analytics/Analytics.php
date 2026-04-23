@@ -39,6 +39,13 @@ final class Analytics
     /**
      * Segment event name emitted on critical OPC errors (technical / blocking errors, no PII).
      */
+    public const EVENT_MODULE_ENABLED = '[OPC] Module Enabled';
+    public const EVENT_MODULE_DISABLED = '[OPC] Module Disabled';
+    public const EVENT_MODULE_UNINSTALLED = '[OPC] Module Uninstalled';
+    public const EVENT_MODULE_UPDATED = '[OPC] Module Updated';
+    public const EVENT_MODULE_CONFIGURED = '[OPC] Module Configured';
+    public const EVENT_CHECKOUT_LAYOUT_SELECTED = '[OPC] Checkout Layout Selected';
+    public const EVENT_CHECKOUT_LAYOUT_PUBLISHED = '[OPC] Checkout Layout Published';
     public const EVENT_OPC_CRITICAL_ERROR = '[OPC] Checkout Error Occurred';
 
     /**
@@ -98,32 +105,24 @@ final class Analytics
      * Required event properties (payload-specific):
      * - error_type: string enum (e.g. payment_failure, shipping_unavailable, api_timeout, unknown)
      * - guest_checkout_active: yes|no
-     *
-     * Common properties are auto-enriched here:
-     * - device_type: mobile|tablet|desktop
-     * - prestashop_version
-     * - module_version
      */
     public static function trackOpcCriticalError(string $errorType, string $guestCheckoutActive, string $moduleVersion): void
     {
-        self::trackEvent(self::EVENT_OPC_CRITICAL_ERROR, array_merge(
-            [
-                'error_type' => $errorType,
-                'guest_checkout_active' => $guestCheckoutActive,
-            ],
-            self::buildCommonProps($moduleVersion)
-        ));
+        self::trackEvent(self::EVENT_OPC_CRITICAL_ERROR, [
+            'error_type' => $errorType,
+            'guest_checkout_active' => $guestCheckoutActive,
+        ], $moduleVersion);
     }
 
     /**
-     * Generic Segment tracking helper.
+     * Generic Segment tracking helper. Common props (device_type, prestashop_version,
+     * module_version) are auto-enriched from $moduleVersion.
      *
-     * - Initializes Segment client on-demand (no dependency on PrestaShop hooks).
-     * - Best effort: never throws and must never block checkout.
+     * Best effort: never throws and must never block checkout.
      *
      * @param array<string, mixed> $properties
      */
-    public static function trackEvent(string $eventName, array $properties): void
+    public static function trackEvent(string $eventName, array $properties, string $moduleVersion): void
     {
         self::bootstrap(true);
         if (!self::$clientInitialized) {
@@ -134,7 +133,7 @@ final class Analytics
             Segment::track([
                 'userId' => self::SHARED_USER_ID,
                 'event' => $eventName,
-                'properties' => $properties,
+                'properties' => array_merge($properties, self::buildCommonProps($moduleVersion)),
             ]);
             Segment::flush();
         } catch (\Throwable) {
