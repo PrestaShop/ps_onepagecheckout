@@ -12,7 +12,7 @@
       </trans-unit>
       <trans-unit id="psopc.checkout.tab_title">
         <source>Checkout</source>
-        <target>TEST</target>
+        <target>Commande</target>
       </trans-unit>
     </body>
   </file>
