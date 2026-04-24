@@ -179,7 +179,7 @@ class BackOfficeConfigurationForm
         );
     }
 
-    private function trans(string $message, string $domain = 'Modules.PsOnePageCheckout.Admin'): string
+    private function trans(string $message, string $domain = 'Modules.Psonepagecheckout.Admin'): string
     {
         $translator = \Context::getContext()->getTranslator();
 

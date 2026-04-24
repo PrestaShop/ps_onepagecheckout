@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file source-language="en-US" target-language="en-US" datatype="plaintext" original="modules/ps_onepagecheckout">
+    <body>
+      <trans-unit id="psopc.shop.account_connected_as">
+        <source>Connected as [1]%firstname% %lastname%[/1].</source>
+        <target>Connected as [1]%firstname% %lastname%[/1].</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.account_my_account_aria">
+        <source>My account (%firstname% %lastname%)</source>
+        <target>My account (%firstname% %lastname%)</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.account_not_you_sign_out">
+        <source>Not you? [1]Sign out[/1]</source>
+        <target>Not you? [1]Sign out[/1]</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.already_have_account_sign_in">
+        <source>Already have an account? Sign in</source>
+        <target>Already have an account? Sign in</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.an_error_occurred_try_again">
+        <source>An error occurred. Please try again.</source>
+        <target>An error occurred. Please try again.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.an_error_loading_carriers">
+        <source>An error occurred while loading carriers. Please try again.</source>
+        <target>An error occurred while loading carriers. Please try again.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.an_error_loading_payment_methods">
+        <source>An error occurred while loading payment methods. Please try again.</source>
+        <target>An error occurred while loading payment methods. Please try again.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.billing_address">
+        <source>Billing address</source>
+        <target>Billing address</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.contact_information">
+        <source>Contact information</source>
+        <target>Contact information</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.continue_as_guest">
+        <source>Continue as guest</source>
+        <target>Continue as guest</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.create_account">
+        <source>Create account</source>
+        <target>Create account</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.delivery_address">
+        <source>Delivery address</source>
+        <target>Delivery address</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.delivery_method">
+        <source>Delivery method</source>
+        <target>Delivery method</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.gift_note_prompt">
+        <source>If you'd like, you can add a note to the gift:</source>
+        <target>If you'd like, you can add a note to the gift:</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.cart_emptied_on_sign_out">
+        <source>If you sign out now, your cart will be emptied.</source>
+        <target>If you sign out now, your cart will be emptied.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.recycled_packaging">
+        <source>I would like to receive my order in recycled packaging.</source>
+        <target>I would like to receive my order in recycled packaging.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.loading_delivery_methods">
+        <source>Loading delivery methods...</source>
+        <target>Loading delivery methods...</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.loading_ellipsis">
+        <source>Loading...</source>
+        <target>Loading...</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.loading_payment_methods">
+        <source>Loading payment methods...</source>
+        <target>Loading payment methods...</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.no_carriers_for_address">
+        <source>Unfortunately, there are no carriers available for your delivery address.</source>
+        <target>Unfortunately, there are no carriers available for your delivery address.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.no_payment_method_available">
+        <source>Unfortunately, there are no payment method available.</source>
+        <target>Unfortunately, there are no payment method available.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.pay">
+        <source>Pay</source>
+        <target>Pay</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.payment_method">
+        <source>Payment method</source>
+        <target>Payment method</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.proceed_to_checkout">
+        <source>Proceed to checkout</source>
+        <target>Proceed to checkout</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.retry">
+        <source>Retry</source>
+        <target>Retry</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.use_address_for_invoice_too">
+        <source>Use this address for invoice too</source>
+        <target>Use this address for invoice too</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.delivery_methods_after_address">
+        <source>You will see the available delivery methods once you've entered your delivery address.</source>
+        <target>You will see the available delivery methods once you've entered your delivery address.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.payment_methods_after_address">
+        <source>You will see the available payment methods once you've entered your delivery address.</source>
+        <target>You will see the available payment methods once you've entered your delivery address.</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.order_comment_label">
+        <source>Write a comment about this order</source>
+        <target>Write a comment about this order</target>
+      </trans-unit>
+      <trans-unit id="psopc.shop.order_comment_placeholder">
+        <source>Write your comment...</source>
+        <target>Write your comment...</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>
