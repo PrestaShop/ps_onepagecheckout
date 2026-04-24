@@ -5,6 +5,9 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OrderOptions;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CartPresenterHelper;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutAjaxResponse;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OpcTempAddress;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\TempAddressCarrierSelectionStorage;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\TempAddressStorage;
 use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -52,6 +55,10 @@ class OnePageCheckoutGiftWrappingHandler
 
         $checkoutSession->setGift($useGift, $giftMessage);
 
+        if ((int) $this->context->cart->id_address_delivery <= 0) {
+            return $this->presentWithTempAddress($requestParameters);
+        }
+
         $cart = $this->cartPresenterHelper->presentCart();
 
         return [
@@ -59,5 +66,47 @@ class OnePageCheckoutGiftWrappingHandler
             'cart' => $cart,
             'totals' => $cart['totals'],
         ];
+    }
+
+    /**
+     * @param array<string,mixed> $requestParameters
+     *
+     * @return array<string,mixed>
+     */
+    private function presentWithTempAddress(array $requestParameters): array
+    {
+        $originalAddressId = (int) $this->context->cart->id_address_delivery;
+        $tempAddress = new OpcTempAddress($this->context);
+        $tempAddressId = 0;
+
+        try {
+            // Prefer address params from the persisted cookie (set during carrier selection)
+            // so this works even when the JS doesn't forward address fields.
+            $storedParams = (new TempAddressStorage($this->context))->get();
+            $addressParams = $storedParams !== [] ? $storedParams : $requestParameters;
+
+            $tempAddressId = $tempAddress->createFromRequest($addressParams);
+
+            if ($tempAddressId > 0) {
+                $persistedOption = (new TempAddressCarrierSelectionStorage($this->context))->get();
+                if ($persistedOption !== '') {
+                    $this->checkoutSessionFactory->create()->setDeliveryOption([
+                        $tempAddressId => $persistedOption,
+                    ]);
+                }
+            }
+
+            $cart = $this->cartPresenterHelper->presentCart();
+
+            return [
+                'success' => true,
+                'cart' => $cart,
+                'totals' => $cart['totals'],
+            ];
+        } finally {
+            if ($tempAddressId > 0) {
+                $tempAddress->cleanup($tempAddressId, $originalAddressId);
+            }
+        }
     }
 }

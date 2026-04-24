@@ -12,6 +12,7 @@ class OnePageCheckoutSelectCarrierHandler
     private CheckoutSessionFactory $checkoutSessionFactory;
     private CartPresenterHelper $cartPresenterHelper;
     private TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage;
+    private TempAddressStorage $tempAddressStorage;
 
     public function __construct(
         \Context $context,
@@ -20,12 +21,14 @@ class OnePageCheckoutSelectCarrierHandler
         ?CheckoutSessionFactory $checkoutSessionFactory = null,
         ?CartPresenterHelper $cartPresenterHelper = null,
         ?TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage = null,
+        ?TempAddressStorage $tempAddressStorage = null,
     ) {
         $this->context = $context;
         $this->translator = $translator;
         $this->checkoutSessionFactory = $checkoutSessionFactory ?? new CheckoutSessionFactory($context, $translator, $deliveryOptionsFinder);
         $this->cartPresenterHelper = $cartPresenterHelper ?? new CartPresenterHelper($context);
         $this->tempCarrierSelectionStorage = $tempCarrierSelectionStorage ?? new TempAddressCarrierSelectionStorage($context);
+        $this->tempAddressStorage = $tempAddressStorage ?? new TempAddressStorage($context);
     }
 
     /**
@@ -64,7 +67,7 @@ class OnePageCheckoutSelectCarrierHandler
             }
 
             $this->persistCarrierSelection($deliveryAddressId, $deliveryOption);
-            $this->persistTemporaryCarrierSelection($deliveryOption, $tempAddressId > 0 && $originalAddressId <= 0);
+            $this->persistTemporaryCarrierSelection($deliveryOption, $tempAddressId > 0 && $originalAddressId <= 0, $requestParameters);
 
             $cartPreview = $this->cartPresenterHelper->presentCart();
 
@@ -89,14 +92,16 @@ class OnePageCheckoutSelectCarrierHandler
         ]);
     }
 
-    private function persistTemporaryCarrierSelection(string $deliveryOption, bool $shouldPersist): void
+    private function persistTemporaryCarrierSelection(string $deliveryOption, bool $shouldPersist, array $requestParameters = []): void
     {
         if ($shouldPersist) {
             $this->tempCarrierSelectionStorage->save($deliveryOption);
+            $this->tempAddressStorage->saveFromRequest($requestParameters);
 
             return;
         }
 
         $this->tempCarrierSelectionStorage->clear();
+        $this->tempAddressStorage->clear();
     }
 }
