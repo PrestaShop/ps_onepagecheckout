@@ -67,7 +67,8 @@ function buildPaymentMethodsUrl(baseUrl) {
   const idCountry = form.querySelector('[name="id_country"]')?.value
     || form.querySelector('[name="delivery_id_country"]')?.value
     || '';
-  const invoiceIdCountry = form.querySelector('[name="invoice_id_country"]')?.value || '';
+  const billingSection = form.querySelector(OPC_SELECTORS.opc.billingFields);
+  const invoiceIdCountry = (billingSection ? billingSection.querySelector('[name="id_country"]') : null)?.value || '';
   const deliveryAddressId = getSelectedSavedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
     || form.querySelector('[name="id_address_delivery"]')?.value
     || '';
