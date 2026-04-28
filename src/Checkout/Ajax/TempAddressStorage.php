@@ -22,7 +22,7 @@ class TempAddressStorage
             return [];
         }
 
-        $raw = (string) ($this->context->cookie->__get(self::COOKIE_KEY) ?: '');
+        $raw = (string) ($this->context->cookie->{self::COOKIE_KEY} ?: '');
         if ($raw === '') {
             return [];
         }
@@ -55,7 +55,7 @@ class TempAddressStorage
             return;
         }
 
-        $this->context->cookie->__set(self::COOKIE_KEY, json_encode($params));
+        $this->context->cookie->{self::COOKIE_KEY} = json_encode($params);
         $this->context->cookie->write();
     }
 
@@ -65,7 +65,7 @@ class TempAddressStorage
             return;
         }
 
-        $this->context->cookie->__unset(self::COOKIE_KEY);
+        unset($this->context->cookie->{self::COOKIE_KEY});
         $this->context->cookie->write();
     }
 }
