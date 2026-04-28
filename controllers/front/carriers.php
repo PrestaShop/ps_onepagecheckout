@@ -23,7 +23,7 @@ class Ps_OnepagecheckoutCarriersModuleFrontController extends Ps_Onepagecheckout
         $response = $handler->handle(Tools::getAllValues());
 
         if (!empty($response['success'])) {
-            $response['carriers_html'] = $this->render(
+            $response['carriers_html'] = $this->renderModuleTemplate(
                 'checkout/_partials/one-page-checkout/carriers',
                 [
                     'delivery_options' => $response['delivery_options'] ?? [],

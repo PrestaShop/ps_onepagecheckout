@@ -151,11 +151,11 @@ class BackOfficeConfigurationForm
             'confirm_modal_title' => $this->trans('Change checkout appearance', 'Modules.PsOnePageCheckout.Admin'),
             'confirm_modal_compatibility_title' => $this->trans('Check theme compatibility', 'Modules.PsOnePageCheckout.Admin'),
             'confirm_modal_description' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.PsOnePageCheckout.Admin'),
-            'confirm_modal_compatibility_description' => $this->trans('One-page checkout layout requires a Hummingbird-compatible theme.', 'Modules.PsOnePageCheckout.Admin'),
+            'confirm_modal_compatibility_description' => $this->trans('One-page checkout layout requires a Bootstrap 5-compatible theme.', 'Modules.PsOnePageCheckout.Admin'),
             'confirm_modal_checklist_title' => $this->trans('Before you proceed, please make sure that:', 'Modules.PsOnePageCheckout.Admin'),
             'confirm_modal_checklist' => [
                 $this->trans('You are NOT using the "Classic" theme: This layout is incompatible with the legacy Classic theme and will break your storefront.', 'Modules.PsOnePageCheckout.Admin'),
-                $this->trans('Your theme is Hummingbird-based: Ensure your custom or third-party theme supports this new checkout architecture.', 'Modules.PsOnePageCheckout.Admin'),
+                $this->trans('Your theme is compatible with the one-page checkout DOM and Bootstrap 5: Custom or third-party themes must support this new checkout architecture.', 'Modules.PsOnePageCheckout.Admin'),
                 $this->trans('Your checkout modules are compatible. Some older modules may not be compatible with a one-page layout.', 'Modules.PsOnePageCheckout.Admin'),
             ],
             'cancel_button_label' => $this->trans('Cancel', 'Admin.Actions'),

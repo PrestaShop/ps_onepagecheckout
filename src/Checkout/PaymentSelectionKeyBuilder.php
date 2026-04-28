@@ -50,7 +50,7 @@ class PaymentSelectionKeyBuilder
         return sprintf(
             '%s:%s',
             $moduleName !== '' ? $moduleName : 'unknown',
-            substr(hash('sha256', json_encode($signature)), 0, 24)
+            substr(hash('sha256', (string) json_encode($signature, JSON_INVALID_UTF8_SUBSTITUTE)), 0, 24)
         );
     }
 

@@ -33,7 +33,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutOnePageStep extends \AbstractCheckoutStep
 {
-    protected $template = 'checkout/_partials/steps/one-page-checkout.tpl';
+    protected $template = 'module:ps_onepagecheckout/views/templates/front/checkout/_partials/steps/one-page-checkout.tpl';
 
     /**
      * @var OnePageCheckoutForm

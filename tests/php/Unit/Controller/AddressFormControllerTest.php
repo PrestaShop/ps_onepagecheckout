@@ -173,6 +173,11 @@ class TestAddressFormController extends \Ps_OnepagecheckoutAddressFormModuleFron
     {
         return sprintf('rendered:%s', (string) $template);
     }
+
+    protected function renderModuleTemplate(string $relativePath, array $params): string
+    {
+        return sprintf('rendered:%s', $relativePath);
+    }
 }
 
 class EnabledPsOnepagecheckoutModuleForAddressForm extends \Ps_Onepagecheckout

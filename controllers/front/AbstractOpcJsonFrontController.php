@@ -47,6 +47,22 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
     }
 
     /**
+     * Render a module-owned Smarty template by relative path under views/templates/front/.
+     * Goes through the `module:` Smarty resource so theme overrides under
+     * `themes/<active>/modules/ps_onepagecheckout/...` still take precedence.
+     *
+     * @param array<string,mixed> $params
+     */
+    protected function renderModuleTemplate(string $relativePath, array $params): string
+    {
+        $this->context->smarty->assign($params);
+
+        return $this->context->smarty->fetch(
+            'module:ps_onepagecheckout/views/templates/front/' . ltrim($relativePath, '/') . '.tpl'
+        );
+    }
+
+    /**
      * @param array<string,mixed> $response
      */
     protected function renderJsonResponse(array $response): void
