@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Module;
 
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
-use Symfony\Contracts\Translation\TranslatorInterface;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
+use PrestaShop\PrestaShop\Adapter\Order\Checkout\CheckoutProcessProviderInterface;
 
 class PsOnepagecheckoutModuleTest extends TestCase
 {
@@ -24,7 +24,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertTrue($result);
         self::assertSame(1, $module->installInParentCalls);
         self::assertSame(1, $module->installConfigurationCalls);
-        self::assertSame(1, $module->initializeProviderCalls);
         self::assertSame([
             'actionCheckoutBuildProcess',
             'actionFrontControllerSetMedia',
@@ -40,7 +39,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
         $result = $module->uninstall();
 
         self::assertTrue($result);
-        self::assertSame(1, $module->clearProviderForCurrentModuleCalls);
         self::assertSame(1, $module->uninstallInParentCalls);
     }
 
@@ -52,7 +50,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
         self::assertTrue($result);
         self::assertSame(1, $module->disableCurrentContextCalls);
-        self::assertSame(1, $module->clearProviderCalls);
         self::assertSame([false], $module->disableInParentCalls);
     }
 
@@ -64,11 +61,10 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
         self::assertTrue($result);
         self::assertSame(1, $module->disableCurrentContextCalls);
-        self::assertSame(1, $module->clearProviderCalls);
         self::assertSame([true], $module->disableInParentCalls);
     }
 
-    public function testEnableReinitializesProviderAndCallsParentEnable(): void
+    public function testEnableCallsParentEnable(): void
     {
         $module = $this->createModule();
 
@@ -76,7 +72,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
         self::assertTrue($result);
         self::assertSame([false], $module->enableInParentCalls);
-        self::assertSame(1, $module->initializeProviderCalls);
     }
 
     public function testEnablePassesForceAllToParentEnable(): void
@@ -87,7 +82,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
         self::assertTrue($result);
         self::assertSame([true], $module->enableInParentCalls);
-        self::assertSame(1, $module->initializeProviderCalls);
     }
 
     public function testEnableStopsWhenParentEnableFails(): void
@@ -99,7 +93,6 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
         self::assertFalse($result);
         self::assertSame([false], $module->enableInParentCalls);
-        self::assertSame(0, $module->initializeProviderCalls);
     }
 
     public function testDisableStopsWhenCurrentContextDisableFails(): void
@@ -111,61 +104,17 @@ class PsOnepagecheckoutModuleTest extends TestCase
 
         self::assertFalse($result);
         self::assertSame(1, $module->disableCurrentContextCalls);
-        self::assertSame(0, $module->clearProviderCalls);
         self::assertSame([], $module->disableInParentCalls);
     }
 
-    public function testHookActionCheckoutBuildProcessReturnsModuleProcess(): void
+    public function testHookActionCheckoutBuildProcessReturnsProvider(): void
     {
         $module = $this->createModule();
-        $module->isEnabled = true;
 
-        $builder = $this->getMockBuilder(OnePageCheckoutProcessBuilder::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['build'])
-            ->getMock();
-        $checkoutSession = $this->getMockBuilder(\CheckoutSession::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $translator = $this->createMock(TranslatorInterface::class);
-        $checkoutProcess = $this->getMockBuilder(\CheckoutProcess::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $result = $module->hookActionCheckoutBuildProcess([]);
 
-        $builder
-            ->expects($this->once())
-            ->method('build')
-            ->with($checkoutSession, $translator)
-            ->willReturn($checkoutProcess);
-        $module->checkoutProcessBuilder = $builder;
-
-        $result = $module->hookActionCheckoutBuildProcess([
-            'checkoutSession' => $checkoutSession,
-            'translator' => $translator,
-        ]);
-
-        self::assertSame($checkoutProcess, $result);
-    }
-
-    public function testHookActionCheckoutBuildProcessReturnsNullOnInvalidPayload(): void
-    {
-        $module = $this->createModule();
-        $module->isEnabled = true;
-
-        $module->checkoutProcessBuilder = $this->getMockBuilder(OnePageCheckoutProcessBuilder::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['build'])
-            ->getMock();
-        $module->checkoutProcessBuilder
-            ->expects($this->never())
-            ->method('build');
-
-        $result = $module->hookActionCheckoutBuildProcess([
-            'checkoutSession' => new \stdClass(),
-            'translator' => $this->createMock(TranslatorInterface::class),
-        ]);
-
-        self::assertNull($result);
+        self::assertInstanceOf(OnePageCheckoutProcessProvider::class, $result);
+        self::assertInstanceOf(CheckoutProcessProviderInterface::class, $result);
     }
 
     public function testHookActionFrontControllerSetVariablesInjectsRuntimeFlagOnOrderPage(): void
@@ -260,8 +209,6 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     public bool $installInParentResult = true;
     public int $installConfigurationCalls = 0;
     public bool $installConfigurationResult = true;
-    public int $initializeProviderCalls = 0;
-    public bool $initializeProviderResult = true;
 
     /**
      * @var list<string>
@@ -288,19 +235,14 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     public bool $isEnabled = true;
     public int $disableCurrentContextCalls = 0;
     public bool $disableCurrentContextResult = true;
-    public int $clearProviderCalls = 0;
-    public bool $clearProviderResult = true;
     public bool $enableInParentResult = true;
     public bool $disableInParentResult = true;
-    public int $clearProviderForCurrentModuleCalls = 0;
-    public bool $clearProviderForCurrentModuleResult = true;
     public int $uninstallInParentCalls = 0;
     public bool $uninstallInParentResult = true;
 
-    public ?OnePageCheckoutProcessBuilder $checkoutProcessBuilder = null;
-
     public function __construct()
     {
+        $this->context = new \Context();
     }
 
     public function setModuleContext(object $context): void
@@ -325,24 +267,6 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         return $this->registerHookResult;
     }
 
-    public function trans(
-        $id,
-        array $parameters = [],
-        $domain = null,
-        $locale = null,
-    ): string {
-        return (string) $id;
-    }
-
-    protected function createCheckoutProcessBuilder(): OnePageCheckoutProcessBuilder
-    {
-        if ($this->checkoutProcessBuilder instanceof OnePageCheckoutProcessBuilder) {
-            return $this->checkoutProcessBuilder;
-        }
-
-        throw new \RuntimeException('Checkout process builder test double is not configured.');
-    }
-
     protected function installInParent(): bool
     {
         ++$this->installInParentCalls;
@@ -357,32 +281,11 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         return $this->installConfigurationResult;
     }
 
-    protected function initializeCheckoutProcessProviderConfiguration(): bool
-    {
-        ++$this->initializeProviderCalls;
-
-        return $this->initializeProviderResult;
-    }
-
     protected function disableOnePageCheckoutConfigurationForCurrentContext(): bool
     {
         ++$this->disableCurrentContextCalls;
 
         return $this->disableCurrentContextResult;
-    }
-
-    protected function clearCheckoutProcessProviderConfigurationForCurrentContext(): bool
-    {
-        ++$this->clearProviderCalls;
-
-        return $this->clearProviderResult;
-    }
-
-    protected function clearCheckoutProcessProviderConfigurationForCurrentModule(): bool
-    {
-        ++$this->clearProviderForCurrentModuleCalls;
-
-        return $this->clearProviderForCurrentModuleResult;
     }
 
     protected function addOpcJavascriptDefinition(array $javascriptDefinition): void

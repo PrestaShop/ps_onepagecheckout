@@ -82,10 +82,9 @@ final class Analytics
 
     public static function trackCheckoutStarted(string $guestCheckoutActive, string $moduleVersion): void
     {
-        self::trackEvent(self::EVENT_OPC_CHECKOUT_STARTED,
-            ['guest_checkout_active' => $guestCheckoutActive],
-            $moduleVersion
-        );
+        self::trackEvent(self::EVENT_OPC_CHECKOUT_STARTED, [
+            'guest_checkout_active' => $guestCheckoutActive,
+        ], $moduleVersion);
     }
 
     public static function trackCheckoutCompleted(string $guestCheckoutActive, string $paymentMethod, string $moduleVersion): void
