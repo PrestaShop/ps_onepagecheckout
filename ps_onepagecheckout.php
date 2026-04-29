@@ -17,7 +17,6 @@ use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
 use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use PrestaShop\PrestaShop\Adapter\Order\Checkout\CheckoutProcessProviderInterface;
 
 class Ps_Onepagecheckout extends Module
