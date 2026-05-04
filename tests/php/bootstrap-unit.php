@@ -8,6 +8,7 @@ use Tests\PHP\Mocks\LegacyEntityMapper;
 
 require __DIR__ . '/../../../../tests/Unit/bootstrap.php';
 require_once __DIR__ . '/Mocks/bootstrap.php';
+require_once __DIR__ . '/Fixtures/CheckoutProcessProviderInterfaceStub.php';
 require_once __DIR__ . '/Fixtures/LegacyFormStubs.php';
 require_once __DIR__ . '/Fixtures/CheckoutTestFixtures.php';
 require __DIR__ . '/bootstrap-autoload.php';
