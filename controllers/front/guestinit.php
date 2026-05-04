@@ -4,7 +4,6 @@
  * AJAX endpoint for module-owned OPC guest initialization.
  */
 
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutGuestInitHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 
@@ -15,37 +14,12 @@ class Ps_OnepagecheckoutGuestInitModuleFrontController extends Ps_Onepagecheckou
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
+        $opcFormFactory = $this->getOpcFormFactory();
+        $handler = $this->createGuestInitHandler($opcFormFactory);
 
-        try {
-            $opcFormFactory = $this->getOpcFormFactory();
-            $handler = $this->createGuestInitHandler($opcFormFactory);
-
-            return $handler->handle(Tools::getAllValues());
-        } catch (Throwable $exception) {
-            PrestaShopLogger::addLog(
-                sprintf('ps_onepagecheckout guestInit runtime exception: %s', $exception->getMessage()),
-                3,
-                null,
-                'Module',
-                (int) $this->module->id,
-                true
-            );
-
-            if ($this->module instanceof Ps_Onepagecheckout) {
-                Analytics::trackOpcCriticalError(
-                    'unknown',
-                    (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
-                    (string) $this->module->version
-                );
-            }
-
-            return $this->buildTechnicalErrorResponse();
-        }
+        return $handler->handle(Tools::getAllValues());
     }
 
     protected function getOpcFormFactory(): OnePageCheckoutFormFactory

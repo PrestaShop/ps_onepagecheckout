@@ -54,7 +54,7 @@ class OnePageCheckoutCarriersHandler
                 $requestedAddressId = (int) $requestParameters['id_address_delivery'];
                 if (!$this->isOwnedCheckoutAddress($requestedAddressId)) {
                     return CheckoutAjaxResponse::error(
-                        ModuleTranslation::translate($this->translator, 'Invalid delivery address.'),
+                        $this->translator->trans('Invalid delivery address.', [], ModuleTranslation::SHOP_DOMAIN),
                         'id_address_delivery'
                     );
                 }

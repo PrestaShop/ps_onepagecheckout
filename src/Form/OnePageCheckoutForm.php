@@ -50,6 +50,9 @@ class OnePageCheckoutForm extends \AbstractForm
      */
     protected $formatter;
 
+    /**
+     * @var \Context
+     */
     private $context;
     private $customerPersister;
     private $addressPersister;
@@ -309,7 +312,7 @@ class OnePageCheckoutForm extends \AbstractForm
             );
             $deliveryAddress->id_customer = $customer->id;
             if (empty($deliveryAddress->alias)) {
-                $deliveryAddress->alias = ModuleTranslation::translate($this->translator, 'My Address');
+                $deliveryAddress->alias = $this->translator->trans('My Address', [], ModuleTranslation::SHOP_DOMAIN);
             }
             \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$deliveryAddress]);
             if (!$this->addressPersister->save($deliveryAddress, $token)) {
@@ -335,10 +338,7 @@ class OnePageCheckoutForm extends \AbstractForm
                     'invoice_'
                 );
                 $invoiceAddress->id_customer = $customer->id;
-                $invoiceAddress->alias = $invoiceAddress->alias ?: ModuleTranslation::translate(
-                    $this->translator,
-                    'Invoice address'
-                );
+                $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans('Invoice address', [], ModuleTranslation::SHOP_DOMAIN);
                 \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$invoiceAddress]);
                 if (!$this->addressPersister->save($invoiceAddress, $token)) {
                     return false;
@@ -559,7 +559,7 @@ class OnePageCheckoutForm extends \AbstractForm
         }
 
         $emailField->addError(
-            ModuleTranslation::translate($this->translator, 'Invalid email format.')
+            $this->translator->trans('Invalid email format.', [], ModuleTranslation::SHOP_DOMAIN)
         );
 
         return false;

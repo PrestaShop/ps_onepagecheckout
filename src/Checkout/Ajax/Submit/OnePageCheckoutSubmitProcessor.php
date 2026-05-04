@@ -133,7 +133,7 @@ class OnePageCheckoutSubmitProcessor
         }
 
         $this->validationErrors['identity'] = [
-            'email' => ModuleTranslation::translate($this->translator, 'Invalid email format.'),
+            'email' => $this->translator->trans('Invalid email format.', [], ModuleTranslation::SHOP_DOMAIN),
         ];
 
         return false;
@@ -171,7 +171,7 @@ class OnePageCheckoutSubmitProcessor
 
         if ($deliveryOptionKey === '' || empty($deliveryOptions[$deliveryOptionKey])) {
             $this->validationErrors['shipping'] = [
-                'delivery_option' => ModuleTranslation::translate($this->translator, 'Please select a shipping method.'),
+                'delivery_option' => $this->translator->trans('Please select a shipping method.', [], ModuleTranslation::SHOP_DOMAIN),
             ];
 
             return false;
@@ -211,7 +211,7 @@ class OnePageCheckoutSubmitProcessor
         }
 
         $this->validationErrors['payment'] = [
-            'paymentMethod' => ModuleTranslation::translate($this->translator, 'Please select a payment method.'),
+            'paymentMethod' => $this->translator->trans('Please select a payment method.', [], ModuleTranslation::SHOP_DOMAIN),
         ];
 
         return false;
@@ -235,7 +235,7 @@ class OnePageCheckoutSubmitProcessor
             }
 
             $this->validationErrors['conditions'] = [
-                'conditions_to_approve' => ModuleTranslation::translate($this->translator, 'Please accept the terms of service.'),
+                'conditions_to_approve' => $this->translator->trans('Please accept the terms of service.', [], ModuleTranslation::SHOP_DOMAIN),
             ];
 
             return false;

@@ -29,7 +29,7 @@ class OnePageCheckoutSelectPaymentHandler
 
         if ($this->hasMissingPaymentSelectionPayload($paymentOption, $paymentModule, $paymentSelectionKey)) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Missing payment selection payload.')
+                $this->translator->trans('Missing payment selection payload.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 

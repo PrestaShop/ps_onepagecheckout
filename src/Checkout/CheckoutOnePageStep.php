@@ -193,10 +193,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         }
 
         $this->setTitle(
-            ModuleTranslation::translate(
-                $this->getTranslator(),
-                'Checkout'
-            )
+            $this->getTranslator()->trans('Checkout', [], ModuleTranslation::SHOP_DOMAIN)
         );
     }
 

@@ -127,4 +127,60 @@ class OpcSubmitHandlerTest extends TestCase
         self::assertTrue($response['reload']);
         self::assertSame('/commande', $response['checkout_url']);
     }
+
+    public function testHandlePersistsReloadErrorsAndRethrowsWhenSubmitFails(): void
+    {
+        $this->submitProcessor->expects($this->once())
+            ->method('process')
+            ->willThrowException(new \RuntimeException('submit exploded'));
+        $this->submitValidationStateStorage->expects($this->once())
+            ->method('save')
+            ->with([
+                'cart_id' => 42,
+                'validation_errors' => [],
+                'form_errors' => [
+                    '' => ['One-page checkout is currently unavailable.'],
+                ],
+                'submitted_values' => [
+                    'email' => 'customer@example.com',
+                ],
+            ]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('submit exploded');
+
+        $this->handler->handle(
+            [
+                'email' => 'customer@example.com',
+            ],
+            [
+                'reload' => true,
+                'errors' => [
+                    '' => ['One-page checkout is currently unavailable.'],
+                ],
+            ]
+        );
+    }
+
+    public function testHandleFailsWhenFailedSubmitStateCannotBeLinkedToACart(): void
+    {
+        $this->context->cart = new \stdClass();
+        $this->context->cart->id = 0;
+        $this->submitProcessor->expects($this->once())
+            ->method('process')
+            ->willReturn([
+                'success' => false,
+                'validation_errors' => [],
+                'form_errors' => [
+                    'firstname' => ['Required'],
+                ],
+                'submitted_values' => [],
+            ]);
+        $this->submitValidationStateStorage->expects($this->never())->method('save');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Cannot persist one-page checkout submit state without an active cart.');
+
+        $this->handler->handle([]);
+    }
 }

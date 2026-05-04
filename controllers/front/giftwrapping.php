@@ -9,12 +9,8 @@ class Ps_OnepagecheckoutGiftwrappingModuleFrontController extends Ps_Onepagechec
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
-
         $handler = new OnePageCheckoutGiftWrappingHandler($this->context, $this->module->getTranslator());
         $result = $handler->handle(Tools::getAllValues());
 

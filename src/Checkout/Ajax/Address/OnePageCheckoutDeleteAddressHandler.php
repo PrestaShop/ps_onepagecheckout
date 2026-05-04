@@ -34,14 +34,14 @@ class OnePageCheckoutDeleteAddressHandler
         $customer = $this->customerResolver->resolve();
         if (!$customer instanceof \Customer) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to resolve checkout customer.')
+                $this->translator->trans('Unable to resolve checkout customer.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
         $address = $this->loadOwnedAddress($customer, (int) ($requestParameters['id_address'] ?? 0));
         if (!$address instanceof \Address) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to load the requested address.')
+                $this->translator->trans('Unable to load the requested address.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
@@ -54,7 +54,7 @@ class OnePageCheckoutDeleteAddressHandler
 
         if (!$this->buildAddressPersister($customer)->delete($address, \Tools::getToken(true, $this->context))) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to delete address.')
+                $this->translator->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
@@ -75,7 +75,7 @@ class OnePageCheckoutDeleteAddressHandler
         return [
             'success' => true,
             'id_address' => $addressId,
-            'message' => ModuleTranslation::translate($this->translator, 'Address successfully deleted.'),
+            'message' => $this->translator->trans('Address successfully deleted.', [], ModuleTranslation::SHOP_DOMAIN),
         ];
     }
 

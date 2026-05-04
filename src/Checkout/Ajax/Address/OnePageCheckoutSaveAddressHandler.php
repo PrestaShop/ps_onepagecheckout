@@ -33,7 +33,7 @@ class OnePageCheckoutSaveAddressHandler
         $customerId = $this->customerResolver->resolveId();
         if ($customerId <= 0) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to resolve checkout customer.')
+                $this->translator->trans('Unable to resolve checkout customer.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
@@ -44,7 +44,7 @@ class OnePageCheckoutSaveAddressHandler
 
         if ($addressId > 0 && (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId)) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to load the requested address.')
+                $this->translator->trans('Unable to load the requested address.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
@@ -58,7 +58,7 @@ class OnePageCheckoutSaveAddressHandler
 
         if (!$this->buildAddressPersister($customerId)->save($address, \Tools::getToken(true, $this->context))) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to save address.')
+                $this->translator->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
@@ -124,8 +124,8 @@ class OnePageCheckoutSaveAddressHandler
 
         $address->id_customer = $customerId;
         $address->alias = trim((string) ($address->alias ?: ($addressType === 'invoice'
-            ? ModuleTranslation::translate($this->translator, 'Invoice address')
-            : ModuleTranslation::translate($this->translator, 'My Address'))));
+            ? $this->translator->trans('Invoice address', [], ModuleTranslation::SHOP_DOMAIN)
+            : $this->translator->trans('My Address', [], ModuleTranslation::SHOP_DOMAIN))));
         $address->id_country = (int) $address->id_country;
         $address->id_state = (int) ($address->id_state ?: 0);
         \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$address]);

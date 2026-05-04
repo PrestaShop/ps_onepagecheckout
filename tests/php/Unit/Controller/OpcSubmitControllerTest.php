@@ -89,7 +89,7 @@ class OpcSubmitControllerTest extends TestCase
         self::assertTrue($response['reload']);
     }
 
-    public function testHandleOpcSubmitPersistsTopLevelErrorWhenRuntimeExceptionOccurs(): void
+    public function testHandleOpcSubmitPassesReloadErrorResponseToHandler(): void
     {
         $_SERVER['REQUEST_METHOD'] = 'POST';
 
@@ -111,6 +111,13 @@ class OpcSubmitControllerTest extends TestCase
         $controller->submitHandler
             ->expects($this->once())
             ->method('handle')
+            ->with(
+                $this->isType('array'),
+                $this->callback(static function (array $response): bool {
+                    return ($response['reload'] ?? false) === true
+                        && ($response['errors'][''][0] ?? null) === 'One-page checkout is currently unavailable.';
+                })
+            )
             ->willThrowException(new \RuntimeException('submit exploded'));
 
         $response = $controller->callHandleOpcRequest();
@@ -122,15 +129,6 @@ class OpcSubmitControllerTest extends TestCase
             ['One-page checkout is currently unavailable.'],
             $response['errors']['']
         );
-
-        $storedState = $controller->getStoredValidationState();
-        self::assertIsArray($storedState);
-        self::assertSame(
-            ['' => ['One-page checkout is currently unavailable.']],
-            $storedState['form_errors'] ?? null
-        );
-        self::assertSame(42, $storedState['cart_id'] ?? null);
-        self::assertSame([], $storedState['validation_errors'] ?? null);
     }
 }
 

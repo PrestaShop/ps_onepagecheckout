@@ -35,7 +35,7 @@ class OnePageCheckoutAddressesListHandler
         $customer = $this->customerResolver->resolve();
         if (!$customer instanceof \Customer) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to resolve checkout customer.')
+                $this->translator->trans('Unable to resolve checkout customer.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 

@@ -41,14 +41,14 @@ class OnePageCheckoutSelectCarrierHandler
         $deliveryOption = (string) ($requestParameters['delivery_option'] ?? '');
         if ($deliveryOption === '') {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Missing delivery option.'),
+                $this->translator->trans('Missing delivery option.', [], ModuleTranslation::SHOP_DOMAIN),
                 'delivery_option'
             );
         }
 
         if (!\Validate::isLoadedObject($this->context->cart)) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to resolve the current cart.')
+                $this->translator->trans('Unable to resolve the current cart.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
@@ -62,7 +62,7 @@ class OnePageCheckoutSelectCarrierHandler
 
             if ($deliveryAddressId <= 0) {
                 return CheckoutAjaxResponse::error(
-                    ModuleTranslation::translate($this->translator, 'Unable to resolve the current delivery address.')
+                    $this->translator->trans('Unable to resolve the current delivery address.', [], ModuleTranslation::SHOP_DOMAIN)
                 );
             }
 

@@ -1,5 +1,6 @@
 <?php
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 
 abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFrontController
@@ -17,12 +18,29 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
     /**
      * @return array<string,mixed>
      */
-    abstract protected function handleOpcRequest(): array;
+    protected function handleOpcRequest(): array
+    {
+        if (!$this->isOpcAvailable()) {
+            return $this->buildTechnicalErrorResponse();
+        }
+
+        try {
+            return $this->handleAvailableOpcRequest();
+        } catch (Throwable $exception) {
+            return $this->handleRuntimeException($exception);
+        }
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    abstract protected function handleAvailableOpcRequest(): array;
 
     protected function isOpcAvailable(): bool
     {
-        return $this->module instanceof Ps_Onepagecheckout
-            && $this->module->isOnePageCheckoutEnabled();
+        assert($this->module instanceof Ps_Onepagecheckout);
+
+        return $this->module->isOnePageCheckoutEnabled();
     }
 
     /**
@@ -46,6 +64,29 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
     protected function getTechnicalErrorResponseExtra(): array
     {
         return [];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    protected function handleRuntimeException(Throwable $exception): array
+    {
+        PrestaShopLogger::addLog(
+            sprintf('ps_onepagecheckout runtime exception: %s', $exception->getMessage()),
+            3,
+            null,
+            'Module',
+            (int) $this->module->id,
+            true
+        );
+
+        Analytics::trackOpcCriticalError(
+            'unknown',
+            (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+            (string) $this->module->version
+        );
+
+        return $this->buildTechnicalErrorResponse();
     }
 
     /**

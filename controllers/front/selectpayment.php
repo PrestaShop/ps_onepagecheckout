@@ -13,12 +13,8 @@ class Ps_OnepagecheckoutSelectPaymentModuleFrontController extends Ps_Onepageche
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
-
         $handler = new OnePageCheckoutSelectPaymentHandler($this->context, $this->module->getTranslator());
 
         return $handler->handle(Tools::getAllValues());

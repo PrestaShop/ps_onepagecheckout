@@ -152,7 +152,7 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
             ->setName('use_same_address')
             ->setType('checkbox')
             ->setLabel(
-                ModuleTranslation::translate($this->translator, 'Use the same address for invoice')
+                $this->translator->trans('Use the same address for invoice', [], ModuleTranslation::SHOP_DOMAIN)
             )
             ->setValue(true);
 

@@ -39,13 +39,13 @@ class OnePageCheckoutGiftWrappingHandler
     {
         if (!\Validate::isLoadedObject($this->context->cart)) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Unable to resolve the current cart.')
+                $this->translator->trans('Unable to resolve the current cart.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
         if (!(bool) \Configuration::get('PS_GIFT_WRAPPING')) {
             return CheckoutAjaxResponse::error(
-                ModuleTranslation::translate($this->translator, 'Gift wrapping is currently unavailable.')
+                $this->translator->trans('Gift wrapping is currently unavailable.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
