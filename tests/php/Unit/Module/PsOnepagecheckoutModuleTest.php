@@ -298,6 +298,14 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         ++$this->registeredJavascriptAssetsCalls;
     }
 
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    protected function trans($id, array $parameters = [], $domain = null, $locale = null): string
+    {
+        return (string) $id;
+    }
+
     protected function disableInParent(bool $forceAll): bool
     {
         $this->disableInParentCalls[] = $forceAll;
