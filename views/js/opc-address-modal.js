@@ -436,25 +436,32 @@ function populateForm($modal, address) {
 
 function getAddressFromTrigger($trigger) {
   const jsonAttr = $trigger.attr('data-address');
+  let address = {};
 
   if (typeof jsonAttr === 'string' && jsonAttr !== '') {
     try {
       const parsed = JSON.parse(jsonAttr);
 
       if (parsed && typeof parsed === 'object') {
-        return parsed;
+        address = parsed;
+
+        // Remove text-based labels to prevent conflicts with ID fields when using partial selectors (name$="")
+        const keysToExclude = ['country', 'state'];
+        keysToExclude.forEach(key => {
+          delete address[key];
+        });
       }
     } catch (e) {
     }
   }
 
-  const address = {};
-
   ADDRESS_FIELDS.forEach((fieldName) => {
-    const attributeValue = $trigger.attr(`data-${fieldName}`);
+    if (address[fieldName] === undefined) {
+      const attributeValue = $trigger.attr(`data-${fieldName}`);
 
-    if (typeof attributeValue !== 'undefined') {
-      address[fieldName] = attributeValue;
+      if (typeof attributeValue !== 'undefined') {
+        address[fieldName] = attributeValue;
+      }
     }
   });
 
