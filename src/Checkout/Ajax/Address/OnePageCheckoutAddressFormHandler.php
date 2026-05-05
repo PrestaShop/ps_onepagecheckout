@@ -58,10 +58,6 @@ class OnePageCheckoutAddressFormHandler
                 continue;
             }
 
-            if ($name === 'invoice_id_country' && $useSameAddress) {
-                continue;
-            }
-
             if (in_array($name, ['id_address_delivery', 'id_address_invoice'], true) && (int) $requestParameters[$name] <= 0) {
                 continue;
             }

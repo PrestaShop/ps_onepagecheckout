@@ -41,7 +41,11 @@ class OpcAddressesListHandlerIntegrationTest extends TestCase
         $context->cart->id_address_delivery = (int) $secondAddress->id;
         $context->cart->id_address_invoice = (int) $firstAddress->id;
 
-        $handler = new OnePageCheckoutAddressesListHandler($context, new CheckoutCustomerContextResolver($context));
+        $handler = new OnePageCheckoutAddressesListHandler(
+            $context,
+            $this->createConfiguredMock(\Symfony\Contracts\Translation\TranslatorInterface::class, ['trans' => 'translated']),
+            new CheckoutCustomerContextResolver($context)
+        );
         $response = $handler->handle();
 
         self::assertTrue($response['success']);

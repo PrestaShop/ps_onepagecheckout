@@ -1,6 +1,11 @@
-import OPC_EVENTS from './events';
+import {OPC_EVENTS} from './events';
+import {emitAddressUpdate} from './address-events';
 import OPC_SELECTORS from './selectors';
-import {getConfiguredOpcUrl} from './runtime/opc-runtime';
+import {
+  getConfiguredOpcMessage,
+  getConfiguredOpcUrl,
+  normalizeErrorEventResponse,
+} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -73,6 +78,27 @@ const DELETE_CONFIRM_MODAL_ID = 'opc-delete-address-confirm-modal';
 const RESTORE_SELECTION_ID_ATTRIBUTE = 'data-opc-restore-address-id';
 const RESTORE_SELECTION_RADIO_NAME_ATTRIBUTE = 'data-opc-restore-radio-name';
 const SKIP_RESTORE_SELECTION_ATTRIBUTE = 'data-opc-skip-restore-selection';
+const ADDRESS_LIST_CONFIG = {
+  delivery: {
+    listSelector: OPC_SELECTORS.opc.deliveryList,
+    loaderTemplateSelector: '#opc-delivery-address-loader',
+    errorTemplateSelector: '#opc-delivery-address-error',
+  },
+  billing: {
+    listSelector: OPC_SELECTORS.opc.billingList,
+    loaderTemplateSelector: '#opc-billing-address-loader',
+    errorTemplateSelector: '#opc-billing-address-error',
+  },
+};
+let pendingAddressListRefreshOptions = null;
+let addressListGeneration = 0;
+
+function emitHandleError(eventType, response, fallbackMessage = '') {
+  prestashop.emit('handleError', {
+    eventType,
+    resp: normalizeErrorEventResponse(response, fallbackMessage),
+  });
+}
 
 function isNonSubmittableField($field) {
   return $field.is(':button, [type="button"], [type="submit"], [type="reset"], [type="image"], [type="file"]');
@@ -493,12 +519,10 @@ function refreshStates($modal, countryId, selectedStateId) {
     updateStateFieldUi($modal, response || {}, selectedStateId);
     updateModalSaveState($modal);
   }).fail((jqXHR) => {
+    const fallbackMessage = getConfiguredOpcMessage('statesLoadFailed', 'Unable to load states.');
     updateStateFieldUi($modal, {hasStates: false, states: []}, '');
     updateModalSaveState($modal);
-    prestashop.emit('handleError', {
-      eventType: 'opcAddressStates',
-      resp: jqXHR.responseJSON || {errors: {'': ['Unable to load states.']}},
-    });
+    emitHandleError('opcAddressStates', jqXHR && jqXHR.responseJSON, fallbackMessage);
   });
 }
 
@@ -551,6 +575,8 @@ function renderValidationErrors($modal, errors) {
     return;
   }
 
+  let $firstInvalidField = $();
+
   Object.entries(errors).forEach(([fieldName, fieldErrors]) => {
     const messages = Array.isArray(fieldErrors) ? fieldErrors.filter(Boolean) : [];
     if (messages.length === 0) {
@@ -566,8 +592,17 @@ function renderValidationErrors($modal, errors) {
       return;
     }
 
-    appendFieldError(getModalField($modal, fieldName), messages[0]);
+    const $field = getModalField($modal, fieldName);
+    appendFieldError($field, messages[0]);
+
+    if (!$firstInvalidField.length && $field.length) {
+      $firstInvalidField = $field;
+    }
   });
+
+  if ($firstInvalidField.length) {
+    $firstInvalidField.trigger('focus');
+  }
 }
 
 function getAddressListSelectorForRadioName(radioName) {
@@ -655,26 +690,60 @@ function restoreRememberedSelection($modal) {
   syncAddressItemStyles($radio.closest(OPC_SELECTORS.opc.addressItem).parent());
 }
 
-function showSuccessMessage(message) {
-  const normalizedMessage = String(message || '').trim();
-  if (normalizedMessage === '') {
-    return;
+function getTemplateHtml(templateSelector) {
+  const template = document.querySelector(templateSelector);
+
+  return template ? template.innerHTML : '';
+}
+
+function getAddressListConfig(listType) {
+  if (!Object.prototype.hasOwnProperty.call(ADDRESS_LIST_CONFIG, listType)) {
+    return null;
   }
 
-  if (window.Theme && window.Theme.components && typeof window.Theme.components.useToast === 'function') {
-    const toast = window.Theme.components.useToast(normalizedMessage, {type: 'success'});
+  return ADDRESS_LIST_CONFIG[listType];
+}
 
-    if (toast && typeof toast.show === 'function') {
-      toast.show();
+function getAddressListTypes(options = {}) {
+  const requestedListTypes = Array.isArray(options.listTypes) && options.listTypes.length > 0
+    ? options.listTypes
+    : Object.keys(ADDRESS_LIST_CONFIG);
+
+  const matchedListTypes = requestedListTypes
+    .map((listType) => ({
+      listType,
+      config: getAddressListConfig(listType),
+    }))
+    .filter(({config}) => config !== null && $(config.listSelector).length > 0);
+
+  const visibleListTypes = matchedListTypes
+    .filter(({config}) => $(config.listSelector).is(':visible'))
+    .map(({listType}) => listType);
+
+  return visibleListTypes.length > 0
+    ? visibleListTypes
+    : matchedListTypes.map(({listType}) => listType);
+}
+
+function renderAddressListsState(listTypes, templateKey) {
+  listTypes.forEach((listType) => {
+    const config = getAddressListConfig(listType);
+
+    if (!config) {
+      return;
     }
 
-    return;
-  }
+    const $list = $(config.listSelector);
+    const templateHtml = getTemplateHtml(config[templateKey]);
 
-  $('body').append($('<div>', {
-    class: 'alert alert-success',
-    text: normalizedMessage,
-  }));
+    if ($list.length && templateHtml) {
+      $list.html(templateHtml);
+    }
+  });
+}
+
+function getListTypesForAddressType(addressType) {
+  return addressType === 'invoice' ? ['billing'] : ['delivery'];
 }
 
 function serializeModalFields($modal) {
@@ -742,6 +811,25 @@ function hideModal($modal) {
   }
 }
 
+function syncAddressItemStyles($scope) {
+  if (!$scope.length) {
+    return;
+  }
+
+  $scope.find(OPC_SELECTORS.opc.addressItem).each((_, item) => {
+    const $item = $(item);
+    const isSelected = $item.find(OPC_SELECTORS.opc.addressRadio).first().is(':checked');
+
+    $item.toggleClass('border-primary selected z-1', isSelected);
+    $item.find(OPC_SELECTORS.opc.addressLabel).first().toggleClass('fw-semibold', isSelected);
+  });
+}
+
+function syncAllSavedAddressItemStyles() {
+  syncAddressItemStyles($(OPC_SELECTORS.opc.deliveryList));
+  syncAddressItemStyles($(OPC_SELECTORS.opc.billingList));
+}
+
 function refreshAddressesSection(options = {}) {
   const addressFormUrl = getConfiguredOpcUrl(URL_KEYS.addressForm);
   const $addressForm = $(OPC_ADDRESSES_SECTION_SELECTOR).first();
@@ -779,44 +867,27 @@ function refreshAddressesSection(options = {}) {
       setAddressSectionFieldValue($addressForm, BILLING_SECTION_SELECTOR, BILLING_FIELDS_SELECTOR, 'invoice_id_country', payload.invoice_id_country);
     }
 
+    pendingAddressListRefreshOptions = null;
     syncAllSavedAddressItemStyles();
     prestashop.emit(OPC_EVENTS.updatedOpcAddressForm, {target: $addressForm, resp: response});
-    prestashop.emit(OPC_EVENTS.opcDeliveryAddressUpdated, {resp: response});
-    prestashop.emit(OPC_EVENTS.opcBillingAddressUpdated, {resp: response});
-  });
-}
 
-function syncAddressItemStyles($scope) {
-  if (!$scope.length) {
-    return;
-  }
+    if (options.listTypes?.includes('delivery')) {
+      emitAddressUpdate('delivery', {resp: response});
+      return;
+    }
 
-  $scope.find(OPC_SELECTORS.opc.addressItem).each((_, item) => {
-    const $item = $(item);
-    const isSelected = $item.find(OPC_SELECTORS.opc.addressRadio).first().is(':checked');
-
-    $item.toggleClass('border-primary selected z-1', isSelected);
-    $item.find(OPC_SELECTORS.opc.addressLabel).first().toggleClass('fw-semibold', isSelected);
-  });
-}
-
-function syncAllSavedAddressItemStyles() {
-  syncAddressItemStyles($(OPC_SELECTORS.opc.deliveryList));
-  syncAddressItemStyles($(OPC_SELECTORS.opc.billingList));
-}
-
-function renderAddressListsLoadingState() {
-  [
-    [OPC_SELECTORS.opc.deliveryList, '#opc-delivery-address-loader'],
-    [OPC_SELECTORS.opc.billingList, '#opc-billing-address-loader'],
-  ].forEach(([listSelector, templateSelector]) => {
-    const $list = $(listSelector);
-    const templateHtml = $(templateSelector).html();
-
-    if ($list.length && templateHtml) {
-      $list.html(templateHtml);
+    if (options.listTypes?.includes('billing')) {
+      emitAddressUpdate('billing', {resp: response});
     }
   });
+}
+
+function renderAddressListsLoadingState(listTypes) {
+  renderAddressListsState(listTypes, 'loaderTemplateSelector');
+}
+
+function renderAddressListsErrorState(listTypes) {
+  renderAddressListsState(listTypes, 'errorTemplateSelector');
 }
 
 function applyAddressListsResponse(response, options = {}) {
@@ -860,17 +931,32 @@ function applyAddressListsResponse(response, options = {}) {
 
 function refreshAddressLists(options = {}) {
   const addressesListUrl = getConfiguredOpcUrl(URL_KEYS.addressesList);
+  const listTypes = getAddressListTypes(options);
+  const fallbackMessage = getConfiguredOpcMessage('refreshAddressesFailed', 'Unable to refresh addresses.');
+  const generation = ++addressListGeneration;
+
+  pendingAddressListRefreshOptions = {
+    ...options,
+    listTypes,
+  };
 
   if (!addressesListUrl) {
     return refreshAddressesSection(options);
   }
 
-  renderAddressListsLoadingState();
+  renderAddressListsLoadingState(listTypes);
 
   return $.post(addressesListUrl)
     .then((response) => {
+      if (generation !== addressListGeneration) {
+        return response;
+      }
+
       if (!response || response.success === false || typeof response.address_count === 'undefined') {
-        return refreshAddressesSection(options);
+        renderAddressListsErrorState(listTypes);
+        emitHandleError('opcAddressesList', response, fallbackMessage);
+
+        return response;
       }
 
       const addressCount = parseInt(response.address_count, 10) || 0;
@@ -879,14 +965,18 @@ function refreshAddressLists(options = {}) {
         return refreshAddressesSection(options);
       }
 
+      pendingAddressListRefreshOptions = null;
       applyAddressListsResponse(response, options);
 
       return response;
     })
     .fail((jqXHR) => {
-      prestashop.emit('handleError', {eventType: 'opcAddressesList', resp: jqXHR.responseJSON || {}});
+      if (generation !== addressListGeneration) {
+        return;
+      }
 
-      return refreshAddressesSection(options);
+      renderAddressListsErrorState(listTypes);
+      emitHandleError('opcAddressesList', jqXHR && jqXHR.responseJSON, fallbackMessage);
     });
 }
 
@@ -1033,6 +1123,11 @@ $(document).on('change', OPC_SELECTORS.opc.addressRadio, (event) => {
   }
 });
 
+$(document).on('click', '[data-opc-action="retry-addresses"]', (event) => {
+  event.preventDefault();
+  refreshAddressLists(pendingAddressListRefreshOptions || {});
+});
+
 $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   event.preventDefault();
 
@@ -1041,7 +1136,11 @@ $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   const $modal = $button.closest(MODAL_SELECTOR);
 
   if (!saveAddressUrl || !$modal.length) {
-    prestashop.emit('handleError', {eventType: 'opcSaveAddress', resp: {errors: {'': ['Missing OPC save address URL.']}}});
+    emitHandleError(
+      'opcSaveAddress',
+      null,
+      getConfiguredOpcMessage('missingSaveAddressUrl', 'Missing OPC save address URL.')
+    );
 
     return;
   }
@@ -1058,8 +1157,15 @@ $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   $.post(saveAddressUrl, payload)
     .done((response) => {
       if (!response || response.success === false) {
-        renderValidationErrors($modal, response && response.errors ? response.errors : {});
-        prestashop.emit('handleError', {eventType: 'opcSaveAddress', resp: response || {}});
+        if (response && response.errors) {
+          renderValidationErrors($modal, response.errors);
+        }
+
+        emitHandleError(
+          'opcSaveAddress',
+          response,
+          getConfiguredOpcMessage('saveAddressFailed', 'Unable to save address.')
+        );
 
         return;
       }
@@ -1068,13 +1174,17 @@ $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
       $modal.attr(SKIP_RESTORE_SELECTION_ATTRIBUTE, '1');
       hideModal($modal);
       refreshAddressLists({
+        listTypes: getListTypesForAddressType(addressType),
         refreshDeliverySelection: addressType === 'delivery',
         refreshBillingSelection: addressType === 'invoice',
       });
-      showSuccessMessage(response.message || '');
     })
     .fail((jqXHR) => {
-      prestashop.emit('handleError', {eventType: 'opcSaveAddress', resp: jqXHR.responseJSON || {}});
+      emitHandleError(
+        'opcSaveAddress',
+        jqXHR && jqXHR.responseJSON,
+        getConfiguredOpcMessage('saveAddressFailed', 'Unable to save address.')
+      );
     })
     .always(() => {
       $button.prop('disabled', false).text(initialText);
@@ -1088,7 +1198,11 @@ $(document).on('click', '.js-delete-address', (event) => {
   const $button = $(event.currentTarget);
 
   if (!deleteAddressUrl || !$button.length) {
-    prestashop.emit('handleError', {eventType: 'opcDeleteAddress', resp: {errors: {'': ['Missing OPC delete address URL.']}}});
+    emitHandleError(
+      'opcDeleteAddress',
+      null,
+      getConfiguredOpcMessage('missingDeleteAddressUrl', 'Missing OPC delete address URL.')
+    );
 
     return;
   }
@@ -1098,6 +1212,7 @@ $(document).on('click', '.js-delete-address', (event) => {
       return;
     }
 
+    const addressType = String($button.attr('data-address-type') || 'delivery');
     $button.prop('disabled', true);
 
     $.post(deleteAddressUrl, {
@@ -1105,19 +1220,27 @@ $(document).on('click', '.js-delete-address', (event) => {
     })
       .done((response) => {
         if (!response || response.success === false) {
-          prestashop.emit('handleError', {eventType: 'opcDeleteAddress', resp: response || {}});
+          emitHandleError(
+            'opcDeleteAddress',
+            response,
+            getConfiguredOpcMessage('deleteAddressFailed', 'Unable to delete address.')
+          );
           $button.prop('disabled', false);
 
           return;
         }
 
         refreshAddressLists({
+          listTypes: getListTypesForAddressType(addressType),
           resetInlineAddressState: true,
         });
-        showSuccessMessage(response.message || '');
       })
       .fail((jqXHR) => {
-        prestashop.emit('handleError', {eventType: 'opcDeleteAddress', resp: jqXHR.responseJSON || {}});
+        emitHandleError(
+          'opcDeleteAddress',
+          jqXHR && jqXHR.responseJSON,
+          getConfiguredOpcMessage('deleteAddressFailed', 'Unable to delete address.')
+        );
         $button.prop('disabled', false);
       });
   });

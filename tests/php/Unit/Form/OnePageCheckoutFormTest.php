@@ -234,6 +234,62 @@ class OnePageCheckoutFormTest extends TestCase
             'communication_channel' => 'email',
         ])));
         self::assertNull($this->context->updatedCustomer);
+        self::assertSame(['Unable to save guest customer'], $form->getField('email')->getErrors());
+    }
+
+    public function testSubmitProjectsCustomerPersisterErrorsOntoFormFields(): void
+    {
+        $form = $this->createSubmitForm();
+        $form->forceValidateResult(true);
+
+        $this->context->cart = new LightweightCart();
+        $this->context->cart->id = -1;
+
+        $this->customerPersister
+            ->expects($this->once())
+            ->method('save')
+            ->willReturn(false)
+        ;
+        $this->customerPersister
+            ->expects($this->once())
+            ->method('getErrors')
+            ->willReturn([
+                'email' => ['Unable to save customer'],
+            ])
+        ;
+        $this->addressPersister
+            ->expects($this->never())
+            ->method('save')
+        ;
+
+        $form->fillWith($this->withDefaultCountry([
+            'email' => 'guest.submit@example.com',
+            'firstname' => 'John',
+            'lastname' => 'Doe',
+            'address1' => '1 Delivery street',
+            'city' => 'Paris',
+            'postcode' => '75001',
+            'use_same_address' => '1',
+            'psgdpr_privacy' => '1',
+            'compliance_terms' => '1',
+            'communication_channel' => 'email',
+        ]));
+
+        self::assertFalse($form->submit());
+        self::assertSame(['Unable to save customer'], $form->getField('email')->getErrors());
+
+        $persistedState = $form->buildPersistedSubmissionState(
+            ['email' => 'guest.submit@example.com'],
+            ['address' => ['email' => ['Unable to save customer']]]
+        );
+
+        self::assertSame(
+            [
+                '' => [],
+                'email' => ['Unable to save customer'],
+            ],
+            $persistedState['form_errors']
+        );
     }
 
     public function testItDoesNotCreateGuestCustomerWhenRequiredRadioConsentIsMissing(): void
@@ -432,6 +488,147 @@ class OnePageCheckoutFormTest extends TestCase
         self::assertSame('firstname', $templateVariables['deliveryFields']['firstname']['name']);
         self::assertSame('invoice_address1', $templateVariables['invoiceFields']['invoice_address1']['name']);
         self::assertSame('id_address_invoice', $templateVariables['invoiceMetaFields']['id_address_invoice']['name']);
+    }
+
+    public function testRestoreSubmissionStateRestoresErrorsOnModuleCustomerFieldsByInternalKey(): void
+    {
+        $customerProbeText = (new \FormField())
+            ->setName('customer_probe_text')
+            ->setType('text');
+
+        $formatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry', 'getFieldGroup'])
+            ->getMock()
+        ;
+        $formatter
+            ->method('getFormat')
+            ->willReturn([
+                'opce2efixtures_customer_probe_text' => $customerProbeText,
+            ])
+        ;
+        $country = CheckoutTestFixtures::country();
+        $country->id = self::DEFAULT_COUNTRY_ID;
+        $formatter->method('getCountry')->willReturn($country);
+        $formatter->method('setCountry')->willReturnSelf();
+        $formatter->method('setInvoiceCountry')->willReturnSelf();
+        $formatter
+            ->method('getFieldGroup')
+            ->willReturnCallback(static function (string $key): ?string {
+                return $key === 'opce2efixtures_customer_probe_text'
+                    ? OnePageCheckoutFormatter::FIELD_GROUP_CUSTOMER
+                    : null;
+            })
+        ;
+
+        $form = new TestableOnePageCheckoutForm(
+            $this->createMock(\Smarty::class),
+            $this->context,
+            CheckoutTestFixtures::language(1),
+            $this->translator,
+            $formatter,
+            $this->customerPersister,
+            $this->addressPersister
+        );
+
+        $form->restoreSubmissionState(
+            ['customer_probe_text' => ''],
+            ['opce2efixtures_customer_probe_text' => ['Fixture customer note is required.']]
+        );
+
+        self::assertSame(
+            ['Fixture customer note is required.'],
+            $form->getField('opce2efixtures_customer_probe_text')->getErrors()
+        );
+    }
+
+    public function testRestoreSubmissionStateRestoresErrorsOnNativeFieldsByInternalKey(): void
+    {
+        $form = $this->createSubmitForm();
+
+        $form->restoreSubmissionState(
+            ['firstname' => ''],
+            ['firstname' => ['The firstname field is required.']]
+        );
+
+        self::assertSame(
+            ['The firstname field is required.'],
+            $form->getField('firstname')->getErrors()
+        );
+    }
+
+    public function testBuildPersistedSubmissionStateUsesInternalFieldKeysForCustomFields(): void
+    {
+        $customerProbeText = (new \FormField())
+            ->setName('customer_probe_text')
+            ->setType('text')
+            ->addError('Fixture customer note is required.');
+
+        $firstname = (new \FormField())
+            ->setName('firstname')
+            ->setType('text')
+            ->addError('The firstname field is required.');
+
+        $formatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry', 'getFieldGroup'])
+            ->getMock()
+        ;
+        $formatter
+            ->method('getFormat')
+            ->willReturn([
+                'firstname' => $firstname,
+                'opce2efixtures_customer_probe_text' => $customerProbeText,
+            ])
+        ;
+        $country = CheckoutTestFixtures::country();
+        $country->id = self::DEFAULT_COUNTRY_ID;
+        $formatter->method('getCountry')->willReturn($country);
+        $formatter->method('setCountry')->willReturnSelf();
+        $formatter->method('setInvoiceCountry')->willReturnSelf();
+        $formatter
+            ->method('getFieldGroup')
+            ->willReturnCallback(static function (string $key): ?string {
+                return $key === 'opce2efixtures_customer_probe_text'
+                    ? OnePageCheckoutFormatter::FIELD_GROUP_CUSTOMER
+                    : null;
+            })
+        ;
+
+        $form = new TestableOnePageCheckoutForm(
+            $this->createMock(\Smarty::class),
+            $this->context,
+            CheckoutTestFixtures::language(1),
+            $this->translator,
+            $formatter,
+            $this->customerPersister,
+            $this->addressPersister
+        );
+        $form->fillWith([
+            'firstname' => '',
+            'customer_probe_text' => '',
+        ]);
+
+        $persistedState = $form->buildPersistedSubmissionState(
+            [
+                'firstname' => '',
+                'customer_probe_text' => '',
+            ],
+            [
+                'address' => [
+                    'firstname' => ['The firstname field is required.'],
+                ],
+            ]
+        );
+
+        self::assertSame(
+            [
+                '' => [],
+                'firstname' => ['The firstname field is required.'],
+                'opce2efixtures_customer_probe_text' => ['Fixture customer note is required.'],
+            ],
+            $persistedState['form_errors']
+        );
     }
 
     public function testSubmitPersistsDeliveryAndInvoiceAddressesWhenUseSameAddressIsDisabled(): void

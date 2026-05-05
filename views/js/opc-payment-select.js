@@ -1,6 +1,11 @@
-import OPC_EVENTS from './events';
+import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {getAjaxErrorResponse, getConfiguredOpcUrl, normalizeErrorResponse} from './runtime/opc-runtime';
+import {
+  getAjaxErrorEventResponse,
+  getConfiguredOpcMessage,
+  getConfiguredOpcUrl,
+  normalizeErrorEventResponse,
+} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -20,6 +25,7 @@ const EVENT_NAME = OPC_EVENTS.opcPaymentMethodSelected;
 const CONFIRMED_OPTION_ATTRIBUTE = 'data-confirmed-payment-option-id';
 const CONFIRMED_MODULE_ATTRIBUTE = 'data-confirmed-payment-module';
 const CONFIRMED_SELECTION_KEY_ATTRIBUTE = 'data-confirmed-payment-selection-key';
+let selectPaymentGeneration = 0;
 
 function togglePaymentPanels($container, paymentOptionId) {
   $container.find('.js-additional-information, .js-payment-option-form').hide();
@@ -83,17 +89,21 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.paymentOp
   const paymentSelectionKey = String($radio.data('selectionKey') || $radio.data('selection-key') || '');
   const selectPaymentUrl = getConfiguredOpcUrl(URL_KEY);
   const $container = $(CONTAINER_SELECTOR);
+  const missingPayloadMessage = getConfiguredOpcMessage('missingPaymentSelectionPayload', 'Missing OPC payment selection payload.');
+  const selectionFailedMessage = getConfiguredOpcMessage('selectPaymentFailed', 'Unable to select the payment method.');
 
   if (!selectPaymentUrl || !paymentOptionId || !paymentModuleName || !paymentSelectionKey) {
+    const resp = normalizeErrorEventResponse(null, missingPayloadMessage);
     prestashop.emit('handleError', {
       eventType: 'opcSelectPayment',
-      resp: normalizeErrorResponse(null, 'Missing OPC payment selection payload.'),
+      resp,
     });
 
     return;
   }
 
   togglePaymentPanels($container, paymentOptionId);
+  const generation = ++selectPaymentGeneration;
 
   $.post(selectPaymentUrl, {
     payment_option: paymentOptionId,
@@ -101,11 +111,15 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.paymentOp
     payment_selection_key: paymentSelectionKey,
   })
     .done((response) => {
+      if (generation !== selectPaymentGeneration) {
+        return;
+      }
+
       if (!response || response.success === false) {
         restoreConfirmedPaymentSelection($container);
         prestashop.emit('handleError', {
           eventType: 'opcSelectPayment',
-          resp: normalizeErrorResponse(response, 'Unable to select the payment method.'),
+          resp: normalizeErrorEventResponse(response, selectionFailedMessage),
         });
 
         return;
@@ -121,10 +135,14 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.paymentOp
       });
     })
     .fail((jqXHR) => {
+      if (generation !== selectPaymentGeneration) {
+        return;
+      }
+
       restoreConfirmedPaymentSelection($container);
       prestashop.emit('handleError', {
         eventType: 'opcSelectPayment',
-        resp: getAjaxErrorResponse(jqXHR, 'Unable to select the payment method.'),
+        resp: getAjaxErrorEventResponse(jqXHR, selectionFailedMessage),
       });
     });
 });

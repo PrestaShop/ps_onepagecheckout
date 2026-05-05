@@ -16,6 +16,7 @@ use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use PrestaShop\PrestaShop\Adapter\Order\Checkout\CheckoutProcessProviderInterface;
 
 class Ps_Onepagecheckout extends Module
@@ -34,7 +35,7 @@ class Ps_Onepagecheckout extends Module
 
         $tabNames = [];
         foreach (Language::getLanguages(true) as $lang) {
-            $tabNames[$lang['locale']] = $this->trans('Checkout', [], 'Modules.Psonepagecheckout.Admin', $lang['locale']);
+            $tabNames[$lang['locale']] = $this->trans('Checkout', [], ModuleTranslation::ADMIN_DOMAIN, $lang['locale']);
         }
         $this->tabs = [
             [
@@ -43,17 +44,17 @@ class Ps_Onepagecheckout extends Module
                 'name' => $tabNames,
                 'parent_class_name' => 'AdminParentThemes',
                 'wording' => 'Checkout',
-                'wording_domain' => 'Modules.Psonepagecheckout.Admin',
+                'wording_domain' => ModuleTranslation::ADMIN_DOMAIN,
             ],
         ];
 
         parent::__construct();
 
-        $this->displayName = $this->trans('One-page checkout', [], 'Modules.Psonepagecheckout.Admin');
+        $this->displayName = $this->trans('One-page checkout', [], ModuleTranslation::ADMIN_DOMAIN);
         $this->description = $this->trans(
             'Native one-page checkout.',
             [],
-            'Modules.Psonepagecheckout.Admin'
+            ModuleTranslation::ADMIN_DOMAIN
         );
         $this->ps_versions_compliancy = ['min' => '9.0.0', 'max' => _PS_VERSION_];
         $this->controllers = [
@@ -270,6 +271,15 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+                'giftWrapping' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'giftwrapping',
+                    ['ajax' => 1, 'action' => 'opcGiftWrapping'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
                 'cartTotals' => $this->context->link->getModuleLink(
                     $this->name,
                     'carttotals',
@@ -279,6 +289,25 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+            ],
+            'messages' => [
+                'missingGuestInitUrl' => $this->trans('Unable to initialize checkout customer.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingAddressFormUrl' => $this->trans('Unable to refresh addresses.', [], ModuleTranslation::SHOP_DOMAIN),
+                'loadCarriersFailed' => $this->trans('Unable to load delivery methods.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingCarrierSelectionPayload' => $this->trans('Missing delivery option.', [], ModuleTranslation::SHOP_DOMAIN),
+                'selectCarrierFailed' => $this->trans('Unable to select the delivery method.', [], ModuleTranslation::SHOP_DOMAIN),
+                'loadPaymentMethodsFailed' => $this->trans('Unable to load payment methods.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingPaymentSelectionPayload' => $this->trans('Missing payment selection payload.', [], ModuleTranslation::SHOP_DOMAIN),
+                'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], ModuleTranslation::SHOP_DOMAIN),
+                'statesLoadFailed' => $this->trans('Unable to load states.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'saveAddressFailed' => $this->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'deleteAddressFailed' => $this->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'refreshAddressesFailed' => $this->trans('Unable to refresh addresses.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingPaymentForm' => $this->trans('Unable to initialize the selected payment method.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingSubmitUrl' => $this->trans('Unable to submit checkout.', [], ModuleTranslation::SHOP_DOMAIN),
+                'submitFailed' => $this->trans('Unable to submit checkout.', [], ModuleTranslation::SHOP_DOMAIN),
             ],
         ];
 
@@ -346,6 +375,7 @@ class Ps_Onepagecheckout extends Module
             ['module-ps-onepagecheckout-select-carrier', 'views/public/opc-carrier-select.bundle.js', 154],
             ['module-ps-onepagecheckout-payment-methods', 'views/public/opc-payment-list.bundle.js', 155],
             ['module-ps-onepagecheckout-select-payment', 'views/public/opc-payment-select.bundle.js', 156],
+            ['module-ps-onepagecheckout-gift-wrapping', 'views/public/opc-gift-wrapping.bundle.js', 157],
         ] as [$id, $path, $priority]) {
             $this->context->controller->registerJavascript(
                 $id,

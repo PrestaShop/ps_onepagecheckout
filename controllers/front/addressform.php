@@ -4,7 +4,6 @@
  * AJAX endpoint for module-owned OPC address form refresh.
  */
 
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressFormHandler;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
@@ -16,43 +15,18 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends Ps_Onepagecheck
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
+        $opcFormFactory = $this->getOpcFormFactory();
+        $handler = $this->createAddressFormHandler($opcFormFactory);
+        $templateVariables = $handler->getTemplateVariables(Tools::getAllValues());
 
-        try {
-            $opcFormFactory = $this->getOpcFormFactory();
-            $handler = $this->createAddressFormHandler($opcFormFactory);
-            $templateVariables = $handler->getTemplateVariables(Tools::getAllValues());
-
-            return [
-                'addresses_section' => $this->render(
-                    'checkout/_partials/one-page-checkout/addresses-section',
-                    $templateVariables
-                ),
-            ];
-        } catch (Throwable $exception) {
-            PrestaShopLogger::addLog(
-                sprintf('ps_onepagecheckout addressForm runtime exception: %s', $exception->getMessage()),
-                3,
-                null,
-                'Module',
-                (int) $this->module->id,
-                true
-            );
-
-            if ($this->module instanceof Ps_Onepagecheckout) {
-                Analytics::trackOpcCriticalError(
-                    'unknown',
-                    (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
-                    (string) $this->module->version
-                );
-            }
-
-            return $this->buildTechnicalErrorResponse();
-        }
+        return [
+            'addresses_section' => $this->render(
+                'checkout/_partials/one-page-checkout/addresses-section',
+                $templateVariables
+            ),
+        ];
     }
 
     protected function getOpcFormFactory(): OnePageCheckoutFormFactory

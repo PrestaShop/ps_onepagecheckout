@@ -1,6 +1,9 @@
-import OPC_EVENTS from './events';
+import {OPC_EVENTS} from './events';
+import {emitAddressUpdate} from './address-events';
 import OPC_SELECTORS from './selectors';
+import {getConfiguredOpcMessage} from './runtime/opc-runtime';
 import {getConfiguredOpcUrl} from './runtime/opc-runtime';
+import {normalizeErrorEventResponse} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -39,6 +42,7 @@ const BILLING_FIELDS_SELECTOR = OPC_SELECTORS.opc.billingFields;
 const ADDRESS_MODAL_SELECTOR = OPC_SELECTORS.modals.address;
 const SAME_ADDRESS_SELECTOR = '[name="use_same_address"]';
 const DISABLED_BY_SAME_ADDRESS_ATTRIBUTE = 'data-opc-disabled-by-same-address';
+let addressFormGeneration = 0;
 
 const SERVER_MANAGED_FIELDS = new Set([
   'id_country',
@@ -342,6 +346,14 @@ function bindBillingToggleListener(selectors) {
 
     syncBillingSectionConstraints(addressContainer, useSameAddress);
 
+    // When "use same address" is enabled again, billing must stop using its
+    // previous country (for example US) and go back to the delivery country
+    // so invoice-based payment filtering is recalculated from delivery.
+    if (useSameAddress) {
+      seedBillingFromDelivery(addressContainer);
+      return;
+    }
+
     if (!useSameAddress && !hasSeparateBillingDraft(addressContainer)) {
       seedBillingFromDelivery(addressContainer);
     }
@@ -400,21 +412,30 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
   const formFieldsSelector = `${selectors.address} input, ${selectors.address} select, ${selectors.address} textarea`;
 
   const addressFormUrl = getConfiguredOpcUrl(MODULE_ADDRESS_FORM_URL_KEY);
+  const fallbackMessage = getConfiguredOpcMessage('missingAddressFormUrl', 'Unable to refresh addresses.');
   if (addressFormUrl === '') {
     prestashop.emit('handleError', {
       eventType: 'updateOpcAddressForm',
-      resp: {errors: {'': ['Missing OPC address form URL.']}},
+      resp: normalizeErrorEventResponse(null, fallbackMessage),
     });
 
     return;
   }
+  const generation = ++addressFormGeneration;
 
   $.post(
     addressFormUrl,
     requestData,
   ).then((resp) => {
+    if (generation !== addressFormGeneration) {
+      return;
+    }
+
     if (!resp || typeof resp.addresses_section !== 'string') {
-      prestashop.emit('handleError', {eventType: 'updateOpcAddressForm', resp});
+      prestashop.emit('handleError', {
+        eventType: 'updateOpcAddressForm',
+        resp: normalizeErrorEventResponse(resp, fallbackMessage),
+      });
 
       return;
     }
@@ -431,10 +452,25 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
     syncBillingSectionConstraints(addressContainer, useSameAddress);
 
     prestashop.emit(OPC_EVENTS.updatedOpcAddressForm, {target: addressContainer, resp});
-    prestashop.emit(OPC_EVENTS.opcDeliveryAddressUpdated, {target: addressContainer, resp});
-    prestashop.emit(OPC_EVENTS.opcBillingAddressUpdated, {target: addressContainer, resp});
+    const changedFieldName = String(target.attr('name') || '');
+
+    if (changedFieldName === 'id_country') {
+      emitAddressUpdate('delivery', {target: addressContainer, resp});
+      return;
+    }
+
+    if (changedFieldName === 'invoice_id_country') {
+      emitAddressUpdate('billing', {target: addressContainer, resp});
+    }
   }).fail((resp) => {
-    prestashop.emit('handleError', {eventType: 'updateOpcAddressForm', resp});
+    if (generation !== addressFormGeneration) {
+      return;
+    }
+
+    prestashop.emit('handleError', {
+      eventType: 'updateOpcAddressForm',
+      resp: normalizeErrorEventResponse(resp && resp.responseJSON, fallbackMessage),
+    });
   });
 }
 

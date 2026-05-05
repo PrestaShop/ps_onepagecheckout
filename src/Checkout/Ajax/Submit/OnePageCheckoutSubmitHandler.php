@@ -25,10 +25,27 @@ class OnePageCheckoutSubmitHandler
 
     /**
      * @param array<string, mixed> $requestParameters
+     * @param array<string, mixed> $reloadErrorResponse
      *
      * @return array<string, mixed>
      */
-    public function handle(array $requestParameters): array
+    public function handle(array $requestParameters, array $reloadErrorResponse = []): array
+    {
+        try {
+            return $this->processSubmit($requestParameters);
+        } catch (\Throwable $exception) {
+            $this->persistErrorsForNextReload($requestParameters, $reloadErrorResponse);
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $requestParameters
+     *
+     * @return array<string, mixed>
+     */
+    private function processSubmit(array $requestParameters): array
     {
         $checkoutSession = $this->checkoutSessionFactory->create();
         $this->persistSelectedPaymentModule($requestParameters);
@@ -43,23 +60,51 @@ class OnePageCheckoutSubmitHandler
             ];
         }
 
-        $this->submitValidationStateStorage->save([
-            'validation_errors' => isset($processingResult['validation_errors']) && is_array($processingResult['validation_errors'])
-                ? $processingResult['validation_errors']
-                : [],
-            'form_errors' => isset($processingResult['form_errors']) && is_array($processingResult['form_errors'])
-                ? $processingResult['form_errors']
-                : [],
-            'submitted_values' => isset($processingResult['submitted_values']) && is_array($processingResult['submitted_values'])
-                ? $processingResult['submitted_values']
-                : [],
-        ]);
+        $persistedState = isset($processingResult['persisted_state']) && is_array($processingResult['persisted_state'])
+            ? $processingResult['persisted_state']
+            : [
+                'validation_errors' => isset($processingResult['validation_errors']) && is_array($processingResult['validation_errors'])
+                    ? $processingResult['validation_errors']
+                    : [],
+                'form_errors' => isset($processingResult['form_errors']) && is_array($processingResult['form_errors'])
+                    ? $processingResult['form_errors']
+                    : [],
+                'submitted_values' => isset($processingResult['submitted_values']) && is_array($processingResult['submitted_values'])
+                    ? $processingResult['submitted_values']
+                    : [],
+            ];
+
+        $this->persistFailedSubmitState($persistedState);
 
         return [
             'success' => false,
             'reload' => true,
             'checkout_url' => $checkoutSession->getCheckoutURL(),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $requestParameters
+     * @param array<string, mixed> $response
+     */
+    private function persistErrorsForNextReload(array $requestParameters, array $response): void
+    {
+        if (empty($response['reload']) || empty($response['errors'])) {
+            return;
+        }
+
+        try {
+            $this->persistFailedSubmitState([
+                'validation_errors' => [],
+                'form_errors' => $response['errors'],
+                'submitted_values' => $requestParameters,
+            ]);
+        } catch (\Throwable $exception) {
+            \PrestaShopLogger::addLog(
+                sprintf('ps_onepagecheckout opcSubmit technical error state could not be persisted: %s', $exception->getMessage()),
+                3
+            );
+        }
     }
 
     /**
@@ -75,5 +120,27 @@ class OnePageCheckoutSubmitHandler
 
         $this->context->cookie->__set('opc_selected_payment_module', $paymentMethod);
         $this->context->cookie->write();
+    }
+
+    /**
+     * @param array<string, mixed> $state
+     */
+    private function persistFailedSubmitState(array $state): void
+    {
+        $this->submitValidationStateStorage->save([
+            'cart_id' => $this->getRequiredCurrentCartId(),
+        ] + $state);
+    }
+
+    private function getRequiredCurrentCartId(): int
+    {
+        $cart = $this->context->cart ?? null;
+        $cartId = (int) ($cart->id ?? 0);
+
+        if ($cartId <= 0) {
+            throw new \RuntimeException('Cannot persist one-page checkout submit state without an active cart.');
+        }
+
+        return $cartId;
     }
 }

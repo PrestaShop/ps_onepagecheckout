@@ -2,6 +2,7 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutCarriersHandler
@@ -12,6 +13,7 @@ class OnePageCheckoutCarriersHandler
     private CheckoutSessionFactory $checkoutSessionFactory;
     private CartPresenterHelper $cartPresenterHelper;
     private TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage;
+    private TempAddressStorage $tempAddressStorage;
 
     public function __construct(
         \Context $context,
@@ -21,6 +23,7 @@ class OnePageCheckoutCarriersHandler
         ?CheckoutSessionFactory $checkoutSessionFactory = null,
         ?CartPresenterHelper $cartPresenterHelper = null,
         ?TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage = null,
+        ?TempAddressStorage $tempAddressStorage = null,
     ) {
         $this->context = $context;
         $this->translator = $translator;
@@ -28,6 +31,7 @@ class OnePageCheckoutCarriersHandler
         $this->checkoutSessionFactory = $checkoutSessionFactory ?? new CheckoutSessionFactory($context, $translator, $deliveryOptionsFinder);
         $this->cartPresenterHelper = $cartPresenterHelper ?? new CartPresenterHelper($context);
         $this->tempCarrierSelectionStorage = $tempCarrierSelectionStorage ?? new TempAddressCarrierSelectionStorage($context);
+        $this->tempAddressStorage = $tempAddressStorage ?? new TempAddressStorage($context);
     }
 
     /**
@@ -50,7 +54,7 @@ class OnePageCheckoutCarriersHandler
                 $requestedAddressId = (int) $requestParameters['id_address_delivery'];
                 if (!$this->isOwnedCheckoutAddress($requestedAddressId)) {
                     return CheckoutAjaxResponse::error(
-                        $this->translator->trans('Invalid delivery address.', [], 'Shop.Notifications.Error'),
+                        $this->translator->trans('Invalid delivery address.', [], ModuleTranslation::SHOP_DOMAIN),
                         'id_address_delivery'
                     );
                 }
@@ -58,8 +62,12 @@ class OnePageCheckoutCarriersHandler
                 $this->context->cart->id_address_delivery = $requestedAddressId;
                 $this->context->cart->save();
                 $this->tempCarrierSelectionStorage->clear();
+                $this->tempAddressStorage->clear();
             } else {
                 $tempAddressId = $tempAddress->createFromRequest($requestParameters);
+                if ($tempAddressId > 0 && $originalAddressId <= 0) {
+                    $this->tempAddressStorage->saveFromRequest($requestParameters);
+                }
             }
 
             if ((int) $this->context->cart->id_address_delivery <= 0) {
@@ -96,6 +104,7 @@ class OnePageCheckoutCarriersHandler
                     $selectedDeliveryOption = $persistedTempOption;
                 } else {
                     $this->tempCarrierSelectionStorage->clear();
+                    $this->tempAddressStorage->clear();
                 }
             }
 
