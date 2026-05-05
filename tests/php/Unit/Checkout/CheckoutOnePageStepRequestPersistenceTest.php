@@ -6,6 +6,7 @@ namespace Tests\Unit\Checkout;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitValidationStateStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\CheckoutOnePageStep;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -34,11 +35,13 @@ class CheckoutOnePageStepRequestPersistenceTest extends TestCase
     private OnePageCheckoutForm|MockObject $opcForm;
     private \PaymentOptionsFinder|MockObject $paymentOptionsFinder;
     private \ConditionsToApproveFinder|MockObject $conditionsToApproveFinder;
+    private InMemoryCheckoutSessionDataDb $storageDb;
     private TestableCheckoutOnePageStep $step;
 
     protected function setUp(): void
     {
         $this->cart = $this->createMock(\Cart::class);
+        $this->cart->id = 42;
         $this->cart->method('isVirtualCart')->willReturn(false);
         $this->cart->method('getOrderTotal')->willReturn(10.0);
 
@@ -94,13 +97,16 @@ class CheckoutOnePageStepRequestPersistenceTest extends TestCase
         $this->opcForm = $this->createMock(OnePageCheckoutForm::class);
         $this->paymentOptionsFinder = $this->createMock(\PaymentOptionsFinder::class);
         $this->conditionsToApproveFinder = $this->createMock(\ConditionsToApproveFinder::class);
+        $this->storageDb = new InMemoryCheckoutSessionDataDb();
 
         $this->step = new TestableCheckoutOnePageStep(
             $this->context,
             $translator,
             $this->opcForm,
             $this->paymentOptionsFinder,
-            $this->conditionsToApproveFinder
+            $this->conditionsToApproveFinder,
+            null,
+            new TestableSubmitValidationStateStorage($this->context, $this->storageDb)
         );
         $this->step->setMockProcess($this->checkoutProcess);
     }
@@ -155,20 +161,22 @@ class CheckoutOnePageStepRequestPersistenceTest extends TestCase
 
     public function testStepRestoresLastFailedSubmitStateFromModuleStorage(): void
     {
-        $this->context->cookie->__set('opc_submit_validation_state', json_encode([
-            'validation_errors' => [
-                'payment' => [
-                    'paymentMethod' => 'Please select a payment method.',
+        $this->context->cart->checkout_session_data = json_encode([
+            '_opc_submit_validation_state' => [
+                'validation_errors' => [
+                    'payment' => [
+                        'paymentMethod' => 'Please select a payment method.',
+                    ],
+                ],
+                'form_errors' => [
+                    'firstname' => ['The firstname field is required.'],
+                ],
+                'submitted_values' => [
+                    'firstname' => 'Ada',
+                    'use_same_address' => '0',
                 ],
             ],
-            'form_errors' => [
-                'firstname' => ['The firstname field is required.'],
-            ],
-            'submitted_values' => [
-                'firstname' => 'Ada',
-                'use_same_address' => '0',
-            ],
-        ]));
+        ]);
 
         $this->opcForm->expects($this->once())
             ->method('restoreSubmissionState')
@@ -193,7 +201,69 @@ class CheckoutOnePageStepRequestPersistenceTest extends TestCase
         self::assertSame([
             'validation_errors' => [],
         ], $this->step->getDataToPersist());
-        self::assertSame('', $this->context->cookie->__get('opc_submit_validation_state'));
+        self::assertSame('', $this->context->cart->checkout_session_data);
+    }
+
+    public function testStepConsumesTopLevelSubmitErrorOnlyOnceAcrossReloads(): void
+    {
+        $this->context->cart->checkout_session_data = json_encode([
+            '_opc_submit_validation_state' => [
+                'cart_id' => 42,
+                'validation_errors' => [],
+                'form_errors' => [
+                    '' => ['One-page checkout is currently unavailable.'],
+                ],
+                'submitted_values' => [],
+            ],
+        ]);
+
+        $this->opcForm->expects($this->once())
+            ->method('restoreSubmissionState')
+            ->with([], ['' => ['One-page checkout is currently unavailable.']])
+            ->willReturnSelf();
+
+        $this->step->handleRequest([]);
+
+        self::assertSame('', $this->context->cart->checkout_session_data);
+
+        $freshOpcForm = $this->createMock(OnePageCheckoutForm::class);
+        $freshOpcForm->expects($this->never())->method('restoreSubmissionState');
+
+        $freshStep = new TestableCheckoutOnePageStep(
+            $this->context,
+            $this->createConfiguredMock(TranslatorInterface::class, ['trans' => '']),
+            $freshOpcForm,
+            $this->paymentOptionsFinder,
+            $this->conditionsToApproveFinder,
+            null,
+            new TestableSubmitValidationStateStorage($this->context, $this->storageDb)
+        );
+        $freshStep->setMockProcess($this->checkoutProcess);
+
+        $freshStep->handleRequest([]);
+
+        self::assertSame([], $freshStep->getValidationErrors());
+    }
+
+    public function testStepIgnoresSubmitStateFromAnotherCart(): void
+    {
+        $this->context->cart->checkout_session_data = json_encode([
+            '_opc_submit_validation_state' => [
+                'cart_id' => 999,
+                'validation_errors' => [],
+                'form_errors' => [
+                    '' => ['One-page checkout is currently unavailable.'],
+                ],
+                'submitted_values' => [],
+            ],
+        ]);
+
+        $this->opcForm->expects($this->never())->method('restoreSubmissionState');
+
+        $this->step->handleRequest([]);
+
+        self::assertSame([], $this->step->getValidationErrors());
+        self::assertSame('', $this->context->cart->checkout_session_data);
     }
 
     public function testDeliveryOptionNotPersistedOnVirtualCart(): void
@@ -225,5 +295,57 @@ class CheckoutOnePageStepRequestPersistenceTest extends TestCase
         $step->handleRequest(['delivery_option' => [5 => '1,']]);
 
         self::assertTrue(true);
+    }
+}
+
+class InMemoryCheckoutSessionDataDb
+{
+    /**
+     * @var array<int, string>
+     */
+    public array $rows = [];
+
+    public function getValue(string $sql): string
+    {
+        preg_match('/id_cart = (\d+)/', $sql, $matches);
+        $cartId = isset($matches[1]) ? (int) $matches[1] : 0;
+
+        return $this->rows[$cartId] ?? '';
+    }
+
+    public function escape(string $value): string
+    {
+        return addslashes($value);
+    }
+
+    public function execute(string $sql): bool
+    {
+        preg_match('/id_cart = (\d+)/', $sql, $matches);
+        $cartId = isset($matches[1]) ? (int) $matches[1] : 0;
+
+        if (str_contains($sql, 'checkout_session_data = NULL')) {
+            unset($this->rows[$cartId]);
+            $this->rows[$cartId] = '';
+
+            return true;
+        }
+
+        preg_match('/checkout_session_data = "(.*)" WHERE id_cart/s', $sql, $valueMatches);
+        $this->rows[$cartId] = isset($valueMatches[1]) ? stripslashes($valueMatches[1]) : '';
+
+        return true;
+    }
+}
+
+class TestableSubmitValidationStateStorage extends OnePageCheckoutSubmitValidationStateStorage
+{
+    public function __construct(\Context $context, private InMemoryCheckoutSessionDataDb $db)
+    {
+        parent::__construct($context);
+    }
+
+    protected function getDb(): InMemoryCheckoutSessionDataDb
+    {
+        return $this->db;
     }
 }

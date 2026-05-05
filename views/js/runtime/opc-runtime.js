@@ -1,4 +1,4 @@
-import OPC_EVENTS from '../events';
+import {OPC_EVENTS} from '../events';
 import OPC_SELECTORS from '../selectors';
 
 export function isPlainObject(value) {
@@ -6,19 +6,77 @@ export function isPlainObject(value) {
 }
 
 export function normalizeErrorResponse(response, fallbackMessage) {
-  if (isPlainObject(response)) {
-    return response;
-  }
-
-  return {
-    errors: {
-      '': [fallbackMessage],
-    },
-  };
+  return normalizeErrorEventResponse(response, fallbackMessage);
 }
 
 export function getAjaxErrorResponse(jqXHR, fallbackMessage) {
   return normalizeErrorResponse(jqXHR && jqXHR.responseJSON, fallbackMessage);
+}
+
+function normalizeErrorMessage(message) {
+  if (typeof message !== 'string') {
+    return '';
+  }
+
+  return message.trim();
+}
+
+function extractMessages(source) {
+  if (Array.isArray(source)) {
+    return source;
+  }
+
+  if (isPlainObject(source)) {
+    return Object.values(source).flatMap((value) => (Array.isArray(value) ? value : [value]));
+  }
+
+  return [source];
+}
+
+export function getErrorMessages(response, fallbackMessage = '') {
+  const fallback = normalizeErrorMessage(fallbackMessage);
+
+  const messages = isPlainObject(response)
+    ? [...extractMessages(response.errors), response.message]
+    : [response];
+
+  const normalizedMessages = messages
+    .map(normalizeErrorMessage)
+    .filter(Boolean);
+
+  if (normalizedMessages.length > 0) {
+    return [...new Set(normalizedMessages)];
+  }
+
+  return fallback ? [fallback] : [];
+}
+
+export function normalizeErrorEventResponse(response, fallbackMessage = '') {
+  const normalizedResponse = isPlainObject(response)
+    ? {...response}
+    : {};
+
+  normalizedResponse.errors = getErrorMessages(response, fallbackMessage);
+
+  return normalizedResponse;
+}
+
+export function getAjaxErrorEventResponse(jqXHR, fallbackMessage = '') {
+  return normalizeErrorEventResponse(jqXHR && jqXHR.responseJSON, fallbackMessage);
+}
+
+export function getConfiguredOpcMessage(messageKey, fallbackMessage = '') {
+  const runtimeConfiguration = getOpcRuntimeConfiguration();
+
+  if (
+    runtimeConfiguration
+    && runtimeConfiguration.messages
+    && typeof runtimeConfiguration.messages[messageKey] === 'string'
+  ) {
+    return String(runtimeConfiguration.messages[messageKey]);
+  }
+
+  return fallbackMessage;
 }
 
 export function getOpcRuntimeConfiguration() {

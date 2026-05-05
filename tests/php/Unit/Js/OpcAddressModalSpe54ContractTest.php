@@ -17,15 +17,25 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         self::assertStringContainsString('saveAddress', $script);
         self::assertStringContainsString('deleteAddress', $script);
         self::assertStringContainsString('updatedOpcAddressForm', $script);
+        self::assertStringContainsString('normalizeErrorEventResponse', $script);
+        self::assertStringContainsString('retry-addresses', $script);
+        self::assertStringContainsString('opc-delivery-address-loader', $script);
+        self::assertStringContainsString('opc-billing-address-loader', $script);
+        self::assertStringContainsString('refreshAddressLists', $script);
         self::assertStringContainsString("$(document).on('input change', MODAL_FIELD_SELECTOR", $script);
         self::assertStringContainsString('const $trigger = $(event.relatedTarget);', $script);
         self::assertStringContainsString("$(document).on('shown.bs.modal', MODAL_SELECTOR", $script);
         self::assertStringContainsString('setModalFieldsDisabled($modal, false);', $script);
         self::assertStringContainsString('const $modal = $(`#${DELETE_CONFIRM_MODAL_ID}`);', $script);
+        self::assertStringNotContainsString('ADDRESSES_FEEDBACK_SELECTOR', $script);
+        self::assertStringNotContainsString('captureAddressListMarkup', $script);
+        self::assertStringNotContainsString('restoreAddressListMarkup', $script);
         self::assertStringNotContainsString('ensureDeleteConfirmModal', $script);
         self::assertStringNotContainsString('syncDeliveryMethodsContainerAddressId', $script);
         self::assertStringNotContainsString('syncHiddenAddressIdsFromSavedSelections', $script);
         self::assertStringNotContainsString('recoverStaleSavedAddressSelections', $script);
+        self::assertStringNotContainsString('buildAddressesRefreshState', $script);
+        self::assertStringNotContainsString('opc-template-addresses-loader', $script);
         self::assertStringNotContainsString('`${MODAL_SELECTOR} input, ${MODAL_SELECTOR} select, ${MODAL_SELECTOR} textarea`', $script);
         self::assertStringNotContainsString('window.confirm', $script);
     }

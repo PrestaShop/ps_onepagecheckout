@@ -14,12 +14,8 @@ class Ps_OnepagecheckoutSaveAddressModuleFrontController extends Ps_Onepagecheck
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
-
         $handler = new OnePageCheckoutSaveAddressHandler(
             $this->context,
             $this->module->getTranslator(),

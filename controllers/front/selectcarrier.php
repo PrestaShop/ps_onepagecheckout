@@ -13,12 +13,8 @@ class Ps_OnepagecheckoutSelectCarrierModuleFrontController extends Ps_Onepageche
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
-
         $handler = new OnePageCheckoutSelectCarrierHandler($this->context, $this->module->getTranslator());
         $response = $handler->handle(Tools::getAllValues());
 

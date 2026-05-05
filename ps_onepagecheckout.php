@@ -12,15 +12,16 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
-use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
-use Symfony\Contracts\Translation\TranslatorInterface;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
+use PrestaShop\PrestaShop\Adapter\Order\Checkout\CheckoutProcessProviderInterface;
 
 class Ps_Onepagecheckout extends Module
 {
     public const CONFIG_ONE_PAGE_CHECKOUT_ENABLED = 'PS_ONE_PAGE_CHECKOUT_ENABLED';
-    public const CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE = 'PS_CHECKOUT_PROCESS_PROVIDER_MODULE';
     private ?BackOfficeConfigurationForm $backOfficeConfigurationForm = null;
 
     public function __construct()
@@ -34,7 +35,7 @@ class Ps_Onepagecheckout extends Module
 
         $tabNames = [];
         foreach (Language::getLanguages(true) as $lang) {
-            $tabNames[$lang['locale']] = $this->trans('Checkout', [], 'Modules.Psonepagecheckout.Admin', $lang['locale']);
+            $tabNames[$lang['locale']] = $this->trans('Checkout', [], ModuleTranslation::ADMIN_DOMAIN, $lang['locale']);
         }
         $this->tabs = [
             [
@@ -43,17 +44,17 @@ class Ps_Onepagecheckout extends Module
                 'name' => $tabNames,
                 'parent_class_name' => 'AdminParentThemes',
                 'wording' => 'Checkout',
-                'wording_domain' => 'Modules.Psonepagecheckout.Admin',
+                'wording_domain' => ModuleTranslation::ADMIN_DOMAIN,
             ],
         ];
 
         parent::__construct();
 
-        $this->displayName = $this->trans('One-page checkout', [], 'Modules.Psonepagecheckout.Admin');
+        $this->displayName = $this->trans('One-page checkout', [], ModuleTranslation::ADMIN_DOMAIN);
         $this->description = $this->trans(
             'Native one-page checkout.',
             [],
-            'Modules.Psonepagecheckout.Admin'
+            ModuleTranslation::ADMIN_DOMAIN
         );
         $this->ps_versions_compliancy = ['min' => '9.0.0', 'max' => _PS_VERSION_];
         $this->controllers = [
@@ -75,16 +76,20 @@ class Ps_Onepagecheckout extends Module
     {
         return $this->installInParent()
             && $this->installOnePageCheckoutConfiguration()
-            && $this->initializeCheckoutProcessProviderConfiguration()
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
-            && $this->registerHook('actionFrontControllerSetVariables');
+            && $this->registerHook('actionFrontControllerSetVariables')
+            && $this->registerHook('actionModuleUpgradeAfter');
     }
 
     public function enable($force_all = false)
     {
-        return $this->enableInParent((bool) $force_all)
-            && $this->initializeCheckoutProcessProviderConfiguration();
+        $result = $this->enableInParent((bool) $force_all);
+        if ($result) {
+            Analytics::trackEvent(Analytics::EVENT_MODULE_ENABLED, [], (string) $this->version);
+        }
+
+        return $result;
     }
 
     /**
@@ -96,16 +101,39 @@ class Ps_Onepagecheckout extends Module
      */
     public function disable($force_all = false)
     {
-        return $this->disableOnePageCheckoutConfigurationForCurrentContext()
-            && $this->clearCheckoutProcessProviderConfigurationForCurrentContext()
+        $result = $this->disableOnePageCheckoutConfigurationForCurrentContext()
             && $this->disableInParent((bool) $force_all);
+
+        if ($result) {
+            Analytics::trackEvent(Analytics::EVENT_MODULE_DISABLED, [], (string) $this->version);
+        }
+
+        return $result;
     }
 
     public function uninstall()
     {
-        return $this->uninstallOnePageCheckoutConfiguration()
-            && $this->clearCheckoutProcessProviderConfigurationForCurrentModule()
+        $result = $this->uninstallOnePageCheckoutConfiguration()
             && $this->uninstallInParent();
+
+        if ($result) {
+            Analytics::trackEvent(Analytics::EVENT_MODULE_UNINSTALLED, [], (string) $this->version);
+        }
+
+        return $result;
+    }
+
+    public function hookActionModuleUpgradeAfter(array $params): void
+    {
+        if (!isset($params['object']) || !($params['object'] instanceof Module)) {
+            return;
+        }
+
+        if ($params['object']->name !== $this->name) {
+            return;
+        }
+
+        Analytics::trackEvent(Analytics::EVENT_MODULE_UPDATED, [], (string) $this->version);
     }
 
     public function getContent()
@@ -118,9 +146,9 @@ class Ps_Onepagecheckout extends Module
         return $this->getBackOfficeConfigurationForm()->renderBackOfficeConfiguration();
     }
 
-    public function hookActionCheckoutBuildProcess(array $params): ?CheckoutProcess
+    public function hookActionCheckoutBuildProcess(array $params = []): CheckoutProcessProviderInterface
     {
-        return $this->buildCheckoutProcessFromHookParams($params);
+        return new OnePageCheckoutProcessProvider($this->context, $this);
     }
 
     public function hookActionFrontControllerSetMedia(): void
@@ -135,6 +163,11 @@ class Ps_Onepagecheckout extends Module
         if (!$isOnePageCheckoutEnabled) {
             return;
         }
+
+        Analytics::trackCheckoutStarted(
+            (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+            (string) $this->version
+        );
 
         $opcRuntimeConfiguration = [
             'enabled' => true,
@@ -238,6 +271,15 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+                'giftWrapping' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'giftwrapping',
+                    ['ajax' => 1, 'action' => 'opcGiftWrapping'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
                 'cartTotals' => $this->context->link->getModuleLink(
                     $this->name,
                     'carttotals',
@@ -247,6 +289,25 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+            ],
+            'messages' => [
+                'missingGuestInitUrl' => $this->trans('Unable to initialize checkout customer.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingAddressFormUrl' => $this->trans('Unable to refresh addresses.', [], ModuleTranslation::SHOP_DOMAIN),
+                'loadCarriersFailed' => $this->trans('Unable to load delivery methods.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingCarrierSelectionPayload' => $this->trans('Missing delivery option.', [], ModuleTranslation::SHOP_DOMAIN),
+                'selectCarrierFailed' => $this->trans('Unable to select the delivery method.', [], ModuleTranslation::SHOP_DOMAIN),
+                'loadPaymentMethodsFailed' => $this->trans('Unable to load payment methods.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingPaymentSelectionPayload' => $this->trans('Missing payment selection payload.', [], ModuleTranslation::SHOP_DOMAIN),
+                'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], ModuleTranslation::SHOP_DOMAIN),
+                'statesLoadFailed' => $this->trans('Unable to load states.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'saveAddressFailed' => $this->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'deleteAddressFailed' => $this->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN),
+                'refreshAddressesFailed' => $this->trans('Unable to refresh addresses.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingPaymentForm' => $this->trans('Unable to initialize the selected payment method.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingSubmitUrl' => $this->trans('Unable to submit checkout.', [], ModuleTranslation::SHOP_DOMAIN),
+                'submitFailed' => $this->trans('Unable to submit checkout.', [], ModuleTranslation::SHOP_DOMAIN),
             ],
         ];
 
@@ -272,13 +333,7 @@ class Ps_Onepagecheckout extends Module
 
     public function isOnePageCheckoutEnabled(): bool
     {
-        if (!$this->isCurrentShopCheckoutProvider()) {
-            return false;
-        }
-
-        $availability = new OnePageCheckoutAvailability(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
-
-        return $availability->isEnabled();
+        return (new OnePageCheckoutAvailability(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED))->isEnabled();
     }
 
     protected function registerOpcJavascriptAssets(): void
@@ -320,6 +375,7 @@ class Ps_Onepagecheckout extends Module
             ['module-ps-onepagecheckout-select-carrier', 'views/public/opc-carrier-select.bundle.js', 154],
             ['module-ps-onepagecheckout-payment-methods', 'views/public/opc-payment-list.bundle.js', 155],
             ['module-ps-onepagecheckout-select-payment', 'views/public/opc-payment-select.bundle.js', 156],
+            ['module-ps-onepagecheckout-gift-wrapping', 'views/public/opc-gift-wrapping.bundle.js', 157],
         ] as [$id, $path, $priority]) {
             $this->context->controller->registerJavascript(
                 $id,
@@ -335,46 +391,6 @@ class Ps_Onepagecheckout extends Module
     protected function addOpcJavascriptDefinition(array $javascriptDefinition): void
     {
         Media::addJsDef($javascriptDefinition);
-    }
-
-    protected function createCheckoutProcessBuilder(): OnePageCheckoutProcessBuilder
-    {
-        return new OnePageCheckoutProcessBuilder($this->context, $this);
-    }
-
-    protected function buildCheckoutProcessFromHookParams(array $params): ?CheckoutProcess
-    {
-        if (!$this->isOnePageCheckoutEnabled()) {
-            return null;
-        }
-
-        if (!isset($params['checkoutSession']) || !$params['checkoutSession'] instanceof CheckoutSession) {
-            return null;
-        }
-
-        if (!isset($params['translator']) || !$params['translator'] instanceof TranslatorInterface) {
-            return null;
-        }
-
-        try {
-            $checkoutProcessBuilder = $this->createCheckoutProcessBuilder();
-            $moduleCheckoutProcess = $checkoutProcessBuilder->build($params['checkoutSession'], $params['translator']);
-
-            return $moduleCheckoutProcess instanceof CheckoutProcess
-                ? $moduleCheckoutProcess
-                : null;
-        } catch (Throwable $exception) {
-            PrestaShopLogger::addLog(
-                sprintf('ps_onepagecheckout: unable to build module checkout process (%s)', $exception->getMessage()),
-                3,
-                null,
-                'Module',
-                (int) $this->id,
-                true
-            );
-        }
-
-        return null;
     }
 
     protected function installInParent(): bool
@@ -419,45 +435,8 @@ class Ps_Onepagecheckout extends Module
         return Configuration::updateValue(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED, 0, false);
     }
 
-    protected function initializeCheckoutProcessProviderConfiguration(): bool
-    {
-        return Configuration::updateValue(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE, $this->name, false);
-    }
-
-    protected function isCurrentShopCheckoutProvider(): bool
-    {
-        return trim((string) Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE)) === $this->name;
-    }
-
-    protected function clearCheckoutProcessProviderConfigurationForCurrentContext(): bool
-    {
-        $configuredProvider = trim((string) Configuration::get(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE));
-        if ($configuredProvider !== $this->name) {
-            return true;
-        }
-
-        return Configuration::updateValue(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE, '', false);
-    }
-
-    protected function clearCheckoutProcessProviderConfigurationForCurrentModule(): bool
-    {
-        return Db::getInstance()->update(
-            'configuration',
-            [
-                'value' => '',
-                'date_upd' => date('Y-m-d H:i:s'),
-            ],
-            sprintf(
-                '`name` = "%s" AND `value` = "%s"',
-                pSQL(self::CONFIG_CHECKOUT_PROCESS_PROVIDER_MODULE),
-                pSQL($this->name)
-            )
-        );
-    }
-
     protected function uninstallOnePageCheckoutConfiguration(): bool
     {
         return Configuration::deleteByName(self::CONFIG_ONE_PAGE_CHECKOUT_ENABLED);
     }
-    // Segment PHP client is initialized lazily on the first tracked event (see Analytics::trackEvent()).
 }

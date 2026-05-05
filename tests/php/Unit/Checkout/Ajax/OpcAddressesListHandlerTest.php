@@ -7,6 +7,7 @@ namespace Tests\Unit\Checkout\Ajax;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressesListHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Tests\Fixtures\CheckoutTestFixtures;
 
 class OpcAddressesListHandlerTest extends TestCase
@@ -28,8 +29,9 @@ class OpcAddressesListHandlerTest extends TestCase
 
         $resolver = $this->createMock(CheckoutCustomerContextResolver::class);
         $resolver->method('resolve')->willReturn($customer);
+        $translator = $this->createConfiguredMock(TranslatorInterface::class, ['trans' => 'translated']);
 
-        $handler = new OnePageCheckoutAddressesListHandler($context, $resolver);
+        $handler = new OnePageCheckoutAddressesListHandler($context, $translator, $resolver);
         $response = $handler->handle();
 
         self::assertTrue($response['success']);

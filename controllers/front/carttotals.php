@@ -13,12 +13,8 @@ class Ps_OnepagecheckoutCartTotalsModuleFrontController extends Ps_Onepagechecko
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
-
         $cartPresenterHelper = new CartPresenterHelper($this->context);
         $cartPreview = $cartPresenterHelper->presentCart();
 

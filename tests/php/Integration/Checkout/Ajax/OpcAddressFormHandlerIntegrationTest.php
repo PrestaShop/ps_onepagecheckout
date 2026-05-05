@@ -51,6 +51,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
             ['customer_id' => (int) $customer->id],
             [
                 'id_country' => '8',
+                'invoice_id_country' => '8',
                 'use_same_address' => '1',
                 'id_address_delivery' => (string) $address->id,
             ],
@@ -169,7 +170,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
         self::assertSame('<form>default-country</form>', $response['address_form']);
     }
 
-    public function testItIgnoresInvoiceCountryWhenUseSameAddressIsEnabled(): void
+    public function testItPreservesInvoiceCountryWhenUseSameAddressIsEnabled(): void
     {
         $customer = $this->createCustomer($this->uniqueEmail('opc-same-address-country'));
         self::getContext()->customer = $customer;
@@ -188,6 +189,7 @@ class OpcAddressFormHandlerIntegrationTest extends TestCase
             ['customer_id' => (int) $customer->id],
             [
                 'id_country' => '21',
+                'invoice_id_country' => '8',
                 'use_same_address' => '1',
             ],
         ], $formSpy->fillWithPayloads);

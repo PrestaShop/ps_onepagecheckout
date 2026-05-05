@@ -29,10 +29,15 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
+use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Twig\Environment;
 
 class BackOfficeConfigurationForm
 {
+    public const CHECKOUT_TYPE_ONE_PAGE = 'one_page';
+    public const CHECKOUT_TYPE_FOUR_STEPS = 'four_steps';
+
     private const FORM_SUBMIT_ACTION = 'submitPsOnePageCheckoutConfiguration';
     private const SUCCESS_FLASH_COOKIE_KEY = 'psopc_bo_configuration_saved';
     private const MAINTENANCE_FLASH_COOKIE_KEY = 'psopc_bo_maintenance_enabled';
@@ -63,6 +68,8 @@ class BackOfficeConfigurationForm
             $isEnabled = (int) \Tools::getValue($this->configurationKey, 0) === 1;
             $isMaintenanceEnabled = (int) \Tools::getValue(self::MAINTENANCE_INPUT_NAME, 0) === 1;
 
+            Analytics::trackEvent(Analytics::EVENT_CHECKOUT_LAYOUT_SELECTED, ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)], (string) $this->module->version);
+
             if ($isMaintenanceEnabled && !$this->enableMaintenanceMode()) {
                 return $this->module->displayError(
                     $this->trans('Unable to enable maintenance mode. Checkout layout was not changed.', 'Modules.PsOnePageCheckout.Admin')
@@ -70,6 +77,7 @@ class BackOfficeConfigurationForm
             }
 
             $this->persistConfigurationValue((int) $isEnabled);
+            Analytics::trackEvent(Analytics::EVENT_CHECKOUT_LAYOUT_PUBLISHED, ['checkout_type' => $this->resolveCheckoutTypeLabel((int) $isEnabled)], (string) $this->module->version);
 
             if ($isMaintenanceEnabled) {
                 $this->storeMaintenanceFlash();
@@ -97,6 +105,8 @@ class BackOfficeConfigurationForm
 
     private function renderConfigurationForm(): string
     {
+        Analytics::trackEvent(Analytics::EVENT_MODULE_CONFIGURED, ['checkout_type' => $this->resolveCheckoutTypeLabel($this->getCurrentConfigurationValue())], (string) $this->module->version);
+
         $this->registerBackOfficeAssets();
         $templateVariables = $this->buildTemplateVariables();
         $twig = $this->resolveTwigEnvironment();
@@ -232,7 +242,7 @@ class BackOfficeConfigurationForm
         );
     }
 
-    private function trans(string $message, string $domain = 'Modules.PsOnePageCheckout.Admin'): string
+    private function trans(string $message, string $domain = ModuleTranslation::ADMIN_DOMAIN): string
     {
         $translator = \Context::getContext()->getTranslator();
 
@@ -264,6 +274,11 @@ class BackOfficeConfigurationForm
     private function isSingleShopContext(): bool
     {
         return \Shop::getContext() === \Shop::CONTEXT_SHOP;
+    }
+
+    private function resolveCheckoutTypeLabel(int $value): string
+    {
+        return $value === 1 ? self::CHECKOUT_TYPE_ONE_PAGE : self::CHECKOUT_TYPE_FOUR_STEPS;
     }
 
     protected function persistConfigurationValue(int $value): void

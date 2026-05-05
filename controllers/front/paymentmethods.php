@@ -13,41 +13,24 @@ class Ps_OnepagecheckoutPaymentMethodsModuleFrontController extends Ps_Onepagech
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
+        $handler = new OnePageCheckoutPaymentMethodsHandler($this->context);
+        $response = $handler->handle(Tools::getAllValues());
 
-        try {
-            $handler = new OnePageCheckoutPaymentMethodsHandler($this->context);
-            $response = $handler->handle(Tools::getAllValues());
-
-            if (!empty($response['success'])) {
-                $response['payment_html'] = $this->render(
-                    'checkout/_partials/one-page-checkout/payment-methods',
-                    [
-                        'payment_options' => $response['payment_options'] ?? [],
-                        'is_free' => $response['is_free'] ?? false,
-                        'selected_payment_module' => $response['selected_payment_module'] ?? '',
-                        'selected_payment_selection_key' => $response['selected_payment_selection_key'] ?? '',
-                    ]
-                );
-                unset($response['payment_options']);
-            }
-
-            return $response;
-        } catch (Throwable $exception) {
-            PrestaShopLogger::addLog(
-                sprintf('ps_onepagecheckout paymentMethods runtime exception: %s', $exception->getMessage()),
-                3,
-                null,
-                'Module',
-                (int) $this->module->id,
-                true
+        if (!empty($response['success'])) {
+            $response['payment_html'] = $this->render(
+                'checkout/_partials/one-page-checkout/payment-methods',
+                [
+                    'payment_options' => $response['payment_options'] ?? [],
+                    'is_free' => $response['is_free'] ?? false,
+                    'selected_payment_module' => $response['selected_payment_module'] ?? '',
+                    'selected_payment_selection_key' => $response['selected_payment_selection_key'] ?? '',
+                ]
             );
-
-            return $this->buildTechnicalErrorResponse();
+            unset($response['payment_options']);
         }
+
+        return $response;
     }
 }

@@ -4,6 +4,7 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit;
 
 use PrestaShop\Module\PsOnePageCheckout\Checkout\PaymentSelectionKeyBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSubmitProcessor
@@ -132,11 +133,7 @@ class OnePageCheckoutSubmitProcessor
         }
 
         $this->validationErrors['identity'] = [
-            'email' => $this->translator->trans(
-                'Invalid email format.',
-                [],
-                'Shop.Notifications.Error'
-            ),
+            'email' => $this->translator->trans('Invalid email format.', [], ModuleTranslation::SHOP_DOMAIN),
         ];
 
         return false;
@@ -174,11 +171,7 @@ class OnePageCheckoutSubmitProcessor
 
         if ($deliveryOptionKey === '' || empty($deliveryOptions[$deliveryOptionKey])) {
             $this->validationErrors['shipping'] = [
-                'delivery_option' => $this->translator->trans(
-                    'Please select a shipping method.',
-                    [],
-                    'Shop.Notifications.Error'
-                ),
+                'delivery_option' => $this->translator->trans('Please select a shipping method.', [], ModuleTranslation::SHOP_DOMAIN),
             ];
 
             return false;
@@ -218,11 +211,7 @@ class OnePageCheckoutSubmitProcessor
         }
 
         $this->validationErrors['payment'] = [
-            'paymentMethod' => $this->translator->trans(
-                'Please select a payment method.',
-                [],
-                'Shop.Notifications.Error'
-            ),
+            'paymentMethod' => $this->translator->trans('Please select a payment method.', [], ModuleTranslation::SHOP_DOMAIN),
         ];
 
         return false;
@@ -246,11 +235,7 @@ class OnePageCheckoutSubmitProcessor
             }
 
             $this->validationErrors['conditions'] = [
-                'conditions_to_approve' => $this->translator->trans(
-                    'Please accept the terms of service.',
-                    [],
-                    'Shop.Notifications.Error'
-                ),
+                'conditions_to_approve' => $this->translator->trans('Please accept the terms of service.', [], ModuleTranslation::SHOP_DOMAIN),
             ];
 
             return false;
@@ -351,11 +336,17 @@ class OnePageCheckoutSubmitProcessor
      */
     private function buildFailureResult(array $submittedValues): array
     {
+        $persistedSubmittedValues = $this->filterPersistedSubmittedValues($submittedValues);
+
         return [
             'success' => false,
             'validation_errors' => $this->validationErrors,
             'form_errors' => $this->opcForm->getErrors(),
-            'submitted_values' => $this->filterPersistedSubmittedValues($submittedValues),
+            'submitted_values' => $persistedSubmittedValues,
+            'persisted_state' => $this->opcForm->buildPersistedSubmissionState(
+                $persistedSubmittedValues,
+                $this->validationErrors
+            ),
         ];
     }
 
@@ -374,10 +365,45 @@ class OnePageCheckoutSubmitProcessor
             $submittedValues['paymentMethod']
         );
 
+        $submittedValues = $this->filterPersistableAddressSelections($submittedValues);
+
         return array_filter(
             $submittedValues,
             static fn ($value): bool => is_scalar($value) || is_array($value) || $value === null
         );
+    }
+
+    /**
+     * Keep only address ids that still resolve to a real address owned by the current checkout customer.
+     * This avoids restoring a stale temp preview address as a selected saved address after a failed submit.
+     *
+     * @param array<string,mixed> $submittedValues
+     *
+     * @return array<string,mixed>
+     */
+    private function filterPersistableAddressSelections(array $submittedValues): array
+    {
+        foreach (['id_address_delivery', 'id_address_invoice'] as $fieldName) {
+            $addressId = (int) ($submittedValues[$fieldName] ?? 0);
+
+            if ($addressId <= 0 || !$this->isOwnedPersistableAddressId($addressId)) {
+                unset($submittedValues[$fieldName]);
+            }
+        }
+
+        return $submittedValues;
+    }
+
+    private function isOwnedPersistableAddressId(int $addressId): bool
+    {
+        $customerId = (int) ($this->context->customer->id ?? 0);
+        if ($addressId <= 0 || $customerId <= 0 || !\Customer::customerHasAddress($customerId, $addressId)) {
+            return false;
+        }
+
+        $address = new \Address($addressId, (int) ($this->context->language->id ?? 0));
+
+        return \Validate::isLoadedObject($address) && (int) $address->deleted === 0;
     }
 
     private function getSelectedPaymentModule(): string
