@@ -884,6 +884,11 @@ function applyAddressListsResponse(response, options = {}) {
   $billingFields.toggleClass('d-none', addressCount > 1);
   $billingFields.find('input, select, textarea').prop('disabled', addressCount > 1);
 
+  const $addressForm = $(OPC_ADDRESSES_SECTION_SELECTOR).first();
+  if ($addressForm.length) {
+    syncBillingSectionConstraints($addressForm, getUseSameAddressState($addressForm));
+  }
+
   syncAllSavedAddressItemStyles();
 
   emitSavedAddressSelectionIfNeeded(
