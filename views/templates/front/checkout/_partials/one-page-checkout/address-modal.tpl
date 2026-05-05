@@ -60,7 +60,7 @@
           {if isset($formFields[$_key_alias])}{form_field field=$formFields[$_key_alias]}{/if}
 
           {if isset($formFields[$_key_firstname]) && isset($formFields[$_key_lastname])}
-            {include file='_partials/form-fields-row.tpl' fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]}
+            {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl' fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]}
           {/if}
 
           {if isset($formFields[$_key_company])}{form_field field=$formFields[$_key_company]}{/if}

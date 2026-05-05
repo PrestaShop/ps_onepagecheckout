@@ -51,6 +51,18 @@ class CheckoutOnePageStepRenderTest extends TestCase
                 return '';
             }
         };
+        $link = $this->createMock(\Link::class);
+        $link->method('getPageLink')
+            ->willReturnCallback(static function ($controller, $ssl = null, $idLang = null, $request = null, $requestUrlEncode = false, $idShop = null, $relativeProtocol = false): string {
+                $url = '/' . $controller;
+
+                if (is_array($request) && $request !== []) {
+                    $url .= '?' . http_build_query($request);
+                }
+
+                return $url;
+            });
+        $context->link = $link;
         $context->controller = new class {
             public function getTemplateVarConfiguration(): array
             {
@@ -186,6 +198,8 @@ class CheckoutOnePageStepRenderTest extends TestCase
         self::assertArrayHasKey('deliveryFields', $step->capturedParams);
         self::assertArrayHasKey('invoiceFields', $step->capturedParams);
         self::assertArrayHasKey('errors', $step->capturedParams);
+        self::assertSame('/authentication?back=%2Forder', $step->capturedParams['opc_urls']['authentication']);
+        self::assertSame('/registration?back=%2Forder', $step->capturedParams['opc_urls']['registration']);
         self::assertArrayHasKey('configuration', $step->capturedParams);
         self::assertArrayHasKey('is_guest_checkout_enabled', $step->capturedParams['configuration']);
         self::assertIsBool($step->capturedParams['configuration']['is_guest_checkout_enabled']);

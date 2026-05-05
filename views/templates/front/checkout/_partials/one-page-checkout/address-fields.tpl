@@ -32,18 +32,18 @@
     {form_field field=$field}
 
   {elseif $_base === 'firstname' && $_has_name_row}
-    {include file='_partials/form-fields-row.tpl'
+    {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
       fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]
     }
 
   {elseif $_base === 'lastname' && $_has_name_row}
   {elseif $_base === 'city' && $_has_city_row}
     {if $_has_state}
-      {include file='_partials/form-fields-row.tpl'
+      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
         fields=[$formFields[$_key_city], $formFields[$_key_id_state], $formFields[$_key_postcode]]
       }
     {else}
-      {include file='_partials/form-fields-row.tpl'
+      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
         fields=[$formFields[$_key_city], $formFields[$_key_postcode]]
       }
     {/if}

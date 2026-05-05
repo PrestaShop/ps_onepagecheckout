@@ -152,7 +152,7 @@ class Ps_Onepagecheckout extends Module
 
     public function hookActionFrontControllerSetMedia(): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!isset($this->context->controller) || !$this->context->controller instanceof OrderController) {
             return;
         }
 
@@ -292,7 +292,7 @@ class Ps_Onepagecheckout extends Module
 
     public function hookActionFrontControllerSetVariables(array $params): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!isset($this->context->controller) || !$this->context->controller instanceof OrderController) {
             return;
         }
 
