@@ -29,7 +29,7 @@
   {/if}
 
   {if $_base === 'alias'}
-    {form_field field=$field}
+    {form_field field=$field file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields.tpl'}
 
   {elseif $_base === 'firstname' && $_has_name_row}
     {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
@@ -66,10 +66,10 @@
           <option value="{$value}" {if (string) $value === (string) $field.value}selected{/if}>{$label}</option>
         {/foreach}
       </select>
-      {include file='_partials/form-errors.tpl' errors=$field.errors|default:[]}
+      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-errors.tpl' errors=$field.errors|default:[]}
     </div>
 
   {else}
-    {form_field field=$field}
+    {form_field field=$field file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields.tpl'}
   {/if}
 {/foreach}

@@ -20,6 +20,6 @@
 
 <div class="form-fields-row form-fields-row--{$fields|count}">
   {foreach from=$fields item="field"}
-    {form_field field=$field}
+    {form_field field=$field file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields.tpl'}
   {/foreach}
 </div>

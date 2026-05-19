@@ -8,8 +8,8 @@
  *}
 
 <form id="opc-form" class="one-page-checkout" method="POST" action="{$urls.pages.order}" data-ps-action="form-validation">
-  {include file='_partials/form-errors.tpl' errors=$errors['']}
-  {include file='_partials/form-errors.tpl' errors=$validation_error_messages|default:[]}
+  {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-errors.tpl' errors=$errors['']}
+  {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-errors.tpl' errors=$validation_error_messages|default:[]}
 
   <div class="js-opc-contact-section">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/contact-section.tpl'}
@@ -66,9 +66,11 @@
   {hook h='displayCheckoutBeforeConfirmation'}
 
   {* ===== Pay button ===== *}
-  <button class="one-page-checkout__submit btn btn-primary btn-lg w-100" type="button" id="opc-pay-button" disabled>
-    {l s='Pay' d='Shop.Theme.Checkout'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
-  </button>
+  <div id="payment-confirmation" class="js-payment-confirmation">
+    <button class="one-page-checkout__submit btn btn-primary btn-lg w-100" type="button" id="opc-pay-button" disabled>
+      {l s='Pay' d='Shop.Theme.Checkout'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
+    </button>
+  </div>
 
   {hook h='displayPaymentByBinaries'}
 </div>

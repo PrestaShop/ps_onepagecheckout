@@ -29,4 +29,9 @@ class OnePageCheckoutProcessProvider implements CheckoutProcessProviderInterface
     ): \CheckoutProcess {
         return $this->checkoutProcessBuilder->build($session, $translator);
     }
+
+    public function getCheckoutPageTemplate(): ?string
+    {
+        return 'module:ps_onepagecheckout/views/templates/front/checkout/checkout.tpl';
+    }
 }
