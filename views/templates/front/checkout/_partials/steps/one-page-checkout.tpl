@@ -66,11 +66,9 @@
   {hook h='displayCheckoutBeforeConfirmation'}
 
   {* ===== Pay button ===== *}
-  <div id="payment-confirmation" class="js-payment-confirmation">
-    <button class="one-page-checkout__submit btn btn-primary btn-lg w-100" type="button" id="opc-pay-button" disabled>
-      {l s='Pay' d='Shop.Theme.Checkout'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
-    </button>
-  </div>
+  <button class="one-page-checkout__submit btn btn-primary btn-lg w-100" type="button" id="opc-pay-button" disabled>
+    {l s='Pay' d='Shop.Theme.Checkout'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
+  </button>
 
   {hook h='displayPaymentByBinaries'}
 </div>
