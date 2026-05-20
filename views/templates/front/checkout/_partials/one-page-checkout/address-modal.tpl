@@ -57,22 +57,22 @@
             </div>
           {/if}
 
-          {if isset($formFields[$_key_alias])}{form_field field=$formFields[$_key_alias] file='_partials/form-fields.tpl'}{/if}
+          {if isset($formFields[$_key_alias])}{form_field field=$formFields[$_key_alias]}{/if}
 
           {if isset($formFields[$_key_firstname]) && isset($formFields[$_key_lastname])}
-            {include file='_partials/form-fields-row.tpl' fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]}
+            {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl' fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]}
           {/if}
 
-          {if isset($formFields[$_key_company])}{form_field field=$formFields[$_key_company] file='_partials/form-fields.tpl'}{/if}
+          {if isset($formFields[$_key_company])}{form_field field=$formFields[$_key_company]}{/if}
 
-          {if isset($formFields[$_key_vat_number])}{form_field field=$formFields[$_key_vat_number] file='_partials/form-fields.tpl'}{/if}
+          {if isset($formFields[$_key_vat_number])}{form_field field=$formFields[$_key_vat_number]}{/if}
 
-          {if isset($formFields[$_key_address1])}{form_field field=$formFields[$_key_address1] file='_partials/form-fields.tpl'}{/if}
+          {if isset($formFields[$_key_address1])}{form_field field=$formFields[$_key_address1]}{/if}
 
-          {if isset($formFields[$_key_address2])}{form_field field=$formFields[$_key_address2] file='_partials/form-fields.tpl'}{/if}
+          {if isset($formFields[$_key_address2])}{form_field field=$formFields[$_key_address2]}{/if}
 
           <div class="form-fields-row form-fields-row--2 address-country-row">
-            {if isset($formFields[$_key_city])}{form_field field=$formFields[$_key_city] file='_partials/form-fields.tpl'}{/if}
+            {if isset($formFields[$_key_city])}{form_field field=$formFields[$_key_city]}{/if}
             <div class="form-group mb-3 state-field-wrapper" style="{if !isset($formFields[$_key_id_state]) || empty($formFields[$_key_id_state].availableValues)}display: none;{/if}">
               <label class="form-label{if isset($formFields[$_key_id_state]) && $formFields[$_key_id_state].required} required{/if}" for="{$modal_id}-field-id_state">
                 {l s='State' d='Shop.Forms.Labels'}
@@ -91,10 +91,10 @@
                 {/if}
               </select>
             </div>
-            {if isset($formFields[$_key_postcode])}{form_field field=$formFields[$_key_postcode] file='_partials/form-fields.tpl'}{/if}
+            {if isset($formFields[$_key_postcode])}{form_field field=$formFields[$_key_postcode]}{/if}
           </div>
 
-          {if isset($formFields[$_key_phone])}{form_field field=$formFields[$_key_phone] file='_partials/form-fields.tpl'}{/if}
+          {if isset($formFields[$_key_phone])}{form_field field=$formFields[$_key_phone]}{/if}
         </div>
       </div>
       <div class="modal-footer">

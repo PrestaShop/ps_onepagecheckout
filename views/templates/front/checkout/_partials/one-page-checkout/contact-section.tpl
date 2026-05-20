@@ -25,19 +25,19 @@
         <div class="one-page-checkout__field">
           <label class="form-label" for="field-email">{l s='Continue as guest' d='Shop.Theme.Checkout'}</label>
           <input class="form-control" type="email" name="email" id="field-email" value="{$contactFields['email']['value']}" required>
-          {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-errors.tpl' errors=$contactFields['email']['errors']|default:[]}
+          {include file='_partials/form-errors.tpl' errors=$contactFields['email']['errors']|default:[]}
         </div>
       {/if}
 
       {if isset($contactFields['optin'])}
         <div class="one-page-checkout__field">
-          {form_field field=$contactFields['optin'] file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields.tpl'}
+          {form_field field=$contactFields['optin']}
         </div>
       {/if}
 
       {foreach from=$additionalCustomerFields item="field"}
         <div class="one-page-checkout__field">
-          {form_field field=$field file='_partials/form-fields.tpl'}
+          {form_field field=$field}
         </div>
       {/foreach}
     {/if}
