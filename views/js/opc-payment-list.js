@@ -18,6 +18,7 @@ const CONTAINER_SELECTOR = OPC_SELECTORS.opc.paymentMethods;
 const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const URL_KEY = 'paymentMethods';
 let fetchGeneration = 0;
+let lastFetchedPaymentListDom = '';
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -120,8 +121,14 @@ function fetchPaymentMethods() {
         return;
       }
 
-      $container.html(response.payment_html || '');
+      const responsePaymentHtml = response.payment_html || '';
+
+      if (lastFetchedPaymentListDom !== responsePaymentHtml) {
+        $container.html(responsePaymentHtml);
+        lastFetchedPaymentListDom = responsePaymentHtml;
+      }
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsUpdated, response);
+
     })
     .fail((jqXHR) => {
       if (generation !== fetchGeneration) {
@@ -134,8 +141,10 @@ function fetchPaymentMethods() {
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
     });
 }
+// TODO: this causes payment methods to be loaded twice during page load.
+// Payment methods are already fetched after shipping option select, which happens automatically.
 
-$(fetchPaymentMethods);
+// $(fetchPaymentMethods);
 $(document).on('click', '[data-opc-action="retry-payment"]', (event) => {
   event.preventDefault();
   fetchPaymentMethods();
