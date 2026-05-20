@@ -16,7 +16,7 @@
   <div
     id="js-account-created-toast"
     class="d-none"
-    data-show="{if !empty($show_account_created_toast)}1{else}0{/if}"
+    data-show="{$show_account_created_toast|intval|default:0}"
     data-message="{l s='Account successfully created' d='Shop.Theme.Customeraccount'}"
   ></div>
 

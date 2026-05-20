@@ -8,8 +8,8 @@
  *}
 
 <form id="opc-form" class="one-page-checkout" method="POST" action="{$urls.pages.order}" data-ps-action="form-validation">
-  {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-errors.tpl' errors=$errors['']}
-  {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-errors.tpl' errors=$validation_error_messages|default:[]}
+  {include file='_partials/form-errors.tpl' errors=$errors['']}
+  {include file='_partials/form-errors.tpl' errors=$validation_error_messages|default:[]}
 
   <div class="js-opc-contact-section">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/contact-section.tpl'}

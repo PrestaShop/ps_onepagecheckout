@@ -29,21 +29,21 @@
   {/if}
 
   {if $_base === 'alias'}
-    {form_field field=$field file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields.tpl'}
+    {form_field field=$field file='_partials/form-fields.tpl'}
 
   {elseif $_base === 'firstname' && $_has_name_row}
-    {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
+    {include file='_partials/form-fields-row.tpl'
       fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]
     }
 
   {elseif $_base === 'lastname' && $_has_name_row}
   {elseif $_base === 'city' && $_has_city_row}
     {if $_has_state}
-      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
+      {include file='_partials/form-fields-row.tpl'
         fields=[$formFields[$_key_city], $formFields[$_key_id_state], $formFields[$_key_postcode]]
       }
     {else}
-      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
+      {include file='_partials/form-fields-row.tpl'
         fields=[$formFields[$_key_city], $formFields[$_key_postcode]]
       }
     {/if}
@@ -66,10 +66,10 @@
           <option value="{$value}" {if (string) $value === (string) $field.value}selected{/if}>{$label}</option>
         {/foreach}
       </select>
-      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-errors.tpl' errors=$field.errors|default:[]}
+      {include file='_partials/form-errors.tpl' errors=$field.errors|default:[]}
     </div>
 
   {else}
-    {form_field field=$field file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields.tpl'}
+    {form_field field=$field file='_partials/form-fields.tpl'}
   {/if}
 {/foreach}

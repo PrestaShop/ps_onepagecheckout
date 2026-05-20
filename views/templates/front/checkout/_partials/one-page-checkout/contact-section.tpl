@@ -37,7 +37,7 @@
 
       {foreach from=$additionalCustomerFields item="field"}
         <div class="one-page-checkout__field">
-          {form_field field=$field file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields.tpl'}
+          {form_field field=$field file='_partials/form-fields.tpl'}
         </div>
       {/foreach}
     {/if}
