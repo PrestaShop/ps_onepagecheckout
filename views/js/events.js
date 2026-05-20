@@ -21,6 +21,8 @@ const OPC_EVENTS = {
   updatedOpcAddressForm: 'updatedOpcAddressForm',
   opcCarriersRetry: 'opcCarriersRetry',
   opcPaymentMethodsRetry: 'opcPaymentMethodsRetry',
+  opcSubmit: 'opcSubmit',
+  opcSubmitted: 'opcSubmitted'
 };
 
 export default OPC_EVENTS;

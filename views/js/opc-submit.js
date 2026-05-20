@@ -453,6 +453,50 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
   window.location.href = response.checkout_url || window.prestashop.urls.pages.order;
 }
 
+  async function submitOpc(form) {
+    if (isFinalSubmitInFlight) {
+      return;
+    }
+
+    const paymentSelection = ensureSubmitPreconditions(form);
+    if (!paymentSelection.isValid) {
+      return;
+    }
+
+    const submitUrl = getOpcSubmitUrl();
+    if (!submitUrl) {
+      return;
+    }
+
+    const payButton = getPayButton();
+    const payload = buildSubmitPayload(form, paymentSelection.paymentRadio);
+
+    isFinalSubmitInFlight = true;
+    if (payButton instanceof HTMLButtonElement) {
+      payButton.disabled = true;
+    }
+
+    try {
+      const response = await fetchOpcSubmitResponse(submitUrl, payload);
+
+      if (!response || response.success !== true) {
+        handleOpcSubmitFailure(response);
+        return;
+      }
+
+      prestashop.emit(OPC_EVENTS.opcSubmitted);
+    } catch (error) {
+      prestashop.emit('handleError', {
+        eventType: 'opcSubmit',
+        resp: {},
+      });
+      prestashop.emit(OPC_EVENTS.opcSubmitFailed, {error});
+    } finally {
+      isFinalSubmitInFlight = false;
+      validateForm();
+    }
+  }
+
 async function submitOpcPay(form) {
   if (isFinalSubmitInFlight) {
     return;
@@ -595,6 +639,9 @@ $(document).ready(() => {
   initBillingToggle();
   validateForm();
 
+  prestashop.on(OPC_EVENTS.opcSubmit, () => {
+    submitOpc(form);
+  });
   prestashop.on(OPC_EVENTS.opcPaymentMethodsLoading, () => {
     paymentMethodsState = 'loading';
     validateForm();
