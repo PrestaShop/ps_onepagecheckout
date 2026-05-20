@@ -308,7 +308,7 @@ class Ps_Onepagecheckout extends Module
     {
         if (
             $this->isOnePageCheckoutEnabled()
-            && $params['template_file'] !== 'checkout/checkout'
+            && $params['template_file'] === 'checkout/checkout'
             && $params['controller'] instanceof OrderController
         ) {
             return 'module:ps_onepagecheckout/views/templates/front/checkout/checkout.tpl';

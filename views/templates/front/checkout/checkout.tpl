@@ -3,7 +3,6 @@
  * file that was distributed with this source code.
  *}
 {extends file=$layout}
-
 {block name='notifications'}
 {/block}
 
@@ -11,10 +10,6 @@
 {/block}
 
 {block name='content_columns'}
-  {if isset($is_one_page_checkout_enabled) && !$is_one_page_checkout_enabled}
-    {include file='checkout/checkout-navigation.tpl'}
-  {/if}
-
   {block name='checkout_notifications'}
     {include file='_partials/notifications.tpl'}
   {/block}
