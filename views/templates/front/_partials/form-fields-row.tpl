@@ -19,7 +19,7 @@
  *}
 
 <div class="form-fields-row form-fields-row--{$fields|count}">
-  {foreach from=$fields item="field"}
-    {form_field field=$field}
-  {/foreach}
+    {foreach from=$fields item="field"}
+        {form_field field=$field}
+    {/foreach}
 </div>
