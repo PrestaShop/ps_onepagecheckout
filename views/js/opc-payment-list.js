@@ -159,10 +159,8 @@ function fetchPaymentMethods() {
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
     });
 }
-// TODO: this causes payment methods to be loaded twice during page load.
-// Payment methods are already fetched after shipping option select, which happens automatically.
 
-// $(fetchPaymentMethods);
+$(fetchPaymentMethods);
 $(document).on('click', '[data-opc-action="retry-payment"]', (event) => {
   event.preventDefault();
   fetchPaymentMethods();
