@@ -20,28 +20,33 @@
 
   {hook h='displayPaymentTop'}
 
-  <div class="one-page-checkout__placeholder" id="opc-payment-methods"
-    data-url-update="{url entity='order' params=['ajax' => 1, 'action' => 'opcSelectPayment']}"
-  >
-    {if $payment_options|count}
-      {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/payment-methods.tpl'
-        payment_options=$payment_options
-        is_free=$is_free
-        selected_payment_module=$selected_payment_module
-        selected_payment_selection_key=$selected_payment_selection_key|default:''
-      }
-    {else}
-      <div class="card card-body bg-light">
-        {l s='You will see the available payment methods once you\'ve entered your delivery address.' d='Shop.Theme.Checkout'}
-      </div>
-    {/if}
-  </div>
+  <div class="opc-payment-methods-wrapper position-relative">
+    <div class="one-page-checkout__placeholder" id="opc-payment-methods"
+      data-url-update="{url entity='order' params=['ajax' => 1, 'action' => 'opcSelectPayment']}"
+    >
+      {if $payment_options|count}
+        {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/payment-methods.tpl'
+          payment_options=$payment_options
+          is_free=$is_free
+          selected_payment_module=$selected_payment_module
+          selected_payment_selection_key=$selected_payment_selection_key|default:''
+        }
+      {else}
+        <div class="card card-body bg-light">
+          {l s='You will see the available payment methods once you\'ve entered your delivery address.' d='Shop.Theme.Checkout'}
+        </div>
+      {/if}
+    </div>
 
-  <template id="opc-template-payment-loader">
-    {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-loader.tpl'
-      message={l s='Loading payment methods...' d='Shop.Theme.Checkout'}
-    }
-  </template>
+    <div id="opc-payment-methods-loader"
+      class="opc-payment-methods-loader position-absolute top-0 start-0 end-0 bottom-0 bg-white d-none"
+      aria-hidden="true"
+    >
+      {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-loader.tpl'
+        message={l s='Loading payment methods...' d='Shop.Theme.Checkout'}
+      }
+    </div>
+  </div>
 
   <template id="opc-template-payment-error">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-error.tpl'

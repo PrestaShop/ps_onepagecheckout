@@ -23,7 +23,6 @@ const OPC_SELECTORS = {
   templates: {
     carrierLoader: '#opc-template-loader',
     carrierError: '#opc-template-carriers-error',
-    paymentLoader: '#opc-template-payment-loader',
     paymentError: '#opc-template-payment-error',
   },
   inputs: {
