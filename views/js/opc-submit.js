@@ -453,7 +453,7 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
   window.location.href = response.checkout_url || window.prestashop.urls.pages.order;
 }
 
-  async function submitOpc(form) {
+  async function submitBeforePayment(form) {
     if (isFinalSubmitInFlight) {
       return;
     }
@@ -563,6 +563,7 @@ function bindValidationListeners(form, payButton) {
   if (!payButton.dataset.opcSubmitHandlerBound) {
     payButton.addEventListener('click', (event) => {
       event.preventDefault();
+      event.stopPropagation();
 
       if (isFinalSubmitInFlight || payButton.disabled) {
         return;
@@ -639,9 +640,17 @@ $(document).ready(() => {
   initBillingToggle();
   validateForm();
 
-  prestashop.on(OPC_EVENTS.opcSubmit, () => {
-    submitOpc(form);
-  });
+  window.ps_onepagecheckout.submitBeforePayment = () => {
+    console.log('submitBeforePayment CALLED');
+    const form = getCheckoutForm();
+
+    if (!(form instanceof HTMLFormElement)) {
+      return Promise.reject(new Error('OPC form not found.'));
+    }
+
+    return submitBeforePayment(form);
+  };
+
   prestashop.on(OPC_EVENTS.opcPaymentMethodsLoading, () => {
     paymentMethodsState = 'loading';
     validateForm();
