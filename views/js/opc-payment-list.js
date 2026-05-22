@@ -142,6 +142,8 @@ function fetchPaymentMethods() {
         $container.html(responsePaymentHtml);
         lastFetchedPaymentListDom = responsePaymentHtml;
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsUpdated, response);
+      } else {
+        prestashop.emit(OPC_EVENTS.opcPaymentMethodsRefreshed, response);
       }
 
       hideLoader();
