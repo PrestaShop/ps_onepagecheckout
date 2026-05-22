@@ -18,7 +18,7 @@ const CONTAINER_SELECTOR = OPC_SELECTORS.opc.paymentMethods;
 const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const URL_KEY = 'paymentMethods';
 let fetchGeneration = 0;
-let lastFetchedPaymentListDom = '<div></div>';
+let lastFetchedPaymentListDom = null;
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -128,7 +128,7 @@ function fetchPaymentMethods() {
       if (!response || response.success === false) {
         const error = normalizeErrorResponse(response, 'Unable to load payment methods.');
         $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
-        lastFetchedPaymentListDom = '';
+        lastFetchedPaymentListDom = null;
         hideLoader();
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
         prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
@@ -153,7 +153,7 @@ function fetchPaymentMethods() {
 
       const error = getAjaxErrorResponse(jqXHR, 'Unable to load payment methods.');
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
-      lastFetchedPaymentListDom = '';
+      lastFetchedPaymentListDom = null;
       hideLoader();
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
@@ -181,7 +181,7 @@ prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
   fetchGeneration += 1;
   if ($container.length) {
     $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
-    lastFetchedPaymentListDom = '';
+    lastFetchedPaymentListDom = null;
   }
   hideLoader();
 
