@@ -95,6 +95,20 @@
           </div>
 
           {if isset($formFields[$_key_phone])}{form_field field=$formFields[$_key_phone]}{/if}
+
+          {* Render any additional fields not covered above (phone_mobile, dni, other, hook fields) *}
+          {assign var="_static_fields" value=['alias', 'id_country', 'firstname', 'lastname', 'company', 'vat_number', 'address1', 'address2', 'city', 'postcode', 'id_state', 'phone']}
+          {foreach from=$formFields item="field" key="fieldKey"}
+            {if $prefix && strpos($field.name, $prefix) !== 0}{continue}{/if}
+            {if !$prefix && strpos($field.name, 'invoice_') === 0}{continue}{/if}
+            {if $prefix}
+              {assign var="_base" value=$field.name|substr:($prefix|strlen)}
+            {else}
+              {assign var="_base" value=$field.name}
+            {/if}
+            {if in_array($_base, $_static_fields)}{continue}{/if}
+            {form_field field=$field}
+          {/foreach}
         </div>
       </div>
       <div class="modal-footer">
