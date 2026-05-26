@@ -1,6 +1,5 @@
 <?php
 
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitHandler;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitProcessor;
@@ -14,11 +13,9 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
+        $requestParameters = Tools::getAllValues();
 
         if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
             header('HTTP/1.1 405 Method Not Allowed');
@@ -31,38 +28,13 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
             ];
         }
 
-        try {
-            $result = $this->createSubmitHandler()->handle(Tools::getAllValues());
-            if (($result['success'] ?? false) === true && $this->module instanceof Ps_Onepagecheckout) {
-                Analytics::trackCheckoutCompleted(
-                    (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
-                    trim((string) (Tools::getValue('paymentMethod') ?? '')),
-                    (string) $this->module->version
-                );
-            }
-
-            return $result;
-        } catch (Throwable $exception) {
-            PrestaShopLogger::addLog(
-                sprintf('ps_onepagecheckout opcSubmit runtime exception: %s', $exception->getMessage()),
-                3,
-                null,
-                'Module',
-                (int) $this->module->id,
-                true
-            );
-
-            return $this->buildTechnicalErrorResponse();
-        }
+        return $this->createSubmitHandler()->handle($requestParameters, $this->buildTechnicalErrorResponse());
     }
 
     protected function createSubmitHandler(): OnePageCheckoutSubmitHandler
     {
+        /** @var Ps_Onepagecheckout $module */
         $module = $this->module;
-        if (!$module instanceof Ps_Onepagecheckout) {
-            throw new LogicException('ps_onepagecheckout module is not available.');
-        }
-
         $translator = $module->getTranslator();
         $checkoutSessionFactory = new CheckoutSessionFactory($this->context, $translator);
         $formFactory = new OnePageCheckoutFormFactory($this->context, $module);
@@ -77,7 +49,7 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
                 new PaymentOptionsFinder(),
                 new ConditionsToApproveFinder($this->context, $translator)
             ),
-            new OnePageCheckoutSubmitValidationStateStorage($this->context)
+            $this->createSubmitValidationStateStorage()
         );
     }
 
@@ -97,5 +69,10 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
         return isset($this->context->link)
             ? (string) $this->context->link->getPageLink('order')
             : '';
+    }
+
+    protected function createSubmitValidationStateStorage(): OnePageCheckoutSubmitValidationStateStorage
+    {
+        return new OnePageCheckoutSubmitValidationStateStorage($this->context);
     }
 }

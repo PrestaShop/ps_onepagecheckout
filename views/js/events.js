@@ -1,4 +1,8 @@
-const OPC_EVENTS = {
+export const CORE_EVENTS = {
+  updatedCart: 'updatedCart',
+};
+
+export const OPC_EVENTS = {
   opcCarrierSelected: 'opcCarrierSelected',
   opcCarriersUpdated: 'opcCarriersUpdated',
   opcCarriersFailed: 'opcCarriersFailed',
@@ -9,6 +13,7 @@ const OPC_EVENTS = {
   opcPaymentMethodsFailed: 'opcPaymentMethodsFailed',
   opcPaymentMethodSelected: 'opcPaymentMethodSelected',
   opcGuestInitSuccess: 'opcGuestInitSuccess',
+  opcGuestInitFailed: 'opcGuestInitFailed',
   opcFinalSubmitStarted: 'opcFinalSubmitStarted',
   opcFormValidated: 'opcFormValidated',
   opcBillingSectionToggled: 'opcBillingSectionToggled',
@@ -22,6 +27,5 @@ const OPC_EVENTS = {
   updatedOpcAddressForm: 'updatedOpcAddressForm',
   opcCarriersRetry: 'opcCarriersRetry',
   opcPaymentMethodsRetry: 'opcPaymentMethodsRetry',
+  opcGiftWrapping: 'opcGiftWrapping',
 };
-
-export default OPC_EVENTS;

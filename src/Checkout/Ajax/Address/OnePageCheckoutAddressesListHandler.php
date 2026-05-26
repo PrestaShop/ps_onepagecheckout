@@ -2,18 +2,24 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
 class OnePageCheckoutAddressesListHandler
 {
     private \Context $context;
+    private TranslatorInterface $translator;
     private CheckoutCustomerContextResolver $customerResolver;
     private CheckoutCustomerTemplateBuilder $customerTemplateBuilder;
 
     public function __construct(
         \Context $context,
+        TranslatorInterface $translator,
         CheckoutCustomerContextResolver $customerResolver,
         ?CheckoutCustomerTemplateBuilder $customerTemplateBuilder = null,
     ) {
         $this->context = $context;
+        $this->translator = $translator;
         $this->customerResolver = $customerResolver;
         $this->customerTemplateBuilder = $customerTemplateBuilder ?? new CheckoutCustomerTemplateBuilder(
             $context,
@@ -28,7 +34,9 @@ class OnePageCheckoutAddressesListHandler
     {
         $customer = $this->customerResolver->resolve();
         if (!$customer instanceof \Customer) {
-            return CheckoutAjaxResponse::error('Unable to resolve checkout customer.');
+            return CheckoutAjaxResponse::error(
+                $this->translator->trans('Unable to resolve checkout customer.', [], ModuleTranslation::SHOP_DOMAIN)
+            );
         }
 
         $customerTemplate = $this->customerTemplateBuilder->build();

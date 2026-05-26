@@ -6,6 +6,7 @@ namespace Tests\Unit\Checkout\Ajax;
 
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutSelectPaymentHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OpcSelectPaymentHandlerTest extends TestCase
 {
@@ -36,7 +37,10 @@ class OpcSelectPaymentHandlerTest extends TestCase
         };
         $context->cookie = $cookie;
 
-        $handler = new OnePageCheckoutSelectPaymentHandler($context);
+        $handler = new OnePageCheckoutSelectPaymentHandler(
+            $context,
+            $this->createConfiguredMock(TranslatorInterface::class, ['trans' => 'translated'])
+        );
         $response = $handler->handle([
             'payment_option' => 'payment-option-1',
             'payment_module' => 'ps_wirepayment',

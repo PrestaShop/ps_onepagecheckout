@@ -2,6 +2,7 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSelectCarrierHandler
@@ -11,6 +12,7 @@ class OnePageCheckoutSelectCarrierHandler
     private CheckoutSessionFactory $checkoutSessionFactory;
     private CartPresenterHelper $cartPresenterHelper;
     private TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage;
+    private TempAddressStorage $tempAddressStorage;
 
     public function __construct(
         \Context $context,
@@ -19,12 +21,14 @@ class OnePageCheckoutSelectCarrierHandler
         ?CheckoutSessionFactory $checkoutSessionFactory = null,
         ?CartPresenterHelper $cartPresenterHelper = null,
         ?TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage = null,
+        ?TempAddressStorage $tempAddressStorage = null,
     ) {
         $this->context = $context;
         $this->translator = $translator;
         $this->checkoutSessionFactory = $checkoutSessionFactory ?? new CheckoutSessionFactory($context, $translator, $deliveryOptionsFinder);
         $this->cartPresenterHelper = $cartPresenterHelper ?? new CartPresenterHelper($context);
         $this->tempCarrierSelectionStorage = $tempCarrierSelectionStorage ?? new TempAddressCarrierSelectionStorage($context);
+        $this->tempAddressStorage = $tempAddressStorage ?? new TempAddressStorage($context);
     }
 
     /**
@@ -37,14 +41,14 @@ class OnePageCheckoutSelectCarrierHandler
         $deliveryOption = (string) ($requestParameters['delivery_option'] ?? '');
         if ($deliveryOption === '') {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Missing delivery option.', [], 'Shop.Notifications.Error'),
+                $this->translator->trans('Missing delivery option.', [], ModuleTranslation::SHOP_DOMAIN),
                 'delivery_option'
             );
         }
 
         if (!\Validate::isLoadedObject($this->context->cart)) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to resolve the current cart.', [], 'Shop.Notifications.Error')
+                $this->translator->trans('Unable to resolve the current cart.', [], ModuleTranslation::SHOP_DOMAIN)
             );
         }
 
@@ -58,12 +62,12 @@ class OnePageCheckoutSelectCarrierHandler
 
             if ($deliveryAddressId <= 0) {
                 return CheckoutAjaxResponse::error(
-                    $this->translator->trans('Unable to resolve the current delivery address.', [], 'Shop.Notifications.Error')
+                    $this->translator->trans('Unable to resolve the current delivery address.', [], ModuleTranslation::SHOP_DOMAIN)
                 );
             }
 
             $this->persistCarrierSelection($deliveryAddressId, $deliveryOption);
-            $this->persistTemporaryCarrierSelection($deliveryOption, $tempAddressId > 0 && $originalAddressId <= 0);
+            $this->persistTemporaryCarrierSelection($deliveryOption, $tempAddressId > 0 && $originalAddressId <= 0, $requestParameters);
 
             $cartPreview = $this->cartPresenterHelper->presentCart();
 
@@ -88,14 +92,16 @@ class OnePageCheckoutSelectCarrierHandler
         ]);
     }
 
-    private function persistTemporaryCarrierSelection(string $deliveryOption, bool $shouldPersist): void
+    private function persistTemporaryCarrierSelection(string $deliveryOption, bool $shouldPersist, array $requestParameters = []): void
     {
         if ($shouldPersist) {
             $this->tempCarrierSelectionStorage->save($deliveryOption);
+            $this->tempAddressStorage->saveFromRequest($requestParameters);
 
             return;
         }
 
         $this->tempCarrierSelectionStorage->clear();
+        $this->tempAddressStorage->clear();
     }
 }

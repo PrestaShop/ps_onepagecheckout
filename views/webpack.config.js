@@ -17,6 +17,7 @@ module.exports = {
     'opc-carrier-select': './js/opc-carrier-select.js',
     'opc-payment-list': './js/opc-payment-list.js',
     'opc-payment-select': './js/opc-payment-select.js',
+    'opc-gift-wrapping': './js/opc-gift-wrapping.js',
     'opc-checkout-layout': './js/opc-checkout-layout.js',
     'opc-cart-summary-state': './js/opc-cart-summary-state.js',
     'one-page-checkout': './scss/one-page-checkout.scss',

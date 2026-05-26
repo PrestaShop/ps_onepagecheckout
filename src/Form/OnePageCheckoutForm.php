@@ -33,6 +33,7 @@ use Country;
 use Customer;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerTemplateBuilder;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use PrestaShop\PrestaShop\Core\Util\InternationalizedDomainNameConverter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Validate;
@@ -199,18 +200,33 @@ class OnePageCheckoutForm extends \AbstractForm
         $this->fillWith($params);
         $this->errors = ['' => is_array($errors[''] ?? null) ? $errors[''] : []];
 
-        foreach ($errors as $fieldName => $fieldErrors) {
-            if ($fieldName === '' || !is_array($fieldErrors)) {
+        foreach ($errors as $fieldKey => $fieldErrors) {
+            if ($fieldKey === '' || !is_array($fieldErrors)) {
                 continue;
             }
 
-            $field = $this->getField((string) $fieldName);
-            if ($field) {
+            $field = $this->getField((string) $fieldKey);
+            if ($field instanceof \FormField) {
                 $field->setErrors($fieldErrors);
             }
         }
 
         return $this;
+    }
+
+    /**
+     * @param array<string,mixed> $submittedValues
+     * @param array<string,mixed> $validationErrors
+     *
+     * @return array<string,mixed>
+     */
+    public function buildPersistedSubmissionState(array $submittedValues, array $validationErrors): array
+    {
+        return [
+            'validation_errors' => $validationErrors,
+            'form_errors' => $this->getPersistableErrors(),
+            'submitted_values' => $submittedValues,
+        ];
     }
 
     public function validate()
@@ -269,12 +285,7 @@ class OnePageCheckoutForm extends \AbstractForm
             $customer->is_guest = true;
 
             if (!$this->customerPersister->save($customer, '', '', false)) {
-                $errors = $this->customerPersister->getErrors();
-                foreach ($errors as $field => $fieldErrors) {
-                    foreach ($fieldErrors as $error) {
-                        $this->errors[$field][] = $error;
-                    }
-                }
+                $this->applyFieldErrors($this->customerPersister->getErrors());
 
                 return false;
             }
@@ -301,7 +312,7 @@ class OnePageCheckoutForm extends \AbstractForm
             );
             $deliveryAddress->id_customer = $customer->id;
             if (empty($deliveryAddress->alias)) {
-                $deliveryAddress->alias = $this->translator->trans('My Address', [], 'Shop.Theme.Checkout');
+                $deliveryAddress->alias = $this->translator->trans('My Address', [], ModuleTranslation::SHOP_DOMAIN);
             }
             \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$deliveryAddress]);
             if (!$this->addressPersister->save($deliveryAddress, $token)) {
@@ -327,11 +338,7 @@ class OnePageCheckoutForm extends \AbstractForm
                     'invoice_'
                 );
                 $invoiceAddress->id_customer = $customer->id;
-                $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans(
-                    'Invoice address',
-                    [],
-                    'Shop.Theme.Checkout'
-                );
+                $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans('Invoice address', [], ModuleTranslation::SHOP_DOMAIN);
                 \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$invoiceAddress]);
                 if (!$this->addressPersister->save($invoiceAddress, $token)) {
                     return false;
@@ -530,12 +537,7 @@ class OnePageCheckoutForm extends \AbstractForm
             return true;
         }
 
-        $errors = $this->customerPersister->getErrors();
-        foreach ($errors as $field => $fieldErrors) {
-            foreach ($fieldErrors as $error) {
-                $this->errors[$field][] = $error;
-            }
-        }
+        $this->applyFieldErrors($this->customerPersister->getErrors());
 
         return false;
     }
@@ -557,11 +559,7 @@ class OnePageCheckoutForm extends \AbstractForm
         }
 
         $emailField->addError(
-            $this->translator->trans(
-                'Invalid email format.',
-                [],
-                'Shop.Notifications.Error'
-            )
+            $this->translator->trans('Invalid email format.', [], ModuleTranslation::SHOP_DOMAIN)
         );
 
         return false;
@@ -884,5 +882,42 @@ class OnePageCheckoutForm extends \AbstractForm
     private function convertFieldToTemplateArray(?\FormField $field): ?array
     {
         return $field ? $field->toArray() : null;
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    private function getPersistableErrors(): array
+    {
+        $persistableErrors = [
+            '' => is_array($this->errors[''] ?? null) ? $this->errors[''] : [],
+        ];
+
+        foreach ($this->formFields as $fieldKey => $field) {
+            $fieldErrors = $field->getErrors();
+
+            if ($fieldErrors !== []) {
+                $persistableErrors[$fieldKey] = $fieldErrors;
+            }
+        }
+
+        return $persistableErrors;
+    }
+
+    /**
+     * @param array<string, array<int, string>> $errorsByField
+     */
+    private function applyFieldErrors(array $errorsByField): void
+    {
+        foreach ($errorsByField as $fieldKey => $fieldErrors) {
+            if ($fieldErrors === []) {
+                continue;
+            }
+
+            $field = $this->getField((string) $fieldKey);
+            if ($field instanceof \FormField) {
+                $field->setErrors($fieldErrors);
+            }
+        }
     }
 }

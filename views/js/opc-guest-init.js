@@ -1,6 +1,8 @@
-import OPC_EVENTS from './events';
+import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
+import {getConfiguredOpcMessage} from './runtime/opc-runtime';
 import {getConfiguredOpcUrl} from './runtime/opc-runtime';
+import {normalizeErrorEventResponse} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -224,20 +226,24 @@ function collectPayload($container) {
   return payload;
 }
 
-function collectRequiredCheckboxState($container) {
-  const requiredCheckboxes = {};
+function collectCheckboxState($container, selector = CHECKBOX_FIELD_SELECTOR) {
+  const checkboxes = {};
 
-  $container.find(`${CHECKBOX_FIELD_SELECTOR}[required]`).each((_, checkbox) => {
+  $container.find(selector).each((_, checkbox) => {
     const fieldName = checkbox.name;
 
-    if (!fieldName || isFieldInsideAddressModal(checkbox)) {
+    if (!fieldName || checkbox.disabled || isFieldInsideAddressModal(checkbox)) {
       return;
     }
 
-    requiredCheckboxes[fieldName] = checkbox.checked ? '1' : '0';
+    checkboxes[fieldName] = checkbox.checked ? '1' : '0';
   });
 
-  return requiredCheckboxes;
+  return checkboxes;
+}
+
+function collectRequiredCheckboxState($container) {
+  return collectCheckboxState($container, `${CHECKBOX_FIELD_SELECTOR}[required]`);
 }
 
 function getPayloadFingerprint(payload) {
@@ -247,7 +253,8 @@ function getPayloadFingerprint(payload) {
 }
 
 function hasMissingRequiredConsent(requiredCheckboxState) {
-  return Object.values(requiredCheckboxState).includes('0');
+  return Object.keys(requiredCheckboxState).length === 0
+    || Object.values(requiredCheckboxState).includes('0');
 }
 
 function setInitialGuestEmailFingerprint() {
@@ -334,14 +341,6 @@ function tryGuestInit() {
   }
 
   const guestInitUrl = getConfiguredOpcUrl(MODULE_GUEST_INIT_URL_KEY);
-  if (guestInitUrl === '') {
-    prestashop.emit('handleError', {
-      eventType: 'opcGuestInit',
-      resp: {errors: {'': ['Missing OPC guest init URL.']}},
-    });
-
-    return;
-  }
 
   inFlightRequest = $.post(
     guestInitUrl,
@@ -379,7 +378,9 @@ function tryGuestInit() {
         // Token errors need fresh context, avoid retry loops while payload stays unchanged.
         lastSubmittedFingerprint = payloadFingerprint;
       } else if (resp && resp.success === false) {
-        prestashop.emit('handleError', {eventType: 'opcGuestInit', resp});
+        prestashop.emit(OPC_EVENTS.opcGuestInitFailed, {
+          resp: normalizeErrorEventResponse(resp),
+        });
       }
     })
     .fail((resp) => {
@@ -387,7 +388,9 @@ function tryGuestInit() {
         return;
       }
 
-      prestashop.emit('handleError', {eventType: 'opcGuestInit', resp});
+      prestashop.emit(OPC_EVENTS.opcGuestInitFailed, {
+        resp: normalizeErrorEventResponse(resp),
+      });
     })
     .always(() => {
       pendingFingerprint = '';

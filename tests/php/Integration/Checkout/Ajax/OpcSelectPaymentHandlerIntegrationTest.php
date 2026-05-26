@@ -27,7 +27,10 @@ class OpcSelectPaymentHandlerIntegrationTest extends TestCase
     public function testItPersistsSelectedPaymentValuesOnCookie(): void
     {
         $context = self::getContext();
-        $handler = new OnePageCheckoutSelectPaymentHandler($context);
+        $handler = new OnePageCheckoutSelectPaymentHandler(
+            $context,
+            $this->createConfiguredMock(\Symfony\Contracts\Translation\TranslatorInterface::class, ['trans' => 'translated'])
+        );
 
         $response = $handler->handle([
             'payment_option' => 'payment-option-1',

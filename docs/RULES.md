@@ -53,6 +53,8 @@ Both entry points must render the same module-owned configuration flow (no redir
 1. Each migration lot must be implemented with a story/test pair and incremental automated verification.
 2. Every lot must ship unit tests for local logic and integration tests for observable behavior.
 3. After JS changes, rebuild `views/public/*` and verify the runtime contracts through tests.
+4. Automated E2E investigation must start with incremental scope (`test:file`, `test:lot`, or `tests/e2e` `test:all:incremental`) before widening execution.
+5. When a human explicitly asks for a full rerun to inventory failures, use exhaustive execution so `serial` suites cannot mask later failures (`tests/e2e` `npm run test:all` or `npm run test:all:exhaustive`).
 
 ## Delivery checklist
 

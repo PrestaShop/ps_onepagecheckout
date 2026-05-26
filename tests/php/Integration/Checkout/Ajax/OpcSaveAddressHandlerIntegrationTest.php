@@ -54,7 +54,9 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
             'use_same_address' => '1',
         ]);
 
-        self::assertSame(['success' => true], $response, var_export($response, true));
+        self::assertSame(true, $response['success'] ?? null, var_export($response, true));
+        self::assertSame('delivery', $response['address_type'] ?? null, var_export($response, true));
+        self::assertIsInt($response['id_address'] ?? null, var_export($response, true));
 
         $freshCart = new \Cart((int) $cart->id);
         self::assertGreaterThan(0, (int) $freshCart->id_address_delivery);
@@ -88,7 +90,9 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
             'use_same_address' => '1',
         ]);
 
-        self::assertSame(['success' => true], $response, var_export($response, true));
+        self::assertSame(true, $response['success'] ?? null, var_export($response, true));
+        self::assertSame('delivery', $response['address_type'] ?? null, var_export($response, true));
+        self::assertIsInt($response['id_address'] ?? null, var_export($response, true));
 
         $savedAddress = new \Address((int) $context->cart->id_address_delivery);
         self::assertSame('My Address', $savedAddress->alias);
@@ -124,7 +128,9 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
             'use_same_address' => '1',
         ]);
 
-        self::assertSame(['success' => true], $response, var_export($response, true));
+        self::assertSame(true, $response['success'] ?? null, var_export($response, true));
+        self::assertSame('delivery', $response['address_type'] ?? null, var_export($response, true));
+        self::assertIsInt($response['id_address'] ?? null, var_export($response, true));
 
         $savedAddress = new \Address((int) $context->cart->id_address_delivery);
         self::assertSame($unitedStatesId, (int) $savedAddress->id_country);
@@ -166,7 +172,9 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
             'invoice_alias' => 'Invoice',
         ]);
 
-        self::assertSame(['success' => true], $response, var_export($response, true));
+        self::assertSame(true, $response['success'] ?? null, var_export($response, true));
+        self::assertSame('invoice', $response['address_type'] ?? null, var_export($response, true));
+        self::assertIsInt($response['id_address'] ?? null, var_export($response, true));
 
         $freshCart = new \Cart((int) $cart->id);
         self::assertSame((int) $deliveryAddress->id, (int) $freshCart->id_address_delivery);
@@ -209,7 +217,9 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
             'use_same_address' => '1',
         ]);
 
-        self::assertSame(['success' => true], $response, var_export($response, true));
+        self::assertSame(true, $response['success'] ?? null, var_export($response, true));
+        self::assertSame('delivery', $response['address_type'] ?? null, var_export($response, true));
+        self::assertSame((int) $address->id, $response['id_address'] ?? null, var_export($response, true));
 
         $freshAddress = new \Address((int) $address->id);
         self::assertSame('99 rue Modifiee', $freshAddress->address1);

@@ -1,6 +1,6 @@
-import OPC_EVENTS from './events';
+import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {getConfiguredOpcUrl, normalizeErrorResponse, updatePayAmount} from './runtime/opc-runtime';
+import {getConfiguredOpcUrl, normalizeErrorEventResponse, getConfiguredOpcMessage, updatePayAmount} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -309,15 +309,15 @@ function ajaxCheckCartStillOrderable() {
 }
 
 function emitSubmitFailure(response) {
+  const normalizedResponse = normalizeErrorEventResponse(response);
   prestashop.emit('handleError', {
     eventType: 'opcSubmit',
-    resp: response,
+    resp: normalizedResponse,
   });
-  prestashop.emit(OPC_EVENTS.opcSubmitFailed, {resp: response});
 }
 
 function emitSubmitRuntimeError(message) {
-  emitSubmitFailure(normalizeErrorResponse(null, message));
+  emitSubmitFailure(normalizeErrorEventResponse(null, message));
 }
 
 function submitPaymentModuleForm(paymentRadio) {
@@ -333,7 +333,9 @@ function submitPaymentModuleForm(paymentRadio) {
     return;
   }
 
-  emitSubmitRuntimeError('Missing rendered payment form for the selected option.');
+  emitSubmitRuntimeError(
+    getConfiguredOpcMessage('missingPaymentForm', 'Unable to initialize the selected payment method.')
+  );
 }
 
 function buildSubmitPayload(form, paymentRadio) {
@@ -400,7 +402,7 @@ function getOpcSubmitUrl() {
     return submitUrl;
   }
 
-  emitSubmitRuntimeError('Missing OPC submit URL.');
+  emitSubmitRuntimeError(getConfiguredOpcMessage('missingSubmitUrl', 'Unable to submit checkout.'));
 
   return '';
 }
@@ -421,6 +423,13 @@ async function fetchOpcSubmitResponse(submitUrl, payload) {
 function handleOpcSubmitFailure(response) {
   if (response && response.reload) {
     window.location.href = response.checkout_url || window.location.href;
+
+    return true;
+  }
+
+  const normalizedResponse = normalizeErrorEventResponse(response);
+  if (normalizedResponse.errors.length === 0) {
+    emitSubmitRuntimeError(getConfiguredOpcMessage('submitFailed', 'Unable to submit checkout.'));
 
     return true;
   }
@@ -527,11 +536,12 @@ async function submitOpcPay(form) {
 
     await continueSuccessfulSubmit(response, paymentSelection.paymentRadio);
   } catch (error) {
-    prestashop.emit('handleError', {
-      eventType: 'opcSubmit',
-      resp: {},
-    });
-    prestashop.emit(OPC_EVENTS.opcSubmitFailed, {error});
+    emitSubmitFailure(
+      normalizeErrorEventResponse(
+        null,
+        getConfiguredOpcMessage('submitFailed', 'Unable to submit checkout.')
+      )
+    );
   } finally {
     isFinalSubmitInFlight = false;
     validateForm();

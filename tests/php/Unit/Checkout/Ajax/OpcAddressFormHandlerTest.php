@@ -52,6 +52,7 @@ class OpcAddressFormHandlerTest extends TestCase
             ->method('fillWith')
             ->with([
                 'id_country' => '8',
+                'invoice_id_country' => '8',
                 'use_same_address' => '1',
             ])
         ;
@@ -138,7 +139,7 @@ class OpcAddressFormHandlerTest extends TestCase
         self::assertSame('<form>initial</form>', $response['address_form']);
     }
 
-    public function testItIgnoresInvoiceCountryWhenUseSameAddressIsEnabled(): void
+    public function testItPreservesInvoiceCountryWhenUseSameAddressIsEnabled(): void
     {
         $resolver = $this->createResolverReturning(null);
         $handler = new OnePageCheckoutAddressFormHandler($this->opcForm, \Context::getContext(), $resolver);
@@ -156,6 +157,7 @@ class OpcAddressFormHandlerTest extends TestCase
             ->method('fillWith')
             ->with([
                 'id_country' => '21',
+                'invoice_id_country' => '8',
                 'use_same_address' => '1',
             ])
         ;

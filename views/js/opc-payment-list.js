@@ -1,6 +1,6 @@
-import OPC_EVENTS from './events';
+import {CORE_EVENTS, OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {getAjaxErrorResponse, getConfiguredOpcUrl, normalizeErrorResponse} from './runtime/opc-runtime';
+import {getAjaxErrorResponse, getConfiguredOpcMessage, getConfiguredOpcUrl, normalizeErrorResponse} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -32,6 +32,18 @@ function getContainer() {
 
 function getCheckoutForm() {
   return document.querySelector(CHECKOUT_FORM_SELECTOR);
+}
+
+function hasSelectedCarrier() {
+  const deliveryMethods = document.querySelector(OPC_SELECTORS.opc.deliveryMethods);
+
+  if (!(deliveryMethods instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(
+    deliveryMethods.querySelector(`${OPC_SELECTORS.inputs.deliveryOption}:checked`)
+  );
 }
 
 function getSelectedSavedAddressId(listSelector, radioName) {
@@ -111,6 +123,7 @@ function buildPaymentMethodsUrl(baseUrl) {
 function fetchPaymentMethods() {
   const $container = getContainer();
   const paymentMethodsUrl = buildPaymentMethodsUrl(getConfiguredOpcUrl(URL_KEY));
+  const fallbackMessage = getConfiguredOpcMessage('loadPaymentMethodsFailed', 'Unable to load payment methods.');
 
   if (!$container.length || !paymentMethodsUrl) {
     return;
@@ -126,7 +139,7 @@ function fetchPaymentMethods() {
       }
 
       if (!response || response.success === false) {
-        const error = normalizeErrorResponse(response, 'Unable to load payment methods.');
+        const error = normalizeErrorResponse(response, fallbackMessage);
         $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
         lastFetchedPaymentListDom = null;
         hideLoader();
@@ -153,7 +166,7 @@ function fetchPaymentMethods() {
         return;
       }
 
-      const error = getAjaxErrorResponse(jqXHR, 'Unable to load payment methods.');
+      const error = getAjaxErrorResponse(jqXHR, fallbackMessage);
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
       lastFetchedPaymentListDom = null;
       hideLoader();
@@ -168,7 +181,14 @@ $(document).on('click', '[data-opc-action="retry-payment"]', (event) => {
   fetchPaymentMethods();
 });
 
+prestashop.on(CORE_EVENTS.updatedCart, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarrierSelected, fetchPaymentMethods);
+prestashop.on(OPC_EVENTS.opcCarriersUpdated, () => {
+  if (!hasSelectedCarrier()) {
+    fetchPaymentMethods();
+  }
+});
+prestashop.on(OPC_EVENTS.opcBillingAddressSelected, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcBillingAddressUpdated, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcGuestInitSuccess, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcPaymentMethodsRetry, fetchPaymentMethods);

@@ -15,6 +15,7 @@ class OpcSaveAddressHandlerTest extends TestCase
     public function testItReturnsTechnicalErrorsUnderTheErrorsKeyWhenCustomerCannotBeResolved(): void
     {
         $translator = $this->createMock(TranslatorInterface::class);
+        $translator->method('trans')->willReturnArgument(0);
         $resolver = $this->createMock(CheckoutCustomerContextResolver::class);
         $resolver->method('resolveId')->willReturn(0);
 

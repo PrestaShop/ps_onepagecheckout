@@ -29,6 +29,8 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitValidationStateStorage;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
+use PrestaShop\PrestaShop\Adapter\Product\PriceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutOnePageStep extends \AbstractCheckoutStep
@@ -149,6 +151,31 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         return $this->displayTaxesLabel;
     }
 
+    public function getGiftCostForLabel()
+    {
+        if ($this->getGiftCost() == 0) {
+            return '';
+        }
+
+        $taxLabel = '';
+        if ($this->getDisplayTaxesLabel()) {
+            $taxLabel = $this->getTranslator()->trans(
+                $this->getIncludeTaxes() ? 'tax incl.' : 'tax excl.',
+                [],
+                'Shop.Theme.Checkout'
+            );
+        }
+
+        return $this->getTranslator()->trans(
+            '(additional cost of %giftcost% %taxlabel%)',
+            [
+                '%giftcost%' => (new PriceFormatter())->convertAndFormat($this->getGiftCost()),
+                '%taxlabel%' => $taxLabel,
+            ],
+            'Shop.Theme.Checkout'
+        );
+    }
+
     public function handleRequest(array $requestParameters = [])
     {
         // Step is always reachable (single step)
@@ -166,11 +193,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         }
 
         $this->setTitle(
-            $this->getTranslator()->trans(
-                'Checkout',
-                [],
-                'Shop.Theme.Checkout'
-            )
+            $this->getTranslator()->trans('Checkout', [], ModuleTranslation::SHOP_DOMAIN)
         );
     }
 
@@ -275,6 +298,11 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             'gift' => [
                 'allowed' => $this->isGiftAllowed(),
                 'isGift' => $this->getCheckoutSession()->getGift()['isGift'],
+                'label' => $this->getTranslator()->trans(
+                    'I would like my order to be gift wrapped %cost%',
+                    ['%cost%' => $this->getGiftCostForLabel()],
+                    'Shop.Theme.Checkout'
+                ),
                 'message' => $this->getCheckoutSession()->getGift()['message'],
             ],
             'opc_urls' => $this->getOpcUrls(),
@@ -325,6 +353,13 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
     {
         $submitState = $this->submitValidationStateStorage->consume();
         if ($submitState === []) {
+            return;
+        }
+
+        $storedCartId = isset($submitState['cart_id']) ? (int) $submitState['cart_id'] : 0;
+        $currentCartId = isset($this->context->cart) ? (int) ($this->context->cart->id ?? 0) : 0;
+
+        if ($storedCartId > 0 && $currentCartId > 0 && $storedCartId !== $currentCartId) {
             return;
         }
 

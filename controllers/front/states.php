@@ -13,12 +13,8 @@ class Ps_OnepagecheckoutStatesModuleFrontController extends Ps_OnepagecheckoutAb
     /**
      * @return array<string,mixed>
      */
-    protected function handleOpcRequest(): array
+    protected function handleAvailableOpcRequest(): array
     {
-        if (!$this->isOpcAvailable()) {
-            return $this->buildTechnicalErrorResponse();
-        }
-
         $handler = new OnePageCheckoutStatesHandler();
 
         return $handler->handle(Tools::getAllValues());

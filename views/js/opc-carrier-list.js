@@ -1,6 +1,6 @@
-import OPC_EVENTS from './events';
+import {CORE_EVENTS, OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {getAjaxErrorResponse, getConfiguredOpcUrl, normalizeErrorResponse, updateCartSummary} from './runtime/opc-runtime';
+import {getAjaxErrorResponse, getConfiguredOpcMessage, getConfiguredOpcUrl, normalizeErrorResponse, updateCartSummary} from './runtime/opc-runtime';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -19,6 +19,7 @@ const URL_KEY = 'carriers';
 const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const FAILED_EVENT_NAME = OPC_EVENTS.opcCarriersFailed;
 let selectedDeliveryAddressId = null;
+let fetchCarriersGeneration = 0;
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -97,9 +98,29 @@ function buildCarriersUrl(baseUrl) {
   return url.toString();
 }
 
+function syncSelectedDeliveryAddressContext() {
+  const deliveryMethodsContainer = document.querySelector(CONTAINER_SELECTOR);
+  const selectedSavedDeliveryAddressId = getSelectedSavedDeliveryAddressId();
+
+  if (selectedSavedDeliveryAddressId) {
+    selectedDeliveryAddressId = selectedSavedDeliveryAddressId;
+    if (deliveryMethodsContainer) {
+      deliveryMethodsContainer.setAttribute('data-id-address', selectedSavedDeliveryAddressId);
+    }
+
+    return;
+  }
+
+  selectedDeliveryAddressId = null;
+  if (deliveryMethodsContainer) {
+    deliveryMethodsContainer.removeAttribute('data-id-address');
+  }
+}
+
 function fetchCarriers() {
   const carriersUrl = buildCarriersUrl(getConfiguredOpcUrl(URL_KEY));
   const $container = $(CONTAINER_SELECTOR);
+  const fallbackMessage = getConfiguredOpcMessage('loadCarriersFailed', 'Unable to load delivery methods.');
 
   if (!carriersUrl || !$container.length) {
     return;
@@ -107,11 +128,16 @@ function fetchCarriers() {
 
   $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierLoader.replace('#', '')));
   prestashop.emit(OPC_EVENTS.opcCarriersLoading, {});
+  const generation = ++fetchCarriersGeneration;
 
   $.get(carriersUrl)
     .done((response) => {
+      if (generation !== fetchCarriersGeneration) {
+        return;
+      }
+
       if (!response || response.success === false) {
-        const resp = normalizeErrorResponse(response, 'Unable to load delivery methods.');
+        const resp = normalizeErrorResponse(response, fallbackMessage);
         $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierError.replace('#', '')));
         prestashop.emit(FAILED_EVENT_NAME, {resp});
         prestashop.emit('handleError', {eventType: 'opcCarriers', resp});
@@ -145,7 +171,11 @@ function fetchCarriers() {
       }
     })
     .fail((jqXHR) => {
-      const resp = getAjaxErrorResponse(jqXHR, 'Unable to load delivery methods.');
+      if (generation !== fetchCarriersGeneration) {
+        return;
+      }
+
+      const resp = getAjaxErrorResponse(jqXHR, fallbackMessage);
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierError.replace('#', '')));
       prestashop.emit(FAILED_EVENT_NAME, {resp});
       prestashop.emit('handleError', {eventType: 'opcCarriers', resp});
@@ -170,29 +200,22 @@ $(document).on('click', '[data-opc-action="retry-carriers"]', (event) => {
 prestashop.on(OPC_EVENTS.opcCarriersRetry, fetchCarriers);
 
 prestashop.on(OPC_EVENTS.opcDeliveryAddressUpdated, () => {
-  const deliveryMethodsContainer = document.querySelector(CONTAINER_SELECTOR);
-  const selectedSavedDeliveryAddressId = getSelectedSavedDeliveryAddressId();
-
-  if (selectedSavedDeliveryAddressId) {
-    selectedDeliveryAddressId = selectedSavedDeliveryAddressId;
-    if (deliveryMethodsContainer) {
-      deliveryMethodsContainer.setAttribute('data-id-address', selectedSavedDeliveryAddressId);
-    }
-
-    fetchCarriers();
-    return;
-  }
-
-  selectedDeliveryAddressId = null;
-  if (deliveryMethodsContainer) {
-    deliveryMethodsContainer.removeAttribute('data-id-address');
-  }
-
+  syncSelectedDeliveryAddressContext();
   fetchCarriers();
 });
 
 prestashop.on(OPC_EVENTS.opcDeliveryAddressSelected, ({idAddress}) => {
   selectedDeliveryAddressId = String(idAddress || '');
+  fetchCarriers();
+});
+
+prestashop.on(OPC_EVENTS.opcGuestInitSuccess, () => {
+  syncSelectedDeliveryAddressContext();
+  fetchCarriers();
+});
+
+prestashop.on(CORE_EVENTS.updatedCart, () => {
+  // Cart mutations can change shipping eligibility and carrier prices.
   fetchCarriers();
 });
 

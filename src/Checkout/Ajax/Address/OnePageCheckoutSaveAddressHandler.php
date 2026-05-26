@@ -4,6 +4,7 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutAddressForm;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutAddressFormatter;
+use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSaveAddressHandler
@@ -31,7 +32,9 @@ class OnePageCheckoutSaveAddressHandler
     {
         $customerId = $this->customerResolver->resolveId();
         if ($customerId <= 0) {
-            return CheckoutAjaxResponse::error('Unable to resolve checkout customer.');
+            return CheckoutAjaxResponse::error(
+                $this->translator->trans('Unable to resolve checkout customer.', [], ModuleTranslation::SHOP_DOMAIN)
+            );
         }
 
         $addressType = (string) ($requestParameters['address_type'] ?? 'delivery');
@@ -40,7 +43,9 @@ class OnePageCheckoutSaveAddressHandler
         $address = $addressId > 0 ? new \Address($addressId, (int) $this->context->language->id) : new \Address();
 
         if ($addressId > 0 && (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId)) {
-            return CheckoutAjaxResponse::error('Unable to load the requested address.');
+            return CheckoutAjaxResponse::error(
+                $this->translator->trans('Unable to load the requested address.', [], ModuleTranslation::SHOP_DOMAIN)
+            );
         }
 
         $addressForm = $this->createAddressForm();
@@ -52,7 +57,9 @@ class OnePageCheckoutSaveAddressHandler
         $this->hydrateAddressFromForm($address, $addressForm, $addressType, $customerId);
 
         if (!$this->buildAddressPersister($customerId)->save($address, \Tools::getToken(true, $this->context))) {
-            return CheckoutAjaxResponse::error('Unable to save address.');
+            return CheckoutAjaxResponse::error(
+                $this->translator->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN)
+            );
         }
 
         if (\Validate::isLoadedObject($this->context->cart)) {
@@ -71,6 +78,8 @@ class OnePageCheckoutSaveAddressHandler
 
         return [
             'success' => true,
+            'id_address' => (int) $address->id,
+            'address_type' => $addressType,
         ];
     }
 
@@ -115,8 +124,8 @@ class OnePageCheckoutSaveAddressHandler
 
         $address->id_customer = $customerId;
         $address->alias = trim((string) ($address->alias ?: ($addressType === 'invoice'
-            ? $this->translator->trans('Invoice address', [], 'Shop.Theme.Checkout')
-            : $this->translator->trans('My Address', [], 'Shop.Theme.Checkout'))));
+            ? $this->translator->trans('Invoice address', [], ModuleTranslation::SHOP_DOMAIN)
+            : $this->translator->trans('My Address', [], ModuleTranslation::SHOP_DOMAIN))));
         $address->id_country = (int) $address->id_country;
         $address->id_state = (int) ($address->id_state ?: 0);
         \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$address]);
