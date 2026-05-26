@@ -46,7 +46,7 @@ Both entry points must render the same module-owned configuration flow (no redir
 1. Triage every future checkout change using the playbook before coding.
 2. Correct existing parity gaps in the module before porting new Core behavior.
 3. Keep Core changes to the minimal no-override surface only.
-4. Keep checkout business logic in the module and DOM/visual ownership in Hummingbird.
+4. Keep all OPC step DOM, styles, and runtime JS inside the module. The theme owns only its own page chrome (checkout page wrapper, cart summary, page-level notifications).
 
 ## Test workflow
 

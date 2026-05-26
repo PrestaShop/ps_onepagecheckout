@@ -9,6 +9,7 @@ export const OPC_EVENTS = {
   opcCarriersLoading: 'opcCarriersLoading',
   opcPaymentMethodsLoading: 'opcPaymentMethodsLoading',
   opcPaymentMethodsUpdated: 'opcPaymentMethodsUpdated',
+  opcPaymentMethodsRefreshed: 'opcPaymentMethodsRefreshed',
   opcPaymentMethodsFailed: 'opcPaymentMethodsFailed',
   opcPaymentMethodSelected: 'opcPaymentMethodSelected',
   opcGuestInitSuccess: 'opcGuestInitSuccess',

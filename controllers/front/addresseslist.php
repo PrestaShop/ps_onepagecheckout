@@ -29,7 +29,7 @@ class Ps_OnepagecheckoutAddressesListModuleFrontController extends Ps_Onepageche
         return [
             'success' => true,
             'address_count' => (int) ($response['address_count'] ?? 0),
-            'delivery_html' => $this->render(
+            'delivery_html' => $this->renderModuleTemplate(
                 'checkout/_partials/one-page-checkout/address-list',
                 [
                     'customer' => $response['customer'] ?? [],
@@ -37,7 +37,7 @@ class Ps_OnepagecheckoutAddressesListModuleFrontController extends Ps_Onepageche
                     'selected_address' => (int) ($response['selected_delivery_address'] ?? 0),
                 ]
             ),
-            'billing_html' => $this->render(
+            'billing_html' => $this->renderModuleTemplate(
                 'checkout/_partials/one-page-checkout/address-list',
                 [
                     'customer' => $response['customer'] ?? [],

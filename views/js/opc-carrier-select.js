@@ -23,7 +23,9 @@ if (!$) {
 const CONTAINER_SELECTOR = OPC_SELECTORS.opc.deliveryMethods;
 const URL_KEY = 'selectCarrier';
 const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
+const OPC_FORM_SELECTOR = OPC_SELECTORS.opc.form;
 const DELIVERY_ADDRESS_SECTION_SELECTOR = OPC_SELECTORS.opc.deliverySection;
+const DELIVERY_OPTION_SELECTOR = '.js-delivery-option';
 const CONFIRMED_DELIVERY_OPTION_ATTRIBUTE = 'data-confirmed-delivery-option';
 let selectCarrierGeneration = 0;
 
@@ -128,7 +130,16 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
         updateCartSummary(response.preview, response.totals);
       }
       setConfirmedDeliveryOption($container, deliveryOption);
-      prestashop.emit(OPC_EVENTS.opcCarrierSelected, response);
+      // Keep existing themes compatible with the 4-step checkout carrier lifecycle.
+      prestashop.emit('updatedDeliveryForm', {
+        dataForm: $(OPC_FORM_SELECTOR).serializeArray(),
+        deliveryOption: $radio.closest(DELIVERY_OPTION_SELECTOR),
+        resp: response,
+      });
+      prestashop.emit(OPC_EVENTS.opcCarrierSelected, {
+        selectedDeliveryOption: deliveryOption,
+        response,
+      });
     })
     .fail((jqXHR) => {
       if (generation !== selectCarrierGeneration) {

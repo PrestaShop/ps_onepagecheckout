@@ -79,7 +79,8 @@ class Ps_Onepagecheckout extends Module
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('actionFrontControllerSetVariables')
-            && $this->registerHook('actionModuleUpgradeAfter');
+            && $this->registerHook('actionModuleUpgradeAfter')
+            && $this->registerHook('displayOverrideTemplate');
     }
 
     public function enable($force_all = false)
@@ -153,7 +154,7 @@ class Ps_Onepagecheckout extends Module
 
     public function hookActionFrontControllerSetMedia(): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!isset($this->context->controller) || !$this->context->controller instanceof OrderController) {
             return;
         }
 
@@ -316,11 +317,12 @@ class Ps_Onepagecheckout extends Module
         ]);
 
         $this->registerOpcJavascriptAssets();
+        $this->registerOpcStylesheets();
     }
 
     public function hookActionFrontControllerSetVariables(array $params): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!isset($this->context->controller) || !$this->context->controller instanceof OrderController) {
             return;
         }
 
@@ -329,6 +331,19 @@ class Ps_Onepagecheckout extends Module
         }
 
         $params['templateVars']['is_one_page_checkout_enabled'] = $this->isOnePageCheckoutEnabled();
+    }
+
+    public function hookDisplayOverrideTemplate(array $params)
+    {
+        if (
+            $this->isOnePageCheckoutEnabled()
+            && $params['template_file'] === 'checkout/checkout'
+            && $params['controller'] instanceof OrderController
+        ) {
+            return 'module:ps_onepagecheckout/views/templates/front/checkout/checkout.tpl';
+        }
+
+        return null;
     }
 
     public function isOnePageCheckoutEnabled(): bool
@@ -376,6 +391,7 @@ class Ps_Onepagecheckout extends Module
             ['module-ps-onepagecheckout-payment-methods', 'views/public/opc-payment-list.bundle.js', 155],
             ['module-ps-onepagecheckout-select-payment', 'views/public/opc-payment-select.bundle.js', 156],
             ['module-ps-onepagecheckout-gift-wrapping', 'views/public/opc-gift-wrapping.bundle.js', 157],
+            ['module-ps-onepagecheckout-cart-summary-state', 'views/public/opc-cart-summary-state.bundle.js', 158],
         ] as [$id, $path, $priority]) {
             $this->context->controller->registerJavascript(
                 $id,
@@ -391,6 +407,22 @@ class Ps_Onepagecheckout extends Module
     protected function addOpcJavascriptDefinition(array $javascriptDefinition): void
     {
         Media::addJsDef($javascriptDefinition);
+    }
+
+    protected function registerOpcStylesheets(): void
+    {
+        if (!isset($this->context->controller)) {
+            return;
+        }
+
+        $this->context->controller->registerStylesheet(
+            'module-ps-onepagecheckout',
+            'modules/' . $this->name . '/views/public/one-page-checkout.css',
+            [
+                'media' => 'all',
+                'priority' => 200,
+            ]
+        );
     }
 
     protected function installInParent(): bool

@@ -35,10 +35,6 @@ jobs:
   phpstan:
     name: PHPStan
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        presta-versions: ['latest']
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -48,11 +44,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Checkout PrestaShop core develop
+        uses: actions/checkout@v5
+        with:
+          repository: PrestaShop/PrestaShop
+          ref: develop
+          path: prestashop-core
+
+      - name: Install PrestaShop core dependencies
+        working-directory: prestashop-core
+        run: composer install --no-interaction --prefer-dist
+
       - name: Install dependencies
         run: composer install
 
-      - name: Execute PHPStan on PrestaShop (Tag ${{ matrix.presta-versions }})
-        run: ./tests/php/phpstan.sh ${{ matrix.presta-versions }}
+      - name: Execute PHPStan on PrestaShop develop
+        env:
+          PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
+        run: ./tests/php/phpstan.sh latest
 
   unit-tests:
     name: Unit tests

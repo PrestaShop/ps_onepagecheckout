@@ -462,6 +462,47 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
   window.location.href = response.checkout_url || window.prestashop.urls.pages.order;
 }
 
+  async function submitBeforePayment(form) {
+    if (isFinalSubmitInFlight) {
+      return;
+    }
+
+    const paymentSelection = ensureSubmitPreconditions(form);
+    if (!paymentSelection.isValid) {
+      return;
+    }
+
+    const submitUrl = getOpcSubmitUrl();
+    if (!submitUrl) {
+      return;
+    }
+
+    const payButton = getPayButton();
+    const payload = buildSubmitPayload(form, paymentSelection.paymentRadio);
+
+    isFinalSubmitInFlight = true;
+    if (payButton instanceof HTMLButtonElement) {
+      payButton.disabled = true;
+    }
+
+    try {
+      const response = await fetchOpcSubmitResponse(submitUrl, payload);
+
+      if (!response || response.success !== true) {
+        handleOpcSubmitFailure(response);
+      }
+    } catch (error) {
+      prestashop.emit('handleError', {
+        eventType: 'opcSubmit',
+        resp: {},
+      });
+      prestashop.emit(OPC_EVENTS.opcSubmitFailed, {error});
+    } finally {
+      isFinalSubmitInFlight = false;
+      validateForm();
+    }
+  }
+
 async function submitOpcPay(form) {
   if (isFinalSubmitInFlight) {
     return;
@@ -529,6 +570,7 @@ function bindValidationListeners(form, payButton) {
   if (!payButton.dataset.opcSubmitHandlerBound) {
     payButton.addEventListener('click', (event) => {
       event.preventDefault();
+      event.stopPropagation();
 
       if (isFinalSubmitInFlight || payButton.disabled) {
         return;
@@ -605,6 +647,16 @@ $(document).ready(() => {
   initBillingToggle();
   validateForm();
 
+  window.ps_onepagecheckout.submitBeforePayment = () => {
+    const form = getCheckoutForm();
+
+    if (!(form instanceof HTMLFormElement)) {
+      return Promise.reject(new Error('OPC form not found.'));
+    }
+
+    return submitBeforePayment(form);
+  };
+
   prestashop.on(OPC_EVENTS.opcPaymentMethodsLoading, () => {
     paymentMethodsState = 'loading';
     validateForm();
@@ -615,6 +667,11 @@ $(document).ready(() => {
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcPaymentMethodsUpdated, () => {
+    paymentMethodsState = 'ready';
+    bindScopedValidationListeners(form);
+    validateForm();
+  });
+  prestashop.on(OPC_EVENTS.opcPaymentMethodsRefreshed, () => {
     paymentMethodsState = 'ready';
     bindScopedValidationListeners(form);
     validateForm();

@@ -18,6 +18,7 @@ const CONTAINER_SELECTOR = OPC_SELECTORS.opc.paymentMethods;
 const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const URL_KEY = 'paymentMethods';
 let fetchGeneration = 0;
+let lastFetchedPaymentListDom = null;
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -58,14 +59,27 @@ function getSelectedSavedAddressId(listSelector, radioName) {
   return selectedAddressId;
 }
 
-function setLoading() {
-  const $container = getContainer();
-  if (!$container.length) {
+function getLoaderOverlay() {
+  return document.getElementById('opc-payment-methods-loader');
+}
+
+function showLoader() {
+  const overlay = getLoaderOverlay();
+  if (!overlay) {
     return;
   }
-
-  $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentLoader.replace('#', '')));
+  overlay.classList.remove('d-none');
+  overlay.setAttribute('aria-hidden', 'false');
   prestashop.emit(OPC_EVENTS.opcPaymentMethodsLoading, {});
+}
+
+function hideLoader() {
+  const overlay = getLoaderOverlay();
+  if (!overlay) {
+    return;
+  }
+  overlay.classList.add('d-none');
+  overlay.setAttribute('aria-hidden', 'true');
 }
 
 function buildPaymentMethodsUrl(baseUrl) {
@@ -116,7 +130,7 @@ function fetchPaymentMethods() {
   }
 
   const generation = ++fetchGeneration;
-  setLoading();
+  showLoader();
 
   $.get(paymentMethodsUrl)
     .done((response) => {
@@ -127,14 +141,25 @@ function fetchPaymentMethods() {
       if (!response || response.success === false) {
         const error = normalizeErrorResponse(response, fallbackMessage);
         $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
+        lastFetchedPaymentListDom = null;
+        hideLoader();
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
         prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
 
         return;
       }
 
-      $container.html(response.payment_html || '');
-      prestashop.emit(OPC_EVENTS.opcPaymentMethodsUpdated, response);
+      const responsePaymentHtml = response.payment_html || '';
+
+      if (lastFetchedPaymentListDom !== responsePaymentHtml) {
+        $container.html(responsePaymentHtml);
+        lastFetchedPaymentListDom = responsePaymentHtml;
+        prestashop.emit(OPC_EVENTS.opcPaymentMethodsUpdated, response);
+      } else {
+        prestashop.emit(OPC_EVENTS.opcPaymentMethodsRefreshed, response);
+      }
+
+      hideLoader();
     })
     .fail((jqXHR) => {
       if (generation !== fetchGeneration) {
@@ -143,6 +168,8 @@ function fetchPaymentMethods() {
 
       const error = getAjaxErrorResponse(jqXHR, fallbackMessage);
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
+      lastFetchedPaymentListDom = null;
+      hideLoader();
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
     });
@@ -167,7 +194,7 @@ prestashop.on(OPC_EVENTS.opcGuestInitSuccess, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcPaymentMethodsRetry, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
   fetchGeneration += 1;
-  setLoading();
+  showLoader();
 });
 
 prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
@@ -176,7 +203,9 @@ prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
   fetchGeneration += 1;
   if ($container.length) {
     $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
+    lastFetchedPaymentListDom = null;
   }
+  hideLoader();
 
   prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error: 'carrier fetch failed'});
 });

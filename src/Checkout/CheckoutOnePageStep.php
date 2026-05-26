@@ -35,7 +35,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutOnePageStep extends \AbstractCheckoutStep
 {
-    protected $template = 'checkout/_partials/steps/one-page-checkout.tpl';
+    protected $template = 'module:ps_onepagecheckout/views/templates/front/checkout/_partials/steps/one-page-checkout.tpl';
 
     /**
      * @var OnePageCheckoutForm
@@ -305,6 +305,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
                 ),
                 'message' => $this->getCheckoutSession()->getGift()['message'],
             ],
+            'opc_urls' => $this->getOpcUrls(),
             'is_virtual_cart' => $this->context->cart->isVirtualCart(),
             'configuration' => $this->getTemplateConfiguration(),
         ] + $this->opcForm->getTemplateVariables();
@@ -328,6 +329,24 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         }
 
         return (string) ($this->context->cookie->__get('opc_selected_payment_selection_key') ?: '');
+    }
+
+    /**
+     * @return array{authentication: string, registration: string}
+     */
+    private function getOpcUrls(): array
+    {
+        $backParams = [];
+        $orderPageUrl = $this->context->link->getPageLink('order', true);
+
+        if (is_string($orderPageUrl) && \Tools::urlBelongsToShop($orderPageUrl)) {
+            $backParams = ['back' => $orderPageUrl];
+        }
+
+        return [
+            'authentication' => $this->context->link->getPageLink('authentication', true, null, $backParams),
+            'registration' => $this->context->link->getPageLink('registration', true, null, $backParams),
+        ];
     }
 
     private function restoreLastFailedSubmitState(): void

@@ -19,7 +19,7 @@ class Ps_OnepagecheckoutPaymentMethodsModuleFrontController extends Ps_Onepagech
         $response = $handler->handle(Tools::getAllValues());
 
         if (!empty($response['success'])) {
-            $response['payment_html'] = $this->render(
+            $response['payment_html'] = $this->renderModuleTemplate(
                 'checkout/_partials/one-page-checkout/payment-methods',
                 [
                     'payment_options' => $response['payment_options'] ?? [],

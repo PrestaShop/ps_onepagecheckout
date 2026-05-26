@@ -22,7 +22,7 @@ class Ps_OnepagecheckoutAddressFormModuleFrontController extends Ps_Onepagecheck
         $templateVariables = $handler->getTemplateVariables(Tools::getAllValues());
 
         return [
-            'addresses_section' => $this->render(
+            'addresses_section' => $this->renderModuleTemplate(
                 'checkout/_partials/one-page-checkout/addresses-section',
                 $templateVariables
             ),

@@ -18,11 +18,7 @@ When a Core checkout event already exists, document separately:
 - listener compatibility already expected by the existing runtime,
 - emitter ownership once the module becomes responsible for triggering the event.
 
-Put a change in Hummingbird when it is:
-- template structure,
-- section placeholders,
-- visual states,
-- style-only behavior.
+Put a change in the active theme only when it is page chrome unrelated to OPC step content (the surrounding `checkout.tpl` wrapper, breadcrumb, notifications, cart-summary panel). All OPC-step templates, partials, styles, and runtime JS live in this module.
 
 Put a change in Core only when:
 - the module would otherwise need an override,
