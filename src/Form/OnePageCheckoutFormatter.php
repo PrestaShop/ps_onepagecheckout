@@ -202,6 +202,12 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
                     $formField->moduleName = $moduleName;
                     $this->fieldGroups[$fieldKey] = self::FIELD_GROUP_ADDRESS;
                     $format[$fieldKey] = $formField;
+
+                    $invoiceField = clone $formField;
+                    $invoiceField->setName('invoice_' . $formField->getName());
+                    $invoiceFieldKey = 'invoice_' . $fieldKey;
+                    $this->fieldGroups[$invoiceFieldKey] = self::FIELD_GROUP_ADDRESS;
+                    $format[$invoiceFieldKey] = $invoiceField;
                 }
             }
         }

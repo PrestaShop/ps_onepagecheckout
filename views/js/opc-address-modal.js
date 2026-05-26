@@ -328,6 +328,8 @@ function syncBillingSectionConstraints($addressForm, useSameAddress) {
 }
 
 function resetModalFields($modal) {
+  const knownFields = new Set(ADDRESS_FIELDS);
+
   ADDRESS_FIELDS.forEach((fieldName) => {
     if (fieldName === 'id_address') {
       getModalField($modal, fieldName).val('');
@@ -340,8 +342,26 @@ function resetModalFields($modal) {
       return;
     }
 
-    if ($field.is('select')) {
-      $field.val('');
+    $field.val('');
+  });
+
+
+  $modal.find('input, select, textarea').each((_, field) => {
+    const $field = $(field);
+    const name = String($field.attr('name') || '');
+
+    if (!name || knownFields.has(name) || isServerManagedField(name)) {
+      return;
+    }
+
+    const type = getFieldType($field);
+
+    if (type === 'hidden' || NON_PRESERVABLE_FIELD_TYPES.has(type)) {
+      return;
+    }
+
+    if (type === 'checkbox' || type === 'radio') {
+      $field.prop('checked', false);
 
       return;
     }
@@ -428,7 +448,7 @@ function populateForm($modal, address) {
     return;
   }
 
-  ADDRESS_FIELDS.forEach((fieldName) => {
+  Object.keys(address).forEach((fieldName) => {
     const value = typeof address[fieldName] === 'undefined' ? '' : address[fieldName];
     const $field = getModalField($modal, fieldName);
 
@@ -441,13 +461,33 @@ function populateForm($modal, address) {
 }
 
 function getAddressFromTrigger($trigger) {
-  const address = {};
+  const jsonAttr = $trigger.attr('data-address');
+  let address = {};
+
+  if (typeof jsonAttr === 'string' && jsonAttr !== '') {
+    try {
+      const parsed = JSON.parse(jsonAttr);
+
+      if (parsed && typeof parsed === 'object') {
+        address = parsed;
+
+        // Remove text-based labels to prevent conflicts with ID fields when using partial selectors (name$="")
+        const keysToExclude = ['country', 'state'];
+        keysToExclude.forEach(key => {
+          delete address[key];
+        });
+      }
+    } catch (e) {
+    }
+  }
 
   ADDRESS_FIELDS.forEach((fieldName) => {
-    const attributeValue = $trigger.attr(`data-${fieldName}`);
+    if (address[fieldName] === undefined) {
+      const attributeValue = $trigger.attr(`data-${fieldName}`);
 
-    if (typeof attributeValue !== 'undefined') {
-      address[fieldName] = attributeValue;
+      if (typeof attributeValue !== 'undefined') {
+        address[fieldName] = attributeValue;
+      }
     }
   });
 
@@ -909,9 +949,16 @@ function applyAddressListsResponse(response, options = {}) {
 
   $deliveryList.toggleClass('d-none', addressCount <= 0);
   $deliveryFields.toggleClass('d-none', addressCount > 0);
+  $deliveryFields.find('input, select, textarea').prop('disabled', addressCount > 0);
 
   $billingList.toggleClass('d-none', addressCount <= 1);
   $billingFields.toggleClass('d-none', addressCount > 1);
+  $billingFields.find('input, select, textarea').prop('disabled', addressCount > 1);
+
+  const $addressForm = $(OPC_ADDRESSES_SECTION_SELECTOR).first();
+  if ($addressForm.length) {
+    syncBillingSectionConstraints($addressForm, getUseSameAddressState($addressForm));
+  }
 
   syncAllSavedAddressItemStyles();
 
@@ -1246,8 +1293,19 @@ $(document).on('click', '.js-delete-address', (event) => {
   });
 });
 
+function disableHiddenInlineAddressFields() {
+  [DELIVERY_FIELDS_SELECTOR, BILLING_FIELDS_SELECTOR].forEach((selector) => {
+    const $section = $(selector);
+
+    if ($section.length && $section.hasClass('d-none')) {
+      $section.find('input, select, textarea').prop('disabled', true);
+    }
+  });
+}
+
 $(function () {
   disableClosedModalFields();
+  disableHiddenInlineAddressFields();
   $(MODAL_SELECTOR).each((_, modal) => updateModalSaveState($(modal)));
   syncAllSavedAddressItemStyles();
   retriggerCheckoutValidation();
@@ -1255,6 +1313,7 @@ $(function () {
 
 prestashop.on(OPC_EVENTS.updatedOpcAddressForm, () => {
   disableClosedModalFields();
+  disableHiddenInlineAddressFields();
   $(MODAL_SELECTOR).each((_, modal) => updateModalSaveState($(modal)));
   retriggerCheckoutValidation();
 });
