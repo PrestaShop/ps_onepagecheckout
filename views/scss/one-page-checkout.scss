@@ -12,7 +12,7 @@
 
 $component-name: one-page-checkout;
 
-@import "form-fields-row";
+@import "opc-form-fields-row";
 
 .#{$component-name} {
   @include media-breakpoint-up(lg) {

@@ -71,7 +71,7 @@
 
           {if isset($formFields[$_key_address2])}{form_field field=$formFields[$_key_address2]}{/if}
 
-          <div class="form-fields-row form-fields-row--2 address-country-row">
+          <div class="opc-form-fields-row opc-form-fields-row--2 address-country-row">
             {if isset($formFields[$_key_city])}{form_field field=$formFields[$_key_city]}{/if}
             <div class="form-group mb-3 state-field-wrapper" style="{if !isset($formFields[$_key_id_state]) || empty($formFields[$_key_id_state].availableValues)}display: none;{/if}">
               <label class="form-label{if isset($formFields[$_key_id_state]) && $formFields[$_key_id_state].required} required{/if}" for="{$modal_id}-field-id_state">

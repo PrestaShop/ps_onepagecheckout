@@ -454,7 +454,7 @@ function updateStateFieldUi($modal, response, selectedStateId) {
     $wrapper.hide();
     $select.prop('required', false).val('');
     if ($row.length) {
-      $row.removeClass('form-fields-row--3').addClass('form-fields-row--2');
+      $row.removeClass('opc-form-fields-row--3').addClass('opc-form-fields-row--2');
     }
 
     return;
@@ -476,7 +476,7 @@ function updateStateFieldUi($modal, response, selectedStateId) {
   $wrapper.show();
   $select.prop('required', true);
   if ($row.length) {
-    $row.removeClass('form-fields-row--2').addClass('form-fields-row--3');
+    $row.removeClass('opc-form-fields-row--2').addClass('opc-form-fields-row--3');
   }
 }
 

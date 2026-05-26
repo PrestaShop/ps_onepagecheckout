@@ -18,7 +18,7 @@
  *                        (2 or 3 items — matches CSS modifiers --2 and --3)
  *}
 
-<div class="form-fields-row form-fields-row--{$fields|count}">
+<div class="opc-form-fields-row opc-form-fields-row--{$fields|count}">
     {foreach from=$fields item="field"}
         {form_field field=$field}
     {/foreach}
