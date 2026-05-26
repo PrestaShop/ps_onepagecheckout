@@ -292,6 +292,26 @@ if (!class_exists('Customer', false)) {
     }
 }
 
+if (!class_exists('OpcLegacyContextCustomerStub', false)) {
+    class OpcLegacyContextCustomerStub
+    {
+        public function isLogged($withGuest = false): bool
+        {
+            return false;
+        }
+    }
+}
+
+if (!class_exists('OpcLegacyContextTranslatorStub', false)) {
+    class OpcLegacyContextTranslatorStub
+    {
+        public function trans($id, array $parameters = [], $domain = null, $locale = null): string
+        {
+            return strtr((string) $id, $parameters);
+        }
+    }
+}
+
 if (!class_exists('Context', false)) {
     class Context
     {
@@ -305,20 +325,25 @@ if (!class_exists('Context', false)) {
         public mixed $smarty = null;
         public mixed $link = null;
         public mixed $controller = null;
+        public mixed $translator = null;
 
         public static function getContext(): self
         {
             if (self::$instance === null) {
                 self::$instance = new self();
-                self::$instance->customer = new class {
-                    public function isLogged($withGuest = false): bool
-                    {
-                        return false;
-                    }
-                };
+                self::$instance->customer = new OpcLegacyContextCustomerStub();
             }
 
             return self::$instance;
+        }
+
+        public function getTranslator()
+        {
+            if ($this->translator === null) {
+                $this->translator = new OpcLegacyContextTranslatorStub();
+            }
+
+            return $this->translator;
         }
     }
 }
