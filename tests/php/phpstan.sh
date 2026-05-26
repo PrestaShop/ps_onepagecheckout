@@ -35,7 +35,7 @@ if [ -n "${PS_ROOT_DIR_HOST}" ]; then
   fi
 
   docker run --rm \
-       -v "${PS_ROOT_DIR_HOST}:/var/www/html:ro" \
+       -v "${PS_ROOT_DIR_HOST}:/var/www/html" \
        -v "$PWD:/var/www/html/modules/ps_onepagecheckout:ro" \
        -e _PS_ROOT_DIR_=/var/www/html \
        --workdir=/var/www/html/modules/ps_onepagecheckout "${PHPSTAN_IMAGE}" \
