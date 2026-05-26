@@ -661,6 +661,11 @@ $(document).ready(() => {
     bindScopedValidationListeners(form);
     validateForm();
   });
+  prestashop.on(OPC_EVENTS.opcPaymentMethodsRefreshed, () => {
+    paymentMethodsState = 'ready';
+    bindScopedValidationListeners(form);
+    validateForm();
+  });
   prestashop.on(OPC_EVENTS.opcDeliveryAddressUpdated, () => {
     initBillingToggle();
     bindScopedValidationListeners(form);
