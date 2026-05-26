@@ -481,10 +481,7 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
 
       if (!response || response.success !== true) {
         handleOpcSubmitFailure(response);
-        return;
       }
-
-      prestashop.emit(OPC_EVENTS.opcSubmitted);
     } catch (error) {
       prestashop.emit('handleError', {
         eventType: 'opcSubmit',
@@ -641,7 +638,6 @@ $(document).ready(() => {
   validateForm();
 
   window.ps_onepagecheckout.submitBeforePayment = () => {
-    console.log('submitBeforePayment CALLED');
     const form = getCheckoutForm();
 
     if (!(form instanceof HTMLFormElement)) {
