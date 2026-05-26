@@ -28,6 +28,12 @@ if [ -n "${PS_ROOT_DIR_HOST}" ]; then
   PS_ROOT_DIR_HOST=$(cd "${PS_ROOT_DIR_HOST}" && pwd)
   echo "Use PrestaShop files from ${PS_ROOT_DIR_HOST}"
 
+  MODULE_MOUNT_POINT="${PS_ROOT_DIR_HOST}/modules/ps_onepagecheckout"
+  if [ ! -d "${MODULE_MOUNT_POINT}" ]; then
+    mkdir -p "${MODULE_MOUNT_POINT}"
+    trap 'rmdir "${MODULE_MOUNT_POINT}" 2>/dev/null || true' EXIT
+  fi
+
   docker run --rm \
        -v "${PS_ROOT_DIR_HOST}:/var/www/html:ro" \
        -v "$PWD:/var/www/html/modules/ps_onepagecheckout:ro" \
