@@ -12,6 +12,8 @@
 
 $component-name: one-page-checkout;
 
+@import "opc-form-fields-row";
+
 .#{$component-name} {
   @include media-breakpoint-up(lg) {
     padding-right: 2em;
@@ -52,4 +54,8 @@ $component-name: one-page-checkout;
   .opc-address-item .form-check-label {
     cursor: pointer;
   }
+}
+
+.opc-payment-methods-wrapper {
+  min-height: 6rem;
 }

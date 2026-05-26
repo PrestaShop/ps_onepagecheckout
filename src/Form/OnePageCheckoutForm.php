@@ -49,6 +49,9 @@ class OnePageCheckoutForm extends \AbstractForm
      */
     protected $formatter;
 
+    /**
+     * @var \Context
+     */
     private $context;
     private $customerPersister;
     private $addressPersister;

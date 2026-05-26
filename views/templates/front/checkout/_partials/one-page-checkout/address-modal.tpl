@@ -60,7 +60,7 @@
           {if isset($formFields[$_key_alias])}{form_field field=$formFields[$_key_alias]}{/if}
 
           {if isset($formFields[$_key_firstname]) && isset($formFields[$_key_lastname])}
-            {include file='_partials/form-fields-row.tpl' fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]}
+            {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl' fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]}
           {/if}
 
           {if isset($formFields[$_key_company])}{form_field field=$formFields[$_key_company]}{/if}
@@ -71,7 +71,7 @@
 
           {if isset($formFields[$_key_address2])}{form_field field=$formFields[$_key_address2]}{/if}
 
-          <div class="form-fields-row form-fields-row--2 address-country-row">
+          <div class="opc-form-fields-row opc-form-fields-row--2 address-country-row">
             {if isset($formFields[$_key_city])}{form_field field=$formFields[$_key_city]}{/if}
             <div class="form-group mb-3 state-field-wrapper" style="{if !isset($formFields[$_key_id_state]) || empty($formFields[$_key_id_state].availableValues)}display: none;{/if}">
               <label class="form-label{if isset($formFields[$_key_id_state]) && $formFields[$_key_id_state].required} required{/if}" for="{$modal_id}-field-id_state">
@@ -95,6 +95,20 @@
           </div>
 
           {if isset($formFields[$_key_phone])}{form_field field=$formFields[$_key_phone]}{/if}
+
+          {* Render any additional fields not covered above (phone_mobile, dni, other, hook fields) *}
+          {assign var="_static_fields" value=['alias', 'id_country', 'firstname', 'lastname', 'company', 'vat_number', 'address1', 'address2', 'city', 'postcode', 'id_state', 'phone']}
+          {foreach from=$formFields item="field" key="fieldKey"}
+            {if $prefix && strpos($field.name, $prefix) !== 0}{continue}{/if}
+            {if !$prefix && strpos($field.name, 'invoice_') === 0}{continue}{/if}
+            {if $prefix}
+              {assign var="_base" value=$field.name|substr:($prefix|strlen)}
+            {else}
+              {assign var="_base" value=$field.name}
+            {/if}
+            {if in_array($_base, $_static_fields)}{continue}{/if}
+            {form_field field=$field}
+          {/foreach}
         </div>
       </div>
       <div class="modal-footer">

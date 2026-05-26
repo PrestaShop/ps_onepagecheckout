@@ -78,7 +78,8 @@ class Ps_Onepagecheckout extends Module
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('actionFrontControllerSetVariables')
-            && $this->registerHook('actionModuleUpgradeAfter');
+            && $this->registerHook('actionModuleUpgradeAfter')
+            && $this->registerHook('displayOverrideTemplate');
     }
 
     public function enable($force_all = false)
@@ -152,7 +153,7 @@ class Ps_Onepagecheckout extends Module
 
     public function hookActionFrontControllerSetMedia(): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!isset($this->context->controller) || !$this->context->controller instanceof OrderController) {
             return;
         }
 
@@ -292,7 +293,7 @@ class Ps_Onepagecheckout extends Module
 
     public function hookActionFrontControllerSetVariables(array $params): void
     {
-        if (!isset($this->context->controller) || $this->context->controller->php_self !== 'order') {
+        if (!isset($this->context->controller) || !$this->context->controller instanceof OrderController) {
             return;
         }
 
@@ -301,6 +302,19 @@ class Ps_Onepagecheckout extends Module
         }
 
         $params['templateVars']['is_one_page_checkout_enabled'] = $this->isOnePageCheckoutEnabled();
+    }
+
+    public function hookDisplayOverrideTemplate(array $params)
+    {
+        if (
+            $this->isOnePageCheckoutEnabled()
+            && $params['template_file'] === 'checkout/checkout'
+            && $params['controller'] instanceof OrderController
+        ) {
+            return 'module:ps_onepagecheckout/views/templates/front/checkout/checkout.tpl';
+        }
+
+        return null;
     }
 
     public function isOnePageCheckoutEnabled(): bool

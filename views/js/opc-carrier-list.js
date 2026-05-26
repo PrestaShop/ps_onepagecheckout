@@ -133,10 +133,12 @@ function fetchCarriers() {
 
       const checkedCarrier = $container.find(`${OPC_SELECTORS.inputs.deliveryOption}:checked`).get(0);
       if (checkedCarrier) {
-        $container.attr('data-confirmed-delivery-option', String(checkedCarrier.value || ''));
+        const selectedDeliveryOption = String(checkedCarrier.value || '');
+
+        $container.attr('data-confirmed-delivery-option', selectedDeliveryOption);
         prestashop.emit(OPC_EVENTS.opcCarrierSelected, {
-          carrierId: checkedCarrier.value,
-          resp: response,
+          selectedDeliveryOption,
+          response,
         });
       } else {
         $container.removeAttr('data-confirmed-delivery-option');

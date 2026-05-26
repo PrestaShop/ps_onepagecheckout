@@ -76,6 +76,7 @@
                 data-id_state="{$address.id_state}"
                 data-id_country="{$address.id_country}"
                 data-phone="{$address.phone|escape:'html':'UTF-8'}"
+                data-address="{$address|@json_encode|escape:'htmlall':'UTF-8'}"
               >
                 {l s='Edit' d='Shop.Theme.Actions'}
               </button>

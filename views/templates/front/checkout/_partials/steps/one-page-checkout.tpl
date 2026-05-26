@@ -47,6 +47,7 @@
 <div class="one-page-checkout__footer">
   {* ===== Terms & conditions ===== *}
   {if $conditions_to_approve|count}
+    <form id="conditions-to-approve" class="js-conditions-to-approve mt-3" method="GET">
     {foreach from=$conditions_to_approve item="condition" key="condition_name"}
       <div class="form-check">
         <input id="conditions_to_approve[{$condition_name}]"
@@ -61,14 +62,17 @@
         </label>
       </div>
     {/foreach}
+    </form>
   {/if}
 
   {hook h='displayCheckoutBeforeConfirmation'}
 
   {* ===== Pay button ===== *}
-  <button class="one-page-checkout__submit btn btn-primary btn-lg w-100" type="button" id="opc-pay-button" disabled>
-    {l s='Pay' d='Shop.Theme.Checkout'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
-  </button>
+  <div id="payment-confirmation" class="js-payment-confirmation">
+    <button class="one-page-checkout__submit btn btn-primary btn-lg w-100" type="button" id="opc-pay-button" disabled>
+      {l s='Pay' d='Shop.Theme.Checkout'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
+    </button>
+  </div>
 
   {hook h='displayPaymentByBinaries'}
 </div>

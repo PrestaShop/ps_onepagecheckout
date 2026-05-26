@@ -29,6 +29,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
             'actionFrontControllerSetMedia',
             'actionFrontControllerSetVariables',
             'actionModuleUpgradeAfter',
+            'displayOverrideTemplate',
         ], $module->registerHookCalls);
     }
 
@@ -122,7 +123,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
         $module = $this->createModule();
         $module->isEnabled = true;
         $module->setModuleContext((object) [
-            'controller' => (object) ['php_self' => 'order'],
+            'controller' => new DummyOrderController(),
         ]);
 
         $templateVars = [];
@@ -139,7 +140,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
         $module->name = 'ps_onepagecheckout';
         $module->isEnabled = true;
         $module->setModuleContext((object) [
-            'controller' => (object) ['php_self' => 'order'],
+            'controller' => new DummyOrderController(),
             'smarty' => new DummySmarty(),
             'link' => new DummyLink(),
         ]);
@@ -151,6 +152,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertTrue($smarty->assigned['is_one_page_checkout_enabled']);
         self::assertCount(1, $module->javascriptDefinitions);
         self::assertSame(1, $module->registeredJavascriptAssetsCalls);
+        self::assertSame(1, $module->registeredStylesheetAssetsCalls);
         self::assertArrayHasKey('ps_onepagecheckout', $module->javascriptDefinitions[0]);
         self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['guestInit']);
         self::assertNotEmpty($module->javascriptDefinitions[0]['ps_onepagecheckout']['urls']['addressForm']);
@@ -171,7 +173,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
         $module->name = 'ps_onepagecheckout';
         $module->isEnabled = false;
         $module->setModuleContext((object) [
-            'controller' => (object) ['php_self' => 'order'],
+            'controller' => new DummyOrderController(),
             'smarty' => new DummySmarty(),
             'link' => new DummyLink(),
         ]);
@@ -183,6 +185,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
         self::assertFalse($smarty->assigned['is_one_page_checkout_enabled']);
         self::assertCount(0, $module->javascriptDefinitions);
         self::assertSame(0, $module->registeredJavascriptAssetsCalls);
+        self::assertSame(0, $module->registeredStylesheetAssetsCalls);
     }
 
     public function testMainModuleFileDoesNotContainCustomAutoloaderRegistration(): void
@@ -228,6 +231,7 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
     public array $javascriptDefinitions = [];
 
     public int $registeredJavascriptAssetsCalls = 0;
+    public int $registeredStylesheetAssetsCalls = 0;
     public bool $isEnabled = true;
     public int $disableCurrentContextCalls = 0;
     public bool $disableCurrentContextResult = true;
@@ -294,6 +298,11 @@ class TestablePsOnepagecheckoutModule extends \Ps_Onepagecheckout
         ++$this->registeredJavascriptAssetsCalls;
     }
 
+    protected function registerOpcStylesheets(): void
+    {
+        ++$this->registeredStylesheetAssetsCalls;
+    }
+
     protected function disableInParent(bool $forceAll): bool
     {
         $this->disableInParentCalls[] = $forceAll;
@@ -336,6 +345,13 @@ class DummySmarty
         }
 
         $this->assigned[(string) $key] = $value;
+    }
+}
+
+class DummyOrderController extends \OrderController
+{
+    public function __construct()
+    {
     }
 }
 
