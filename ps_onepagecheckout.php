@@ -72,6 +72,11 @@ class Ps_Onepagecheckout extends Module
         ];
     }
 
+    public function isUsingNewTranslationSystem(): bool
+    {
+        return true;
+    }
+
     public function install()
     {
         return $this->installInParent()

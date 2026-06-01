@@ -27,7 +27,7 @@
           id="opc-address-{if $prefix}invoice{else}delivery{/if}-{$_address_id}"
           value="{$_address_id}"
           {if $is_address_selected}checked{/if}
-          aria-label="{l s='Select address: %alias%' sprintf=['%alias%' => $address.alias] d='Shop.Theme.Actions'}"
+          aria-label="{l s='Select address: %alias%' sprintf=['%alias%' => $address.alias] d='Modules.Onepagecheckout.Shop'}"
           aria-describedby="opc-address-details-{$_address_id}"
         >
       </div>
@@ -37,7 +37,7 @@
           {$address.alias}
         </label>
         <p class="mb-2 text-muted small" id="opc-address-details-{$_address_id}">
-          <span class="visually-hidden">{l s='Address details:' d='Shop.Theme.Actions'}</span>
+          <span class="visually-hidden">{l s='Address details:' d='Modules.Onepagecheckout.Shop'}</span>
           {$address.firstname} {$address.lastname}<br>
           {$address.address1}{if $address.address2} {$address.address2}{/if}<br>
           {$address.postcode} {$address.city}
@@ -51,7 +51,7 @@
             class="btn p-0"
             data-bs-toggle="dropdown"
             aria-expanded="false"
-            aria-label="{l s='Address options' d='Shop.Theme.Actions'}"
+            aria-label="{l s='Address options' d='Modules.Onepagecheckout.Shop'}"
           >
             <i class="material-icons">more_vert</i>
           </button>
@@ -78,7 +78,7 @@
                 data-phone="{$address.phone|escape:'html':'UTF-8'}"
                 data-address="{$address|@json_encode|escape:'htmlall':'UTF-8'}"
               >
-                {l s='Edit' d='Shop.Theme.Actions'}
+                {l s='Edit' d='Modules.Onepagecheckout.Shop'}
               </button>
             </li>
             <li>
@@ -87,9 +87,9 @@
                 class="dropdown-item link-danger js-delete-address"
                 data-id-address="{$_address_id}"
                 data-address-type="{if $prefix == 'invoice_'}invoice{else}delivery{/if}"
-                data-confirm-message="{l s='Are you sure you want to delete this address?' d='Shop.Theme.Checkout'}"
+                data-confirm-message="{l s='Are you sure you want to delete this address?' d='Modules.Onepagecheckout.Shop'}"
               >
-                {l s='Delete' d='Shop.Theme.Actions'}
+                {l s='Delete' d='Modules.Onepagecheckout.Shop'}
               </button>
             </li>
           </ul>
@@ -118,7 +118,7 @@
       </div>
       <div class="flex-grow-1">
         <label class="form-check-label" for="opc-new-{if $prefix == 'invoice_'}invoice{else}delivery{/if}-address">
-          {l s='Use a different delivery address' d='Shop.Theme.Checkout'}
+          {l s='Use a different delivery address' d='Modules.Onepagecheckout.Shop'}
         </label>
       </div>
     </div>

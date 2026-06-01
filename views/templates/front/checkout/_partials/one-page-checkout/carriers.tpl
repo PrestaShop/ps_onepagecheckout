@@ -55,6 +55,6 @@
   </div>
 {else}
   <p class="alert alert-warning mb-0">
-    {l s='Unfortunately, there are no carriers available for your delivery address.' d='Shop.Theme.Checkout'}
+    {l s='Unfortunately, there are no carriers available for your delivery address.' d='Modules.Onepagecheckout.Shop'}
   </p>
 {/if}

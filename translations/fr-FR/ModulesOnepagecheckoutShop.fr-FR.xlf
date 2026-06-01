@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="ps_onepagecheckout" source-language="en-US" target-language="fr-FR" datatype="plaintext">
+    <body>
+      <trans-unit id="1625e29c02062efe5dbc42c3efeeebc4">
+        <source>-- please choose --</source>
+        <target>-- veuillez choisir --</target>
+      </trans-unit>
+      <trans-unit id="85af2203cc9500c9de15a53a2cb28a77">
+        <source>Account successfully created</source>
+        <target>Compte créé avec succès</target>
+      </trans-unit>
+      <trans-unit id="1412f7dcbcbe951b817f3f65b77b8e57">
+        <source>Address details:</source>
+        <target>Détails de l'adresse :</target>
+      </trans-unit>
+      <trans-unit id="45bf37e13a06d2475492f79a350638e4">
+        <source>Address options</source>
+        <target>Options d'adresse</target>
+      </trans-unit>
+      <trans-unit id="548a3bc9bd5a65835dff0bc6ddee5687">
+        <source>Already have an account? Sign in</source>
+        <target>Vous avez déjà un compte ? Connectez-vous</target>
+      </trans-unit>
+      <trans-unit id="0f2128487e1f02160ea77f4093546bb1">
+        <source>An error occurred while loading addresses. Please try again.</source>
+        <target>Une erreur s'est produite lors du chargement des adresses. Veuillez réessayer.</target>
+      </trans-unit>
+      <trans-unit id="06750e5dee5f8f5e6a257ab8e9ad6009">
+        <source>An error occurred while loading carriers. Please try again.</source>
+        <target>Une erreur s'est produite lors du chargement des transporteurs. Veuillez réessayer.</target>
+      </trans-unit>
+      <trans-unit id="e6f361baca5de43e91b605e0e4ea9653">
+        <source>An error occurred while loading payment methods. Please try again.</source>
+        <target>Une erreur s'est produite lors du chargement des moyens de paiement. Veuillez réessayer.</target>
+      </trans-unit>
+      <trans-unit id="b028ccd04708b8c3c7722956e149a718">
+        <source>An error occurred. Please try again.</source>
+        <target>Une erreur s'est produite. Veuillez réessayer.</target>
+      </trans-unit>
+      <trans-unit id="cae1b369089f67ab3f25a4dfaa0dffeb">
+        <source>Are you sure you want to delete this address?</source>
+        <target>Êtes-vous sûr de vouloir supprimer cette adresse ?</target>
+      </trans-unit>
+      <trans-unit id="1fbc7e5f1b92c7ec072397b59a0bb5da">
+        <source>Billing address</source>
+        <target>Adresse de facturation</target>
+      </trans-unit>
+      <trans-unit id="ea4788705e6873b424c65e91c2846b19">
+        <source>Cancel</source>
+        <target>Annuler</target>
+      </trans-unit>
+      <trans-unit id="d3d2e617335f08df83599665eef8a418">
+        <source>Close</source>
+        <target>Fermer</target>
+      </trans-unit>
+      <trans-unit id="8bf910bb9ffa608d4c7fd6504667d62f">
+        <source>Connected as</source>
+        <target>Connecté en tant que</target>
+      </trans-unit>
+      <trans-unit id="5e3d6d040d8a81befd75127d526646bc">
+        <source>Contact information</source>
+        <target>Coordonnées</target>
+      </trans-unit>
+      <trans-unit id="73dcb1add64570efc166580263215412">
+        <source>Continue as guest</source>
+        <target>Continuer en tant qu'invité</target>
+      </trans-unit>
+      <trans-unit id="42369faa6a6b243aac58683f3874bf99">
+        <source>Create account</source>
+        <target>Créez votre compte</target>
+      </trans-unit>
+      <trans-unit id="f2a6c498fb90ee345d997f888fce3b18">
+        <source>Delete</source>
+        <target>Supprimer</target>
+      </trans-unit>
+      <trans-unit id="0f1556b1cbbbce852b830d243c684460">
+        <source>Delete this address?</source>
+        <target>Supprimer cette adresse ?</target>
+      </trans-unit>
+      <trans-unit id="af0f5bdc5be121b9307687aeeae38c17">
+        <source>Delivery address</source>
+        <target>Adresse de livraison</target>
+      </trans-unit>
+      <trans-unit id="6310f29293c902c64db619c29179d99a">
+        <source>Delivery method</source>
+        <target>Mode de livraison</target>
+      </trans-unit>
+      <trans-unit id="7dce122004969d56ae2e0245cb754d35">
+        <source>Edit</source>
+        <target>Modifier</target>
+      </trans-unit>
+      <trans-unit id="0cbf677caf425ccdc93236a70356602d">
+        <source>Edit billing address</source>
+        <target>Modifier l'adresse de facturation</target>
+      </trans-unit>
+      <trans-unit id="8e1572c93c613c98c4ae49073feb2fed">
+        <source>Edit delivery address</source>
+        <target>Modifier l'adresse de livraison</target>
+      </trans-unit>
+      <trans-unit id="9193b58520051d8b59ca64a5cc5353ff">
+        <source>I would like to receive my order in recycled packaging.</source>
+        <target>J'accepte de recevoir ma commande dans un emballage recyclé</target>
+      </trans-unit>
+      <trans-unit id="3e0b39c8cd14dd15fff36eecf9c19861">
+        <source>If you sign out now, your cart will be emptied.</source>
+        <target>Si vous vous déconnectez maintenant, votre panier sera vidé.</target>
+      </trans-unit>
+      <trans-unit id="5153f37f9159735ef4ae472c19b732e3">
+        <source>If you'd like, you can add a note to the gift:</source>
+        <target>Vous pouvez ajouter un message à votre cadeau :</target>
+      </trans-unit>
+      <trans-unit id="9a1e1ced2c95b8cc8ee5cb713637326f">
+        <source>Loading addresses...</source>
+        <target>Chargement des adresses...</target>
+      </trans-unit>
+      <trans-unit id="6bf1e23d73a0a3866a539285165851cd">
+        <source>Loading delivery methods...</source>
+        <target>Chargement des modes de livraison...</target>
+      </trans-unit>
+      <trans-unit id="a6f21e1a3fe54c9c2f733a952de0c69d">
+        <source>Loading payment methods...</source>
+        <target>Chargement des moyens de paiement...</target>
+      </trans-unit>
+      <trans-unit id="8524de963f07201e5c086830d370797f">
+        <source>Loading...</source>
+        <target>Chargement...</target>
+      </trans-unit>
+      <trans-unit id="d95cf4ab2cbf1dfb63f066b50558b07d">
+        <source>My account</source>
+        <target>Mon compte</target>
+      </trans-unit>
+      <trans-unit id="8cad959f414b692c94d7cebbeedd3188">
+        <source>New billing address</source>
+        <target>Nouvelle adresse de facturation</target>
+      </trans-unit>
+      <trans-unit id="32c2d21acbef75699237601dd8c01220">
+        <source>New delivery address</source>
+        <target>Nouvelle adresse de livraison</target>
+      </trans-unit>
+      <trans-unit id="e44d34afa2de844e6e565bfe2afd334a">
+        <source>Not you?</source>
+        <target>Ce n'est pas vous ?</target>
+      </trans-unit>
+      <trans-unit id="f1d3b424cd68795ecaa552883759aceb">
+        <source>Order summary</source>
+        <target>Récapitulatif de commande</target>
+      </trans-unit>
+      <trans-unit id="99938b17c91170dfb0c2f3f8bc9f2a85">
+        <source>Pay</source>
+        <target>Payer</target>
+      </trans-unit>
+      <trans-unit id="f0aaaae189e9c7711931a65ffcd22543">
+        <source>Payment method</source>
+        <target>Moyen de paiement</target>
+      </trans-unit>
+      <trans-unit id="6327b4e59f58137083214a1fec358855">
+        <source>Retry</source>
+        <target>Réessayer</target>
+      </trans-unit>
+      <trans-unit id="c9cc8cce247e49bae79f15173ce97354">
+        <source>Save</source>
+        <target>Enregistrer</target>
+      </trans-unit>
+      <trans-unit id="575f5f86d2c7ea113c6710c1037c4465">
+        <source>Saving...</source>
+        <target>Enregistrement...</target>
+      </trans-unit>
+      <trans-unit id="f1e8f49d1d8ddba0394ca883412a8c7b">
+        <source>Select address: %alias%</source>
+        <target>Sélectionner l'adresse : %alias%</target>
+      </trans-unit>
+      <trans-unit id="c87aacf5673fada1108c9f809d354311">
+        <source>Sign out</source>
+        <target>Déconnexion</target>
+      </trans-unit>
+      <trans-unit id="46a2a41cc6e552044816a2d04634545d">
+        <source>State</source>
+        <target>État</target>
+      </trans-unit>
+      <trans-unit id="beb82bccc3495c14997d4ce277c434ba">
+        <source>This action will remove the selected address from your checkout.</source>
+        <target>Cette action supprimera l'adresse sélectionnée de votre commande.</target>
+      </trans-unit>
+      <trans-unit id="9a605fc0e1667ebdbd0ac37cf9f90789">
+        <source>Unfortunately, there are no carriers available for your delivery address.</source>
+        <target>Il n'y a malheureusement aucun transporteur pouvant livrer à votre adresse.</target>
+      </trans-unit>
+      <trans-unit id="97b72d419a22e2d1144b2fb05ee26901">
+        <source>Unfortunately, there are no payment method available.</source>
+        <target>Malheureusement, aucun moyen de paiement n'est disponible.</target>
+      </trans-unit>
+      <trans-unit id="0c7789282e40ec6011abadf2763198f6">
+        <source>Use a different delivery address</source>
+        <target>Utiliser une adresse de livraison différente</target>
+      </trans-unit>
+      <trans-unit id="5c74d926c4b89517ad64133990d04413">
+        <source>Use this address for invoice too</source>
+        <target>Utiliser aussi cette adresse pour la facturation</target>
+      </trans-unit>
+      <trans-unit id="51cb70bea00ccdb79e8458d4a683e369">
+        <source>Write a comment about this order</source>
+        <target>Écrire un commentaire à propos de cette commande</target>
+      </trans-unit>
+      <trans-unit id="77a65c29dba3f45446aa813d7c48ad93">
+        <source>Write your comment...</source>
+        <target>Écrivez votre commentaire...</target>
+      </trans-unit>
+      <trans-unit id="ff6f6d4b784d4bc43b544affc182fae5">
+        <source>You will see the available delivery methods once you've entered your delivery address.</source>
+        <target>Vous verrez les modes de livraison disponibles une fois votre adresse de livraison saisie.</target>
+      </trans-unit>
+      <trans-unit id="c9c832248d8ed6c68565cb2aca51ecbc">
+        <source>You will see the available payment methods once you've entered your delivery address.</source>
+        <target>Vous verrez les moyens de paiement disponibles une fois votre adresse de livraison saisie.</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

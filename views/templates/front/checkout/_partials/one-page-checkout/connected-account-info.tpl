@@ -5,31 +5,18 @@
 
 <div class="step__account">
   <p>
-    {l s='Connected as [1]%firstname% %lastname%[/1].'
-    d='Shop.Theme.Customeraccount'
-    sprintf=[
-      '[1]' => "<a href='{$urls.pages.identity}' aria-label='{l s='My account (%firstname% %lastname%)' d='Shop.Theme.Customeraccount' sprintf=['%firstname%' => $customer.firstname, '%lastname%' => $customer.lastname]}'>",
-      '[/1]' => "</a>",
-      '%firstname%' => $customer.firstname,
-      '%lastname%' => $customer.lastname
-    ]
-    }
+    {l s='Connected as' d='Modules.Onepagecheckout.Shop'}
+    <a href="{$urls.pages.identity|escape:'html'}" aria-label="{l s='My account' d='Modules.Onepagecheckout.Shop'} ({$customer.firstname|escape:'html'} {$customer.lastname|escape:'html'})">{$customer.firstname|escape:'html'} {$customer.lastname|escape:'html'}</a>.
   </p>
 
   <p class="mb-1">
-    {l
-    s='Not you? [1]Sign out[/1]'
-    d='Shop.Theme.Customeraccount'
-    sprintf=[
-      '[1]' => "<a class='text-danger' href='{$urls.actions.logout}'>",
-      '[/1]' => "</a>"
-    ]
-    }
+    {l s='Not you?' d='Modules.Onepagecheckout.Shop'}
+    <a class="text-danger" href="{$urls.actions.logout|escape:'html'}">{l s='Sign out' d='Modules.Onepagecheckout.Shop'}</a>
   </p>
 
   {if !isset($empty_cart_on_logout) || $empty_cart_on_logout}
     <p class="mb-0">
-      <small class="text-body-tertiary">{l s='If you sign out now, your cart will be emptied.' d='Shop.Theme.Checkout'}</small>
+      <small class="text-body-tertiary">{l s='If you sign out now, your cart will be emptied.' d='Modules.Onepagecheckout.Shop'}</small>
     </p>
   {/if}
 </div>

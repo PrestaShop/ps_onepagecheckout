@@ -49,7 +49,7 @@
                 id="{$modal_id}-field-id_country"
                 {if $formFields[$_key_id_country].required}required{/if}
               >
-                <option value="">{l s='-- please choose --' d='Shop.Forms.Labels'}</option>
+                <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
                 {foreach from=$formFields[$_key_id_country].availableValues item="label" key="value"}
                   <option value="{$value}" {if (string) $value === (string) $formFields[$_key_id_country].value}selected{/if}>{$label}</option>
                 {/foreach}
@@ -75,15 +75,15 @@
             {if isset($formFields[$_key_city])}{form_field field=$formFields[$_key_city]}{/if}
             <div class="form-group mb-3 state-field-wrapper" style="{if !isset($formFields[$_key_id_state]) || empty($formFields[$_key_id_state].availableValues)}display: none;{/if}">
               <label class="form-label{if isset($formFields[$_key_id_state]) && $formFields[$_key_id_state].required} required{/if}" for="{$modal_id}-field-id_state">
-                {l s='State' d='Shop.Forms.Labels'}
+                {l s='State' d='Modules.Onepagecheckout.Shop'}
               </label>
               <select
                 class="form-select"
                 name="{if isset($formFields[$_key_id_state])}{$formFields[$_key_id_state].name}{else}{$prefix}id_state{/if}"
                 id="{$modal_id}-field-id_state"
-                data-select-placeholder="{l s='-- please choose --' d='Shop.Forms.Labels' js=1}"
+                data-select-placeholder="{l s='-- please choose --' d='Modules.Onepagecheckout.Shop' js=1}"
               >
-                <option value="">{l s='-- please choose --' d='Shop.Forms.Labels'}</option>
+                <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
                 {if isset($formFields[$_key_id_state]) && isset($formFields[$_key_id_state].availableValues)}
                   {foreach from=$formFields[$_key_id_state].availableValues item="label" key="value"}
                     <option value="{$value}" {if $value eq $formFields[$_key_id_state].value}selected{/if}>{$label}</option>
@@ -116,10 +116,10 @@
           id="submit-address-modal"
           type="button"
           class="btn btn-primary"
-          data-loading-text="{l s='Saving...' d='Shop.Theme.Checkout'}"
-          data-text="{l s='Save' d='Shop.Theme.Actions'}"
+          data-loading-text="{l s='Saving...' d='Modules.Onepagecheckout.Shop'}"
+          data-text="{l s='Save' d='Modules.Onepagecheckout.Shop'}"
         >
-          {l s='Save' d='Shop.Theme.Actions'}
+          {l s='Save' d='Modules.Onepagecheckout.Shop'}
         </button>
       </div>
     </div>
