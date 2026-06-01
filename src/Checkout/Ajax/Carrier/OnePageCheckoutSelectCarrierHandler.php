@@ -2,7 +2,6 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSelectCarrierHandler
@@ -41,14 +40,14 @@ class OnePageCheckoutSelectCarrierHandler
         $deliveryOption = (string) ($requestParameters['delivery_option'] ?? '');
         if ($deliveryOption === '') {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Missing delivery option.', [], ModuleTranslation::SHOP_DOMAIN),
+                $this->translator->trans('Missing delivery option.', [], 'Modules.Onepagecheckout.Shop'),
                 'delivery_option'
             );
         }
 
         if (!\Validate::isLoadedObject($this->context->cart)) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to resolve the current cart.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to resolve the current cart.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -62,7 +61,7 @@ class OnePageCheckoutSelectCarrierHandler
 
             if ($deliveryAddressId <= 0) {
                 return CheckoutAjaxResponse::error(
-                    $this->translator->trans('Unable to resolve the current delivery address.', [], ModuleTranslation::SHOP_DOMAIN)
+                    $this->translator->trans('Unable to resolve the current delivery address.', [], 'Modules.Onepagecheckout.Shop')
                 );
             }
 

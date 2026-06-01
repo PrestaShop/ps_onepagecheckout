@@ -16,7 +16,6 @@ use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use PrestaShop\PrestaShop\Adapter\Order\Checkout\CheckoutProcessProviderInterface;
 
 class Ps_Onepagecheckout extends Module
@@ -35,7 +34,7 @@ class Ps_Onepagecheckout extends Module
 
         $tabNames = [];
         foreach (Language::getLanguages(true) as $lang) {
-            $tabNames[$lang['locale']] = $this->trans('Checkout', [], ModuleTranslation::ADMIN_DOMAIN, $lang['locale']);
+            $tabNames[$lang['locale']] = $this->trans('Checkout', [], 'Modules.Onepagecheckout.Admin', $lang['locale']);
         }
         $this->tabs = [
             [
@@ -44,17 +43,17 @@ class Ps_Onepagecheckout extends Module
                 'name' => $tabNames,
                 'parent_class_name' => 'AdminParentThemes',
                 'wording' => 'Checkout',
-                'wording_domain' => ModuleTranslation::ADMIN_DOMAIN,
+                'wording_domain' => 'Modules.Onepagecheckout.Admin',
             ],
         ];
 
         parent::__construct();
 
-        $this->displayName = $this->trans('One-page checkout', [], ModuleTranslation::ADMIN_DOMAIN);
+        $this->displayName = $this->trans('One-page checkout', [], 'Modules.Onepagecheckout.Admin');
         $this->description = $this->trans(
             'Native one-page checkout.',
             [],
-            ModuleTranslation::ADMIN_DOMAIN
+            'Modules.Onepagecheckout.Admin'
         );
         $this->ps_versions_compliancy = ['min' => '9.0.0', 'max' => _PS_VERSION_];
         $this->controllers = [
@@ -297,23 +296,23 @@ class Ps_Onepagecheckout extends Module
                 ),
             ],
             'messages' => [
-                'missingGuestInitUrl' => $this->trans('Unable to initialize checkout customer.', [], ModuleTranslation::SHOP_DOMAIN),
-                'missingAddressFormUrl' => $this->trans('Unable to refresh addresses.', [], ModuleTranslation::SHOP_DOMAIN),
-                'loadCarriersFailed' => $this->trans('Unable to load delivery methods.', [], ModuleTranslation::SHOP_DOMAIN),
-                'missingCarrierSelectionPayload' => $this->trans('Missing delivery option.', [], ModuleTranslation::SHOP_DOMAIN),
-                'selectCarrierFailed' => $this->trans('Unable to select the delivery method.', [], ModuleTranslation::SHOP_DOMAIN),
-                'loadPaymentMethodsFailed' => $this->trans('Unable to load payment methods.', [], ModuleTranslation::SHOP_DOMAIN),
-                'missingPaymentSelectionPayload' => $this->trans('Missing payment selection payload.', [], ModuleTranslation::SHOP_DOMAIN),
-                'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], ModuleTranslation::SHOP_DOMAIN),
-                'statesLoadFailed' => $this->trans('Unable to load states.', [], ModuleTranslation::SHOP_DOMAIN),
-                'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN),
-                'saveAddressFailed' => $this->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN),
-                'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN),
-                'deleteAddressFailed' => $this->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN),
-                'refreshAddressesFailed' => $this->trans('Unable to refresh addresses.', [], ModuleTranslation::SHOP_DOMAIN),
-                'missingPaymentForm' => $this->trans('Unable to initialize the selected payment method.', [], ModuleTranslation::SHOP_DOMAIN),
-                'missingSubmitUrl' => $this->trans('Unable to submit checkout.', [], ModuleTranslation::SHOP_DOMAIN),
-                'submitFailed' => $this->trans('Unable to submit checkout.', [], ModuleTranslation::SHOP_DOMAIN),
+                'missingGuestInitUrl' => $this->trans('Unable to initialize checkout customer.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingAddressFormUrl' => $this->trans('Unable to refresh addresses.', [], 'Modules.Onepagecheckout.Shop'),
+                'loadCarriersFailed' => $this->trans('Unable to load delivery methods.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingCarrierSelectionPayload' => $this->trans('Missing delivery option.', [], 'Modules.Onepagecheckout.Shop'),
+                'selectCarrierFailed' => $this->trans('Unable to select the delivery method.', [], 'Modules.Onepagecheckout.Shop'),
+                'loadPaymentMethodsFailed' => $this->trans('Unable to load payment methods.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingPaymentSelectionPayload' => $this->trans('Missing payment selection payload.', [], 'Modules.Onepagecheckout.Shop'),
+                'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], 'Modules.Onepagecheckout.Shop'),
+                'statesLoadFailed' => $this->trans('Unable to load states.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
+                'saveAddressFailed' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], 'Modules.Onepagecheckout.Shop'),
+                'deleteAddressFailed' => $this->trans('Unable to delete address.', [], 'Modules.Onepagecheckout.Shop'),
+                'refreshAddressesFailed' => $this->trans('Unable to refresh addresses.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingPaymentForm' => $this->trans('Unable to initialize the selected payment method.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingSubmitUrl' => $this->trans('Unable to submit checkout.', [], 'Modules.Onepagecheckout.Shop'),
+                'submitFailed' => $this->trans('Unable to submit checkout.', [], 'Modules.Onepagecheckout.Shop'),
             ],
         ];
 

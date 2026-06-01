@@ -30,7 +30,6 @@ declare(strict_types=1);
 namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
 use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Twig\Environment;
 
 class BackOfficeConfigurationForm
@@ -72,7 +71,7 @@ class BackOfficeConfigurationForm
 
             if ($isMaintenanceEnabled && !$this->enableMaintenanceMode()) {
                 return $this->module->displayError(
-                    $this->trans('Unable to enable maintenance mode. Checkout layout was not changed.', 'Modules.PsOnePageCheckout.Admin')
+                    $this->trans('Unable to enable maintenance mode. Checkout layout was not changed.', 'Modules.Onepagecheckout.Admin')
                 ) . $this->renderConfigurationForm();
             }
 
@@ -92,7 +91,7 @@ class BackOfficeConfigurationForm
 
         if ($this->consumeMaintenanceFlash()) {
             $output .= $this->module->displayWarning(
-                $this->trans('Checkout layout has been changed. Shop is now in maintenance mode.', 'Modules.PsOnePageCheckout.Admin')
+                $this->trans('Checkout layout has been changed. Shop is now in maintenance mode.', 'Modules.Onepagecheckout.Admin')
             );
         } elseif ($this->consumeSuccessFlash()) {
             $output .= $this->module->displayConfirmation(
@@ -127,8 +126,8 @@ class BackOfficeConfigurationForm
     private function buildTemplateVariables(): array
     {
         $isEnabled = $this->getCurrentConfigurationValue() === 1;
-        $onePageLabel = $this->trans('One-page checkout', 'Admin.Design.Feature');
-        $fourPageLabel = $this->trans('Four-page checkout', 'Admin.Design.Feature');
+        $onePageLabel = $this->trans('One-page checkout', 'Modules.Onepagecheckout.Admin');
+        $fourPageLabel = $this->trans('Four-page checkout', 'Modules.Onepagecheckout.Admin');
 
         $isMaintenanceEnabled = (int) \Configuration::get('PS_SHOP_ENABLE') === 0;
 
@@ -143,29 +142,29 @@ class BackOfficeConfigurationForm
                 'Note that this page is available in a single shop context only. Switch context to work on it.',
                 'Admin.Notifications.Info'
             ),
-            'checkout_layout_title' => $this->trans('Checkout layout', 'Admin.Design.Feature'),
+            'checkout_layout_title' => $this->trans('Checkout layout', 'Modules.Onepagecheckout.Admin'),
             'checkout_layout_description' => $this->trans(
                 'Allow faster checkout for higher conversion and spontaneous purchases.',
-                'Admin.Design.Feature'
+                'Modules.Onepagecheckout.Admin'
             ),
             'save_button_label' => $this->trans('Save', 'Admin.Actions'),
-            'confirm_modal_title' => $this->trans('Change checkout appearance', 'Modules.PsOnePageCheckout.Admin'),
-            'confirm_modal_compatibility_title' => $this->trans('Check theme compatibility', 'Modules.PsOnePageCheckout.Admin'),
-            'confirm_modal_description' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.PsOnePageCheckout.Admin'),
-            'confirm_modal_compatibility_description' => $this->trans('One-page checkout layout requires a Bootstrap 5-compatible theme.', 'Modules.PsOnePageCheckout.Admin'),
-            'confirm_modal_checklist_title' => $this->trans('Before you proceed, please make sure that:', 'Modules.PsOnePageCheckout.Admin'),
+            'confirm_modal_title' => $this->trans('Change checkout appearance', 'Modules.Onepagecheckout.Admin'),
+            'confirm_modal_compatibility_title' => $this->trans('Check theme compatibility', 'Modules.Onepagecheckout.Admin'),
+            'confirm_modal_description' => $this->trans('You\'re about to update the Checkout appearance of your store.', 'Modules.Onepagecheckout.Admin'),
+            'confirm_modal_compatibility_description' => $this->trans('One-page checkout layout requires a Bootstrap 5-compatible theme.', 'Modules.Onepagecheckout.Admin'),
+            'confirm_modal_checklist_title' => $this->trans('Before you proceed, please make sure that:', 'Modules.Onepagecheckout.Admin'),
             'confirm_modal_checklist' => [
-                $this->trans('You are NOT using the "Classic" theme: This layout is incompatible with the legacy Classic theme and will break your storefront.', 'Modules.PsOnePageCheckout.Admin'),
-                $this->trans('Your theme is compatible with the one-page checkout DOM and Bootstrap 5: Custom or third-party themes must support this new checkout architecture.', 'Modules.PsOnePageCheckout.Admin'),
-                $this->trans('Your checkout modules are compatible. Some older modules may not be compatible with a one-page layout.', 'Modules.PsOnePageCheckout.Admin'),
+                $this->trans('You are NOT using the "Classic" theme: This layout is incompatible with the legacy Classic theme and will break your storefront.', 'Modules.Onepagecheckout.Admin'),
+                $this->trans('Your theme is compatible with the one-page checkout DOM and Bootstrap 5: Custom or third-party themes must support this new checkout architecture.', 'Modules.Onepagecheckout.Admin'),
+                $this->trans('Your checkout modules are compatible. Some older modules may not be compatible with a one-page layout.', 'Modules.Onepagecheckout.Admin'),
             ],
             'cancel_button_label' => $this->trans('Cancel', 'Admin.Actions'),
-            'confirm_button_label' => $this->trans('Change checkout appearance', 'Modules.PsOnePageCheckout.Admin'),
+            'confirm_button_label' => $this->trans('Change checkout appearance', 'Modules.Onepagecheckout.Admin'),
             'maintenance_mode_input_name' => self::MAINTENANCE_INPUT_NAME,
-            'maintenance_mode_label' => $this->trans('Maintenance mode', 'Modules.PsOnePageCheckout.Admin'),
+            'maintenance_mode_label' => $this->trans('Maintenance mode', 'Modules.Onepagecheckout.Admin'),
             'maintenance_mode_warning' => $this->trans(
                 'We strongly recommend enabling <strong>Maintenance Mode</strong> or testing this in a <strong>Staging Environment</strong> first to ensure a smooth transition for your customers.',
-                'Modules.PsOnePageCheckout.Admin'
+                'Modules.Onepagecheckout.Admin'
             ),
             'choices' => [
                 [
@@ -173,18 +172,18 @@ class BackOfficeConfigurationForm
                     'value' => 1,
                     'checked' => $isEnabled,
                     'label' => $onePageLabel,
-                    'badge' => $this->trans('Recommended', 'Admin.Design.Feature'),
+                    'badge' => $this->trans('Recommended', 'Modules.Onepagecheckout.Admin'),
                     'description' => $this->trans(
                         'Propose the best checkout experience to your clients with the one-page layout. All the payment steps will be displayed in one page and let you benefit from:',
-                        'Admin.Design.Feature'
+                        'Modules.Onepagecheckout.Admin'
                     ),
                     'features' => [
-                        $this->trans('Reduced time spent, less clicks & no extra-step', 'Admin.Design.Feature'),
+                        $this->trans('Reduced time spent, less clicks & no extra-step', 'Modules.Onepagecheckout.Admin'),
                         $this->trans(
                             'Increased conversion with a seamless and frictionless experience',
-                            'Admin.Design.Feature'
+                            'Modules.Onepagecheckout.Admin'
                         ),
-                        $this->trans('Mobile-friendly checkout', 'Admin.Design.Feature'),
+                        $this->trans('Mobile-friendly checkout', 'Modules.Onepagecheckout.Admin'),
                     ],
                     'illustration' => $this->module->getPathUri() . 'views/img/checkout/one-page-checkout.svg',
                 ],
@@ -196,15 +195,15 @@ class BackOfficeConfigurationForm
                     'badge' => '',
                     'description' => $this->trans(
                         'Propose a step-by-step checkout experience. All the usual payment steps will be displayed on different screens. Choose this method if:',
-                        'Admin.Design.Feature'
+                        'Modules.Onepagecheckout.Admin'
                     ),
                     'features' => [
                         $this->trans(
                             'You need flexibility for complex or specific information',
-                            'Admin.Design.Feature'
+                            'Modules.Onepagecheckout.Admin'
                         ),
-                        $this->trans('You\'re under regulatory compliance', 'Admin.Design.Feature'),
-                        $this->trans('You want to integrate upsell & cross-sell strategies', 'Admin.Design.Feature'),
+                        $this->trans('You\'re under regulatory compliance', 'Modules.Onepagecheckout.Admin'),
+                        $this->trans('You want to integrate upsell & cross-sell strategies', 'Modules.Onepagecheckout.Admin'),
                     ],
                     'illustration' => $this->module->getPathUri() . 'views/img/checkout/four-page-checkout.svg',
                 ],
@@ -242,7 +241,7 @@ class BackOfficeConfigurationForm
         );
     }
 
-    private function trans(string $message, string $domain = ModuleTranslation::ADMIN_DOMAIN): string
+    private function trans(string $message, string $domain = 'Modules.Onepagecheckout.Admin'): string
     {
         $translator = \Context::getContext()->getTranslator();
 

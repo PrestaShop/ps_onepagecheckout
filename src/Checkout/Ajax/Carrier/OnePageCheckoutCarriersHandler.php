@@ -2,7 +2,6 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutCarriersHandler
@@ -54,7 +53,7 @@ class OnePageCheckoutCarriersHandler
                 $requestedAddressId = (int) $requestParameters['id_address_delivery'];
                 if (!$this->isOwnedCheckoutAddress($requestedAddressId)) {
                     return CheckoutAjaxResponse::error(
-                        $this->translator->trans('Invalid delivery address.', [], ModuleTranslation::SHOP_DOMAIN),
+                        $this->translator->trans('Invalid delivery address.', [], 'Modules.Onepagecheckout.Shop'),
                         'id_address_delivery'
                     );
                 }
