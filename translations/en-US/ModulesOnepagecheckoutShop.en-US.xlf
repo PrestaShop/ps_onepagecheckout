@@ -18,6 +18,10 @@
         <source>Address options</source>
         <target>Address options</target>
       </trans-unit>
+      <trans-unit id="2db4fbd930cf5c255363c0cf81db24dd">
+        <source>Address successfully deleted.</source>
+        <target>Address successfully deleted.</target>
+      </trans-unit>
       <trans-unit id="548a3bc9bd5a65835dff0bc6ddee5687">
         <source>Already have an account? Sign in</source>
         <target>Already have an account? Sign in</target>
@@ -49,6 +53,10 @@
       <trans-unit id="ea4788705e6873b424c65e91c2846b19">
         <source>Cancel</source>
         <target>Cancel</target>
+      </trans-unit>
+      <trans-unit id="6ff063fbc860a79759a7369ac32cee22">
+        <source>Checkout</source>
+        <target>Checkout</target>
       </trans-unit>
       <trans-unit id="d3d2e617335f08df83599665eef8a418">
         <source>Close</source>
@@ -98,6 +106,10 @@
         <source>Edit delivery address</source>
         <target>Edit delivery address</target>
       </trans-unit>
+      <trans-unit id="7e0740b66b9d7d6578358ecc5bce8b92">
+        <source>Gift wrapping is currently unavailable.</source>
+        <target>Gift wrapping is currently unavailable.</target>
+      </trans-unit>
       <trans-unit id="9193b58520051d8b59ca64a5cc5353ff">
         <source>I would like to receive my order in recycled packaging.</source>
         <target>I would like to receive my order in recycled packaging.</target>
@@ -109,6 +121,22 @@
       <trans-unit id="5153f37f9159735ef4ae472c19b732e3">
         <source>If you'd like, you can add a note to the gift:</source>
         <target>If you'd like, you can add a note to the gift:</target>
+      </trans-unit>
+      <trans-unit id="999240422d91520da77051a8ef2af9f9">
+        <source>Invalid delivery address.</source>
+        <target>Invalid delivery address.</target>
+      </trans-unit>
+      <trans-unit id="5a5e1e87a8eaa7a31d48ee128302f2bc">
+        <source>Invalid email format.</source>
+        <target>Invalid email format.</target>
+      </trans-unit>
+      <trans-unit id="66dff4bc6149738292b7b2737e7e2e8c">
+        <source>Invalid security token.</source>
+        <target>Invalid security token.</target>
+      </trans-unit>
+      <trans-unit id="601d8c4b9f72fc1862013c19b677a499">
+        <source>Invoice address</source>
+        <target>Invoice address</target>
       </trans-unit>
       <trans-unit id="9a1e1ced2c95b8cc8ee5cb713637326f">
         <source>Loading addresses...</source>
@@ -126,6 +154,18 @@
         <source>Loading...</source>
         <target>Loading...</target>
       </trans-unit>
+      <trans-unit id="f4ac0281c7bfebb39bb90934628c40e2">
+        <source>Missing delivery option.</source>
+        <target>Missing delivery option.</target>
+      </trans-unit>
+      <trans-unit id="f7410e96ce082dd92c8e63a27d7fa809">
+        <source>Missing payment selection payload.</source>
+        <target>Missing payment selection payload.</target>
+      </trans-unit>
+      <trans-unit id="0bf3928d84fde940f6feafac75062280">
+        <source>My Address</source>
+        <target>My Address</target>
+      </trans-unit>
       <trans-unit id="d95cf4ab2cbf1dfb63f066b50558b07d">
         <source>My account</source>
         <target>My account</target>
@@ -142,6 +182,14 @@
         <source>Not you?</source>
         <target>Not you?</target>
       </trans-unit>
+      <trans-unit id="e84403ce2ed14f42eebf1c507795792c">
+        <source>One-page checkout is currently unavailable.</source>
+        <target>One-page checkout is currently unavailable.</target>
+      </trans-unit>
+      <trans-unit id="17ae274a6886db8dd6d8d2c5697205ec">
+        <source>One-page checkout is not enabled.</source>
+        <target>One-page checkout is not enabled.</target>
+      </trans-unit>
       <trans-unit id="f1d3b424cd68795ecaa552883759aceb">
         <source>Order summary</source>
         <target>Order summary</target>
@@ -153,6 +201,18 @@
       <trans-unit id="f0aaaae189e9c7711931a65ffcd22543">
         <source>Payment method</source>
         <target>Payment method</target>
+      </trans-unit>
+      <trans-unit id="688000bea2f79c9ca3d2d1755456024f">
+        <source>Please accept the terms of service.</source>
+        <target>Please accept the terms of service.</target>
+      </trans-unit>
+      <trans-unit id="7c35f5beee619d9244ee3f3d7acfed6b">
+        <source>Please select a payment method.</source>
+        <target>Please select a payment method.</target>
+      </trans-unit>
+      <trans-unit id="3a27a24bff20b8e1cf0bcc9afc8f04ff">
+        <source>Please select a shipping method.</source>
+        <target>Please select a shipping method.</target>
       </trans-unit>
       <trans-unit id="6327b4e59f58137083214a1fec358855">
         <source>Retry</source>
@@ -182,6 +242,74 @@
         <source>This action will remove the selected address from your checkout.</source>
         <target>This action will remove the selected address from your checkout.</target>
       </trans-unit>
+      <trans-unit id="19ab27c1f898f3fa7652f7ca2a3c5d2f">
+        <source>Unable to delete address.</source>
+        <target>Unable to delete address.</target>
+      </trans-unit>
+      <trans-unit id="0cc35c7acbd573ed83e89dac16ce5573">
+        <source>Unable to initialize checkout customer.</source>
+        <target>Unable to initialize checkout customer.</target>
+      </trans-unit>
+      <trans-unit id="39a762ed88fa8f4b4cc0d3edfd5e865b">
+        <source>Unable to initialize the selected payment method.</source>
+        <target>Unable to initialize the selected payment method.</target>
+      </trans-unit>
+      <trans-unit id="423c3d9a7feb297656d8abdbe59cb7d1">
+        <source>Unable to load delivery methods.</source>
+        <target>Unable to load delivery methods.</target>
+      </trans-unit>
+      <trans-unit id="5641fbf5ff3a7f9ed8340f2752248e3c">
+        <source>Unable to load payment methods.</source>
+        <target>Unable to load payment methods.</target>
+      </trans-unit>
+      <trans-unit id="fe166f359a0f562c5b90c4b0eb412d28">
+        <source>Unable to load states.</source>
+        <target>Unable to load states.</target>
+      </trans-unit>
+      <trans-unit id="e8ae1f23e882fa6b0914930c9e9860b9">
+        <source>Unable to load the requested address.</source>
+        <target>Unable to load the requested address.</target>
+      </trans-unit>
+      <trans-unit id="46adf24b089e8b8b6d58d7b24695e2a2">
+        <source>Unable to refresh addresses.</source>
+        <target>Unable to refresh addresses.</target>
+      </trans-unit>
+      <trans-unit id="d13a4cb4a391399e099cb802757ed4f1">
+        <source>Unable to resolve checkout customer.</source>
+        <target>Unable to resolve checkout customer.</target>
+      </trans-unit>
+      <trans-unit id="9b0e8775368f8c648327cf0401538874">
+        <source>Unable to resolve the current cart.</source>
+        <target>Unable to resolve the current cart.</target>
+      </trans-unit>
+      <trans-unit id="5aace64d0cf0bbaff29f6847e52ff282">
+        <source>Unable to resolve the current delivery address.</source>
+        <target>Unable to resolve the current delivery address.</target>
+      </trans-unit>
+      <trans-unit id="7e4ce39f86900b9ccef423a30041c1e5">
+        <source>Unable to save address.</source>
+        <target>Unable to save address.</target>
+      </trans-unit>
+      <trans-unit id="21286c5a3bf880ec178485353ef0b5f0">
+        <source>Unable to select the delivery method.</source>
+        <target>Unable to select the delivery method.</target>
+      </trans-unit>
+      <trans-unit id="5c9a8d4b5ddbb8a15b1d3c64b05dcb2b">
+        <source>Unable to select the payment method.</source>
+        <target>Unable to select the payment method.</target>
+      </trans-unit>
+      <trans-unit id="d001e703f1dd8eaa0f5ac2122811dec6">
+        <source>Unable to submit checkout.</source>
+        <target>Unable to submit checkout.</target>
+      </trans-unit>
+      <trans-unit id="03f74fc93b61e4eef8270a1356347fe8">
+        <source>Unable to synchronize cart customer link.</source>
+        <target>Unable to synchronize cart customer link.</target>
+      </trans-unit>
+      <trans-unit id="d339a896f81c562af827c27c3372c6d7">
+        <source>Unable to update guest email.</source>
+        <target>Unable to update guest email.</target>
+      </trans-unit>
       <trans-unit id="9a605fc0e1667ebdbd0ac37cf9f90789">
         <source>Unfortunately, there are no carriers available for your delivery address.</source>
         <target>Unfortunately, there are no carriers available for your delivery address.</target>
@@ -193,6 +321,10 @@
       <trans-unit id="0c7789282e40ec6011abadf2763198f6">
         <source>Use a different delivery address</source>
         <target>Use a different delivery address</target>
+      </trans-unit>
+      <trans-unit id="564d26a146ad07a32a17b625e828cdd6">
+        <source>Use the same address for invoice</source>
+        <target>Use the same address for invoice</target>
       </trans-unit>
       <trans-unit id="5c74d926c4b89517ad64133990d04413">
         <source>Use this address for invoice too</source>
