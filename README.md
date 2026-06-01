@@ -7,6 +7,10 @@
 > [!WARNING]
 > This module is under heavy development. It is not production-ready and should not be used in live environments.
 
+## Beta release
+
+Version `0.1.0` is a beta release intended for validation and integration testing only. It may receive breaking fixes before the first stable release.
+
 ## Compatibility
 
 PrestaShop: `9.0.0` or later.
