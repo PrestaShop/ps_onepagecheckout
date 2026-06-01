@@ -104,6 +104,7 @@ For end-to-end checks, use the dedicated runbook:
 - implementation rules: [`docs/RULES.md`](./docs/RULES.md)
 - architectural decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
 - Segment (configuration & usage): [`docs/SEGMENT.md`](./docs/SEGMENT.md)
+- translations (i18n): [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md)
 - contributors: [`CONTRIBUTORS.md`](./CONTRIBUTORS.md)
 
 ## License
