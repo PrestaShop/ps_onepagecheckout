@@ -16,7 +16,7 @@
  *}
 
 <section class="one-page-checkout__section js-opc-payment-section">
-  <h2 class="one-page-checkout__title">{l s='Payment method' d='Shop.Theme.Checkout'}</h2>
+  <h2 class="one-page-checkout__title">{l s='Payment method' d='Modules.Onepagecheckout.Shop'}</h2>
 
   {hook h='displayPaymentTop'}
 
@@ -33,7 +33,7 @@
         }
       {else}
         <div class="card card-body bg-light">
-          {l s='You will see the available payment methods once you\'ve entered your delivery address.' d='Shop.Theme.Checkout'}
+          {l s='You will see the available payment methods once you\'ve entered your delivery address.' d='Modules.Onepagecheckout.Shop'}
         </div>
       {/if}
     </div>
@@ -43,15 +43,15 @@
       aria-hidden="true"
     >
       {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-loader.tpl'
-        message={l s='Loading payment methods...' d='Shop.Theme.Checkout'}
+        message={l s='Loading payment methods...' d='Modules.Onepagecheckout.Shop'}
       }
     </div>
   </div>
 
   <template id="opc-template-payment-error">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-error.tpl'
-      message={l s='An error occurred while loading payment methods. Please try again.' d='Shop.Theme.Checkout'}
-      retry_label={l s='Retry' d='Shop.Theme.Checkout'}
+      message={l s='An error occurred while loading payment methods. Please try again.' d='Modules.Onepagecheckout.Shop'}
+      retry_label={l s='Retry' d='Modules.Onepagecheckout.Shop'}
       retry_action='retry-payment'
     }
   </template>

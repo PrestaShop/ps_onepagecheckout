@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file source-language="en-US" target-language="fr-FR" datatype="plaintext" original="modules/ps_onepagecheckout">
+    <body>
+      <trans-unit id="psopc.checkout.display_name">
+        <source>One-page checkout</source>
+        <target>Commande en une page</target>
+      </trans-unit>
+      <trans-unit id="psopc.checkout.description">
+        <source>Native one-page checkout.</source>
+        <target>Commande en une page native.</target>
+      </trans-unit>
+      <trans-unit id="psopc.checkout.tab_title">
+        <source>Checkout</source>
+        <target>Commande</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

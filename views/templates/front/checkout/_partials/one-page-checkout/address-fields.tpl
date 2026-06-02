@@ -61,7 +61,7 @@
         id="field-{$field.name}"
         {if $field.required}required{/if}
       >
-        <option value="">{l s='-- please choose --' d='Shop.Forms.Labels'}</option>
+        <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
         {foreach from=$field.availableValues item="label" key="value"}
           <option value="{$value}" {if (string) $value === (string) $field.value}selected{/if}>{$label}</option>
         {/foreach}

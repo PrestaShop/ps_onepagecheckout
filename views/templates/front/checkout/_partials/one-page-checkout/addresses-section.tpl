@@ -7,8 +7,8 @@
 {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-modal.tpl'
 modal_id='modal-delivery'
 formFields=$deliveryFields
-title_new={l s='New delivery address' d='Shop.Theme.Checkout'}
-title_edit={l s='Edit delivery address' d='Shop.Theme.Checkout'}
+title_new={l s='New delivery address' d='Modules.Onepagecheckout.Shop'}
+title_edit={l s='Edit delivery address' d='Modules.Onepagecheckout.Shop'}
 address_type='delivery'
 prefix=''
 }
@@ -17,8 +17,8 @@ prefix=''
 {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-modal.tpl'
 modal_id='modal-invoice'
 formFields=$invoiceFields
-title_new={l s='New billing address' d='Shop.Theme.Checkout'}
-title_edit={l s='Edit billing address' d='Shop.Theme.Checkout'}
+title_new={l s='New billing address' d='Modules.Onepagecheckout.Shop'}
+title_edit={l s='Edit billing address' d='Modules.Onepagecheckout.Shop'}
 address_type='invoice'
 prefix='invoice_'
 }
@@ -31,28 +31,28 @@ prefix='invoice_'
 
 <template id="opc-delivery-address-loader">
   {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-loader.tpl'
-    message={l s='Loading addresses...' d='Shop.Theme.Checkout'}
+    message={l s='Loading addresses...' d='Modules.Onepagecheckout.Shop'}
   }
 </template>
 
 <template id="opc-delivery-address-error">
   {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-error.tpl'
-    message={l s='An error occurred while loading addresses. Please try again.' d='Shop.Theme.Checkout'}
-    retry_label={l s='Retry' d='Shop.Theme.Checkout'}
+    message={l s='An error occurred while loading addresses. Please try again.' d='Modules.Onepagecheckout.Shop'}
+    retry_label={l s='Retry' d='Modules.Onepagecheckout.Shop'}
     retry_action='retry-addresses'
   }
 </template>
 
 <template id="opc-billing-address-loader">
   {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-loader.tpl'
-    message={l s='Loading addresses...' d='Shop.Theme.Checkout'}
+    message={l s='Loading addresses...' d='Modules.Onepagecheckout.Shop'}
   }
 </template>
 
 <template id="opc-billing-address-error">
   {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-error.tpl'
-    message={l s='An error occurred while loading addresses. Please try again.' d='Shop.Theme.Checkout'}
-    retry_label={l s='Retry' d='Shop.Theme.Checkout'}
+    message={l s='An error occurred while loading addresses. Please try again.' d='Modules.Onepagecheckout.Shop'}
+    retry_label={l s='Retry' d='Modules.Onepagecheckout.Shop'}
     retry_action='retry-addresses'
   }
 </template>
@@ -60,9 +60,9 @@ prefix='invoice_'
 <section class="one-page-checkout__section">
   <h2 class="one-page-checkout__title">
     {if $is_virtual_cart}
-      {l s='Billing address' d='Shop.Theme.Checkout'}
+      {l s='Billing address' d='Modules.Onepagecheckout.Shop'}
     {else}
-      {l s='Delivery address' d='Shop.Theme.Checkout'}
+      {l s='Delivery address' d='Modules.Onepagecheckout.Shop'}
     {/if}
   </h2>
 
@@ -89,7 +89,7 @@ prefix='invoice_'
       <div class="form-check">
         <input class="form-check-input" type="checkbox" id="opc-use-same-address" name="use_same_address" value="1" {if $useSameAddressField.value}checked{/if}>
         <label class="form-check-label" for="opc-use-same-address">
-          {l s='Use this address for invoice too' d='Shop.Theme.Checkout'}
+          {l s='Use this address for invoice too' d='Modules.Onepagecheckout.Shop'}
         </label>
       </div>
     {/if}
@@ -98,7 +98,7 @@ prefix='invoice_'
 
 {if !$is_virtual_cart}
 <section class="one-page-checkout__section" id="opc-billing-section" style="display: none;">
-  <h2 class="one-page-checkout__title">{l s='Billing address' d='Shop.Theme.Checkout'}</h2>
+  <h2 class="one-page-checkout__title">{l s='Billing address' d='Modules.Onepagecheckout.Shop'}</h2>
 
   <section class="form-fields">
     <div id="opc-billing-address-content">

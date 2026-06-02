@@ -4,7 +4,6 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutAddressForm;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutAddressFormatter;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSaveAddressHandler
@@ -33,7 +32,7 @@ class OnePageCheckoutSaveAddressHandler
         $customerId = $this->customerResolver->resolveId();
         if ($customerId <= 0) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to resolve checkout customer.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to resolve checkout customer.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -44,7 +43,7 @@ class OnePageCheckoutSaveAddressHandler
 
         if ($addressId > 0 && (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId)) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to load the requested address.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to load the requested address.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -58,7 +57,7 @@ class OnePageCheckoutSaveAddressHandler
 
         if (!$this->buildAddressPersister($customerId)->save($address, \Tools::getToken(true, $this->context))) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to save address.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -124,8 +123,8 @@ class OnePageCheckoutSaveAddressHandler
 
         $address->id_customer = $customerId;
         $address->alias = trim((string) ($address->alias ?: ($addressType === 'invoice'
-            ? $this->translator->trans('Invoice address', [], ModuleTranslation::SHOP_DOMAIN)
-            : $this->translator->trans('My Address', [], ModuleTranslation::SHOP_DOMAIN))));
+            ? $this->translator->trans('Invoice address', [], 'Modules.Onepagecheckout.Shop')
+            : $this->translator->trans('My Address', [], 'Modules.Onepagecheckout.Shop'))));
         $address->id_country = (int) $address->id_country;
         $address->id_state = (int) ($address->id_state ?: 0);
         \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$address]);

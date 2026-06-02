@@ -29,7 +29,6 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitValidationStateStorage;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use PrestaShop\PrestaShop\Adapter\Product\PriceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -193,7 +192,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         }
 
         $this->setTitle(
-            $this->getTranslator()->trans('Checkout', [], ModuleTranslation::SHOP_DOMAIN)
+            $this->getTranslator()->trans('Checkout', [], 'Modules.Onepagecheckout.Shop')
         );
     }
 

@@ -4,7 +4,6 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit;
 
 use PrestaShop\Module\PsOnePageCheckout\Checkout\PaymentSelectionKeyBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSubmitProcessor
@@ -133,7 +132,7 @@ class OnePageCheckoutSubmitProcessor
         }
 
         $this->validationErrors['identity'] = [
-            'email' => $this->translator->trans('Invalid email format.', [], ModuleTranslation::SHOP_DOMAIN),
+            'email' => $this->translator->trans('Invalid email format.', [], 'Modules.Onepagecheckout.Shop'),
         ];
 
         return false;
@@ -171,7 +170,7 @@ class OnePageCheckoutSubmitProcessor
 
         if ($deliveryOptionKey === '' || empty($deliveryOptions[$deliveryOptionKey])) {
             $this->validationErrors['shipping'] = [
-                'delivery_option' => $this->translator->trans('Please select a shipping method.', [], ModuleTranslation::SHOP_DOMAIN),
+                'delivery_option' => $this->translator->trans('Please select a shipping method.', [], 'Modules.Onepagecheckout.Shop'),
             ];
 
             return false;
@@ -211,7 +210,7 @@ class OnePageCheckoutSubmitProcessor
         }
 
         $this->validationErrors['payment'] = [
-            'paymentMethod' => $this->translator->trans('Please select a payment method.', [], ModuleTranslation::SHOP_DOMAIN),
+            'paymentMethod' => $this->translator->trans('Please select a payment method.', [], 'Modules.Onepagecheckout.Shop'),
         ];
 
         return false;
@@ -235,7 +234,7 @@ class OnePageCheckoutSubmitProcessor
             }
 
             $this->validationErrors['conditions'] = [
-                'conditions_to_approve' => $this->translator->trans('Please accept the terms of service.', [], ModuleTranslation::SHOP_DOMAIN),
+                'conditions_to_approve' => $this->translator->trans('Please accept the terms of service.', [], 'Modules.Onepagecheckout.Shop'),
             ];
 
             return false;

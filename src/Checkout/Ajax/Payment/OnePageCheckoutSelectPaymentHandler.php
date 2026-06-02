@@ -2,7 +2,6 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSelectPaymentHandler
@@ -29,7 +28,7 @@ class OnePageCheckoutSelectPaymentHandler
 
         if ($this->hasMissingPaymentSelectionPayload($paymentOption, $paymentModule, $paymentSelectionKey)) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Missing payment selection payload.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Missing payment selection payload.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 

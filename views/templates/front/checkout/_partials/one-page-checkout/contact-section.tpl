@@ -9,21 +9,21 @@
 
 {if !$customer.is_logged}
   <section class="one-page-checkout__section">
-    <h2 class="one-page-checkout__title">{l s='Contact information' d='Shop.Theme.Checkout'}</h2>
+    <h2 class="one-page-checkout__title">{l s='Contact information' d='Modules.Onepagecheckout.Shop'}</h2>
 
     <div class="one-page-checkout__links">
       <a class="one-page-checkout__link" href="{$opc_urls.authentication}">
-        {l s='Already have an account? Sign in' d='Shop.Theme.Checkout'}
+        {l s='Already have an account? Sign in' d='Modules.Onepagecheckout.Shop'}
       </a>
       <a class="one-page-checkout__link" href="{$opc_urls.registration}">
-        {l s='Create account' d='Shop.Theme.Checkout'}
+        {l s='Create account' d='Modules.Onepagecheckout.Shop'}
       </a>
     </div>
 
     {if $isGuestCheckoutEnabled}
       {if isset($contactFields['email'])}
         <div class="one-page-checkout__field">
-          <label class="form-label" for="field-email">{l s='Continue as guest' d='Shop.Theme.Checkout'}</label>
+          <label class="form-label" for="field-email">{l s='Continue as guest' d='Modules.Onepagecheckout.Shop'}</label>
           <input class="form-control" type="email" name="email" id="field-email" value="{$contactFields['email']['value']}" required>
           {include file='_partials/form-errors.tpl' errors=$contactFields['email']['errors']|default:[]}
         </div>
@@ -44,7 +44,7 @@
   </section>
 {else}
   <section class="one-page-checkout__section">
-    <h2 class="one-page-checkout__title">{l s='Contact information' d='Shop.Theme.Checkout'}</h2>
+    <h2 class="one-page-checkout__title">{l s='Contact information' d='Modules.Onepagecheckout.Shop'}</h2>
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/connected-account-info.tpl'}
   </section>
 {/if}

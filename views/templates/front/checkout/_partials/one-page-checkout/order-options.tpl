@@ -13,14 +13,14 @@
 <div class="order-options mt-3">
   <div class="mb-3">
     <label for="delivery_message" class="form-label">
-      {l s='Write a comment about this order' d='Shop.Theme.Checkout'}
+      {l s='Write a comment about this order' d='Modules.Onepagecheckout.Shop'}
     </label>
     <textarea
       class="form-control"
       rows="2"
       id="delivery_message"
       name="delivery_message"
-      placeholder="{l s='Write your comment...' d='Shop.Theme.Checkout'}"
+      placeholder="{l s='Write your comment...' d='Modules.Onepagecheckout.Shop'}"
     >{$delivery_message|escape:'html'}</textarea>
   </div>
 
@@ -35,7 +35,7 @@
         {if $recyclable}checked{/if}
       >
       <label class="form-check-label" for="input_recyclable">
-        {l s='I would like to receive my order in recycled packaging.' d='Shop.Theme.Checkout'}
+        {l s='I would like to receive my order in recycled packaging.' d='Modules.Onepagecheckout.Shop'}
       </label>
     </div>
   {/if}
@@ -57,7 +57,7 @@
 
     <div id="opc-gift-message" class="collapse{if $gift.isGift} show{/if} mb-3">
       <label for="gift_message" class="form-label">
-        {l s="If you'd like, you can add a note to the gift:" d='Shop.Theme.Checkout'}
+        {l s="If you'd like, you can add a note to the gift:" d='Modules.Onepagecheckout.Shop'}
       </label>
       <textarea
         class="form-control"

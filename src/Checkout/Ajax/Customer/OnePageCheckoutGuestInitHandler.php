@@ -14,7 +14,6 @@ use Customer;
 use Db;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\ExistingCustomerState;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use PrestaShop\PrestaShop\Core\Util\InternationalizedDomainNameConverter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -120,7 +119,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->isOnePageCheckoutEnabled) {
             return $this->errorResponse(
                 self::ERROR_FIELD_GLOBAL,
-                $this->translator->trans('One-page checkout is not enabled.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('One-page checkout is not enabled.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -133,7 +132,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->isTokenValid($requestParameters)) {
             return $this->errorResponse(
                 self::ERROR_FIELD_TOKEN,
-                $this->translator->trans('Invalid security token.', [], ModuleTranslation::SHOP_DOMAIN),
+                $this->translator->trans('Invalid security token.', [], 'Modules.Onepagecheckout.Shop'),
                 false
             );
         }
@@ -473,7 +472,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->customerPersister->save($existingCustomer, '', '', false)) {
             return $this->errorResponse(
                 self::ERROR_FIELD_EMAIL,
-                $this->translator->trans(self::ERROR_GUEST_EMAIL_UPDATE_FAILED, [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans(self::ERROR_GUEST_EMAIL_UPDATE_FAILED, [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -686,7 +685,7 @@ class OnePageCheckoutGuestInitHandler
     {
         return $this->errorResponse(
             self::ERROR_FIELD_GLOBAL,
-            $this->translator->trans(self::ERROR_CART_CUSTOMER_SYNC_FAILED, [], ModuleTranslation::SHOP_DOMAIN)
+            $this->translator->trans(self::ERROR_CART_CUSTOMER_SYNC_FAILED, [], 'Modules.Onepagecheckout.Shop')
         );
     }
 

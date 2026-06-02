@@ -12,7 +12,7 @@
  *}
 <div class="d-flex flex-column justify-content-center align-items-center h-100 gap-2 py-3">
   <div class="spinner-border text-primary" role="status">
-    <span class="visually-hidden">{l s='Loading...' d='Shop.Theme.Checkout'}</span>
+    <span class="visually-hidden">{l s='Loading...' d='Modules.Onepagecheckout.Shop'}</span>
   </div>
   {if isset($message) && $message}
     <p class="text-muted small mb-0">{$message|escape:'html'}</p>
