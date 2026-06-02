@@ -62,9 +62,9 @@
         <source>Close</source>
         <target>Close</target>
       </trans-unit>
-      <trans-unit id="8bf910bb9ffa608d4c7fd6504667d62f">
-        <source>Connected as</source>
-        <target>Connected as</target>
+      <trans-unit id="6280ed214163d6e214763ff970910cdc">
+        <source>Connected as [1]%firstname% %lastname%[/1].</source>
+        <target>Connected as [1]%firstname% %lastname%[/1].</target>
       </trans-unit>
       <trans-unit id="5e3d6d040d8a81befd75127d526646bc">
         <source>Contact information</source>
@@ -166,9 +166,9 @@
         <source>My Address</source>
         <target>My Address</target>
       </trans-unit>
-      <trans-unit id="d95cf4ab2cbf1dfb63f066b50558b07d">
-        <source>My account</source>
-        <target>My account</target>
+      <trans-unit id="dc8350c8bd88911cabd243b705284f04">
+        <source>My account (%firstname% %lastname%)</source>
+        <target>My account (%firstname% %lastname%)</target>
       </trans-unit>
       <trans-unit id="8cad959f414b692c94d7cebbeedd3188">
         <source>New billing address</source>
@@ -178,9 +178,9 @@
         <source>New delivery address</source>
         <target>New delivery address</target>
       </trans-unit>
-      <trans-unit id="e44d34afa2de844e6e565bfe2afd334a">
-        <source>Not you?</source>
-        <target>Not you?</target>
+      <trans-unit id="82dc57da54e2a0ed4db0a04ce7dd1949">
+        <source>Not you? [1]Sign out[/1]</source>
+        <target>Not you? [1]Sign out[/1]</target>
       </trans-unit>
       <trans-unit id="e84403ce2ed14f42eebf1c507795792c">
         <source>One-page checkout is currently unavailable.</source>
@@ -229,10 +229,6 @@
       <trans-unit id="f1e8f49d1d8ddba0394ca883412a8c7b">
         <source>Select address: %alias%</source>
         <target>Select address: %alias%</target>
-      </trans-unit>
-      <trans-unit id="c87aacf5673fada1108c9f809d354311">
-        <source>Sign out</source>
-        <target>Sign out</target>
       </trans-unit>
       <trans-unit id="46a2a41cc6e552044816a2d04634545d">
         <source>State</source>
