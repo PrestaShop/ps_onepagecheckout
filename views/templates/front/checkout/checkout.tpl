@@ -17,7 +17,7 @@
     id="js-account-created-toast"
     class="d-none"
     data-show="{$show_account_created_toast|intval|default:0}"
-    data-message="{l s='Account successfully created' d='Shop.Theme.Customeraccount'}"
+    data-message="{l s='Account successfully created' d='Modules.Onepagecheckout.Shop'}"
   ></div>
 
   <div class="columns-container container">
@@ -37,7 +37,7 @@
               <div class="checkout__summary-accordion-item accordion-item">
                 <div class="checkout__summary-accordion-header accordion-header">
                   <button class="accordion-button" type="button" data-bs-target="#js-checkout-summary" data-bs-toggle="collapse" aria-expanded="true">
-                    {l s='Order summary' d='Shop.Theme.Checkout'}
+                    {l s='Order summary' d='Modules.Onepagecheckout.Shop'}
                   </button>
                 </div>
 

@@ -8,7 +8,6 @@ use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OpcTempAddress;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\TempAddressCarrierSelectionStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\TempAddressStorage;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutGiftWrappingHandler
@@ -39,13 +38,13 @@ class OnePageCheckoutGiftWrappingHandler
     {
         if (!\Validate::isLoadedObject($this->context->cart)) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to resolve the current cart.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to resolve the current cart.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
         if (!(bool) \Configuration::get('PS_GIFT_WRAPPING')) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Gift wrapping is currently unavailable.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Gift wrapping is currently unavailable.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 

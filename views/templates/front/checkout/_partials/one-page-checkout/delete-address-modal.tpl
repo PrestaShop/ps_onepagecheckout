@@ -15,18 +15,18 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="opc-delete-address-confirm-title" class="mb-0">
-          {l s='Delete this address?' d='Shop.Theme.Checkout'}
+          {l s='Delete this address?' d='Modules.Onepagecheckout.Shop'}
         </h2>
         <button
           type="button"
           class="btn-close"
           data-bs-dismiss="modal"
-          aria-label="{l s='Close' d='Shop.Theme.Actions'}"
+          aria-label="{l s='Close' d='Modules.Onepagecheckout.Shop'}"
         ></button>
       </div>
       <div class="modal-body">
         <p class="mb-0">
-          {l s='This action will remove the selected address from your checkout.' d='Shop.Theme.Checkout'}
+          {l s='This action will remove the selected address from your checkout.' d='Modules.Onepagecheckout.Shop'}
         </p>
       </div>
       <div class="modal-footer">
@@ -35,13 +35,13 @@
           class="btn btn-outline-primary js-opc-delete-address-cancel"
           data-bs-dismiss="modal"
         >
-          {l s='Cancel' d='Shop.Theme.Actions'}
+          {l s='Cancel' d='Modules.Onepagecheckout.Shop'}
         </button>
         <button
           type="button"
           class="btn btn-outline-danger js-opc-delete-address-confirm"
         >
-          {l s='Delete' d='Shop.Theme.Actions'}
+          {l s='Delete' d='Modules.Onepagecheckout.Shop'}
         </button>
       </div>
     </div>

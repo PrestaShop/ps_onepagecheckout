@@ -70,6 +70,6 @@
   {/foreach}
 {foreachelse}
   <p class="alert alert-danger">
-    {l s='Unfortunately, there are no payment method available.' d='Shop.Theme.Checkout'}
+    {l s='Unfortunately, there are no payment method available.' d='Modules.Onepagecheckout.Shop'}
   </p>
 {/foreach}

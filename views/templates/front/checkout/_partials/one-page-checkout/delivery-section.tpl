@@ -17,7 +17,7 @@
  *}
 
 <section class="one-page-checkout__section js-opc-delivery-section">
-  <h2 class="one-page-checkout__title">{l s='Delivery method' d='Shop.Theme.Checkout'}</h2>
+  <h2 class="one-page-checkout__title">{l s='Delivery method' d='Modules.Onepagecheckout.Shop'}</h2>
 
   <div id="delivery-options__hook">
     {if isset($hookDisplayBeforeCarrier)}
@@ -29,7 +29,7 @@
 
   <div class="one-page-checkout__placeholder" id="opc-delivery-methods" data-id-address="{$id_address_delivery|intval}"
     data-url-update="{url entity='order' params=['ajax' => 1, 'action' => 'opcSelectCarrier']}"
-    data-msg-no-carriers="{l s='Unfortunately, there are no carriers available for your delivery address.' d='Shop.Theme.Checkout'}"
+    data-msg-no-carriers="{l s='Unfortunately, there are no carriers available for your delivery address.' d='Modules.Onepagecheckout.Shop'}"
   >
     {if $delivery_options|count}
       {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/carriers.tpl'
@@ -38,7 +38,7 @@
       }
     {else}
       <div class="card card-body bg-light">
-        {l s='You will see the available delivery methods once you\'ve entered your delivery address.' d='Shop.Theme.Checkout'}
+        {l s='You will see the available delivery methods once you\'ve entered your delivery address.' d='Modules.Onepagecheckout.Shop'}
       </div>
     {/if}
   </div>
@@ -62,14 +62,14 @@
 
   <template id="opc-template-loader">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-loader.tpl'
-      message={l s='Loading delivery methods...' d='Shop.Theme.Checkout'}
+      message={l s='Loading delivery methods...' d='Modules.Onepagecheckout.Shop'}
     }
   </template>
 
   <template id="opc-template-carriers-error">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-error.tpl'
-      message={l s='An error occurred while loading carriers. Please try again.' d='Shop.Theme.Checkout'}
-      retry_label={l s='Retry' d='Shop.Theme.Checkout'}
+      message={l s='An error occurred while loading carriers. Please try again.' d='Modules.Onepagecheckout.Shop'}
+      retry_label={l s='Retry' d='Modules.Onepagecheckout.Shop'}
     }
   </template>
 </section>

@@ -33,7 +33,6 @@ use Country;
 use Customer;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerTemplateBuilder;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use PrestaShop\PrestaShop\Core\Util\InternationalizedDomainNameConverter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Validate;
@@ -312,7 +311,7 @@ class OnePageCheckoutForm extends \AbstractForm
             );
             $deliveryAddress->id_customer = $customer->id;
             if (empty($deliveryAddress->alias)) {
-                $deliveryAddress->alias = $this->translator->trans('My Address', [], ModuleTranslation::SHOP_DOMAIN);
+                $deliveryAddress->alias = $this->translator->trans('My Address', [], 'Modules.Onepagecheckout.Shop');
             }
             \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$deliveryAddress]);
             if (!$this->addressPersister->save($deliveryAddress, $token)) {
@@ -338,7 +337,7 @@ class OnePageCheckoutForm extends \AbstractForm
                     'invoice_'
                 );
                 $invoiceAddress->id_customer = $customer->id;
-                $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans('Invoice address', [], ModuleTranslation::SHOP_DOMAIN);
+                $invoiceAddress->alias = $invoiceAddress->alias ?: $this->translator->trans('Invoice address', [], 'Modules.Onepagecheckout.Shop');
                 \Hook::exec('actionSubmitCustomerAddressForm', ['address' => &$invoiceAddress]);
                 if (!$this->addressPersister->save($invoiceAddress, $token)) {
                     return false;
@@ -559,7 +558,7 @@ class OnePageCheckoutForm extends \AbstractForm
         }
 
         $emailField->addError(
-            $this->translator->trans('Invalid email format.', [], ModuleTranslation::SHOP_DOMAIN)
+            $this->translator->trans('Invalid email format.', [], 'Modules.Onepagecheckout.Shop')
         );
 
         return false;

@@ -29,7 +29,6 @@ namespace PrestaShop\Module\PsOnePageCheckout\Form;
 
 use Address;
 use Country;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutFormatter implements \FormFormatterInterface
@@ -152,7 +151,7 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
             ->setName('use_same_address')
             ->setType('checkbox')
             ->setLabel(
-                $this->translator->trans('Use the same address for invoice', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Use the same address for invoice', [], 'Modules.Onepagecheckout.Shop')
             )
             ->setValue(true);
 

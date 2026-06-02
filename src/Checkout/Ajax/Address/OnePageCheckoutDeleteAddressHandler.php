@@ -2,7 +2,6 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutDeleteAddressHandler
@@ -34,14 +33,14 @@ class OnePageCheckoutDeleteAddressHandler
         $customer = $this->customerResolver->resolve();
         if (!$customer instanceof \Customer) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to resolve checkout customer.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to resolve checkout customer.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
         $address = $this->loadOwnedAddress($customer, (int) ($requestParameters['id_address'] ?? 0));
         if (!$address instanceof \Address) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to load the requested address.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to load the requested address.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -54,7 +53,7 @@ class OnePageCheckoutDeleteAddressHandler
 
         if (!$this->buildAddressPersister($customer)->delete($address, \Tools::getToken(true, $this->context))) {
             return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to delete address.', [], ModuleTranslation::SHOP_DOMAIN)
+                $this->translator->trans('Unable to delete address.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -75,7 +74,7 @@ class OnePageCheckoutDeleteAddressHandler
         return [
             'success' => true,
             'id_address' => $addressId,
-            'message' => $this->translator->trans('Address successfully deleted.', [], ModuleTranslation::SHOP_DOMAIN),
+            'message' => $this->translator->trans('Address successfully deleted.', [], 'Modules.Onepagecheckout.Shop'),
         ];
     }
 

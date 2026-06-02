@@ -1,7 +1,6 @@
 <?php
 
 use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
-use PrestaShop\Module\PsOnePageCheckout\Translation\ModuleTranslation;
 
 abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFrontController
 {
@@ -52,7 +51,7 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
             'success' => false,
             'errors' => [
                 '' => [
-                    $this->trans('One-page checkout is currently unavailable.', [], ModuleTranslation::SHOP_DOMAIN),
+                    $this->trans('One-page checkout is currently unavailable.', [], 'Modules.Onepagecheckout.Shop'),
                 ],
             ],
         ];

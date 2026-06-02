@@ -15,7 +15,7 @@
     {if isset($message) && $message}
       {$message|escape:'html'}
     {else}
-      {l s='An error occurred. Please try again.' d='Shop.Theme.Checkout'}
+      {l s='An error occurred. Please try again.' d='Modules.Onepagecheckout.Shop'}
     {/if}
   </p>
   {if isset($retry_label) && $retry_label}
