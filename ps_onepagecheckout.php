@@ -174,11 +174,11 @@ class Ps_Onepagecheckout extends Module
             $backParams = [];
             $orderPageUrl = $this->context->link->getPageLink('order');
 
-            if (is_string($orderPageUrl) && \Tools::urlBelongsToShop($orderPageUrl)) {
+            if (Tools::urlBelongsToShop($orderPageUrl)) {
                 $backParams = ['back' => $orderPageUrl];
             }
 
-            \Tools::redirect($this->context->link->getPageLink('authentication', null, null, $backParams));
+            Tools::redirect($this->context->link->getPageLink('authentication', null, null, $backParams));
         }
 
         $this->context->smarty->assign('is_one_page_checkout_enabled', $isOnePageCheckoutEnabled);
