@@ -163,6 +163,7 @@ class Ps_Onepagecheckout extends Module
         }
 
         $isOnePageCheckoutEnabled = $this->isOnePageCheckoutEnabled();
+        $this->context->smarty->assign('is_one_page_checkout_enabled', $isOnePageCheckoutEnabled);
 
         if (!$isOnePageCheckoutEnabled) {
             return;
@@ -170,7 +171,11 @@ class Ps_Onepagecheckout extends Module
 
         $guestCheckoutEnabled = (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED');
 
-        if (!$guestCheckoutEnabled && !$this->context->customer->isLogged()) {
+        if (
+            !$guestCheckoutEnabled
+            && $this->context->customer
+            && !$this->context->customer->isLogged()
+        ) {
             $backParams = [];
             $orderPageUrl = $this->context->link->getPageLink('order');
 
@@ -180,8 +185,6 @@ class Ps_Onepagecheckout extends Module
 
             Tools::redirect($this->context->link->getPageLink('authentication', null, null, $backParams));
         }
-
-        $this->context->smarty->assign('is_one_page_checkout_enabled', $isOnePageCheckoutEnabled);
 
         Analytics::trackCheckoutStarted(
             $guestCheckoutEnabled ? 'yes' : 'no',
