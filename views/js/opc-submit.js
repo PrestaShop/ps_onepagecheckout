@@ -371,18 +371,7 @@ function markFieldsValidity(form) {
       return;
     }
 
-    if (element.checkValidity()) {
-      // Only clear the marker we set ourselves; leave server-rendered .is-invalid intact.
-      if (element.dataset.opcInvalid) {
-        element.classList.remove('is-invalid');
-        delete element.dataset.opcInvalid;
-      }
-
-      return;
-    }
-
-    element.classList.add('is-invalid');
-    element.dataset.opcInvalid = '1';
+    element.toggleClass('is-invalid', element.checkValidity());
   });
 }
 
@@ -395,11 +384,7 @@ function clearFieldValidityOnFix(event) {
     return;
   }
 
-  // Only clear the marker we set at submit time; never touch server-rendered .is-invalid.
-  if (element.dataset.opcInvalid && element.checkValidity()) {
-    element.classList.remove('is-invalid');
-    delete element.dataset.opcInvalid;
-  }
+  element.toggleClass('is-invalid', element.checkValidity());
 }
 
 function validateNativeForm(form) {
