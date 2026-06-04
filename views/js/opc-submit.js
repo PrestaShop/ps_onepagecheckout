@@ -358,7 +358,53 @@ function buildSubmitPayload(form, paymentRadio) {
   return payload;
 }
 
+function markFieldsValidity(form) {
+  Array.from(form.elements).forEach((element) => {
+    if (!(element instanceof HTMLInputElement
+      || element instanceof HTMLSelectElement
+      || element instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
+    // Skip controls the browser never validates (disabled, hidden, buttons, etc.).
+    if (!element.willValidate) {
+      return;
+    }
+
+    if (element.checkValidity()) {
+      // Only clear the marker we set ourselves; leave server-rendered .is-invalid intact.
+      if (element.dataset.opcInvalid) {
+        element.classList.remove('is-invalid');
+        delete element.dataset.opcInvalid;
+      }
+
+      return;
+    }
+
+    element.classList.add('is-invalid');
+    element.dataset.opcInvalid = '1';
+  });
+}
+
+function clearFieldValidityOnFix(event) {
+  const element = event.target;
+
+  if (!(element instanceof HTMLInputElement
+    || element instanceof HTMLSelectElement
+    || element instanceof HTMLTextAreaElement)) {
+    return;
+  }
+
+  // Only clear the marker we set at submit time; never touch server-rendered .is-invalid.
+  if (element.dataset.opcInvalid && element.checkValidity()) {
+    element.classList.remove('is-invalid');
+    delete element.dataset.opcInvalid;
+  }
+}
+
 function validateNativeForm(form) {
+  markFieldsValidity(form);
+
   if (!form.checkValidity()) {
     form.reportValidity();
 
@@ -551,6 +597,7 @@ async function submitOpcPay(form) {
 function bindValidationListeners(form, payButton) {
   if (!form.dataset.opcSubmitInputBound) {
     form.addEventListener('input', validateForm);
+    form.addEventListener('input', clearFieldValidityOnFix);
     form.dataset.opcSubmitInputBound = '1';
   }
 
