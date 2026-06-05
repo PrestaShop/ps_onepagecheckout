@@ -51,6 +51,7 @@ const OPC_SUBMIT_URL_KEY = 'opcSubmit';
 let billingToggleHandler = null;
 let paymentMethodsState = 'idle';
 let isFinalSubmitInFlight = false;
+let hasAttemptedSubmit = false;
 
 function getCheckoutForm() {
   return document.querySelector(OPC_FORM_ID_SELECTOR) || document.querySelector(CHECKOUT_SELECTOR);
@@ -219,6 +220,13 @@ function validateForm() {
     && hasSelectedPayment();
 
   payButton.disabled = !isValid;
+
+  // Once the customer has tried to submit, keep the invalid-field highlights in sync even
+  // while Pay stays disabled (e.g. empty required fields never reach validateNativeForm).
+  if (hasAttemptedSubmit) {
+    markFieldsValidity(form);
+  }
+
   prestashop.emit(OPC_EVENTS.opcFormValidated, {isValid});
 }
 
@@ -371,7 +379,7 @@ function markFieldsValidity(form) {
       return;
     }
 
-    element.toggleClass('is-invalid', element.checkValidity());
+    element.classList.toggle('is-invalid', !element.checkValidity());
   });
 }
 
@@ -384,7 +392,10 @@ function clearFieldValidityOnFix(event) {
     return;
   }
 
-  element.toggleClass('is-invalid', element.checkValidity());
+  // Only clear the highlight as the user fixes a field; marking happens at submit time.
+  if (element.classList.contains('is-invalid') && element.checkValidity()) {
+    element.classList.remove('is-invalid');
+  }
 }
 
 function validateNativeForm(form) {
@@ -594,6 +605,7 @@ function bindValidationListeners(form, payButton) {
   if (!form.dataset.opcSubmitHandlerBound) {
     form.addEventListener('submit', (event) => {
       event.preventDefault();
+      hasAttemptedSubmit = true;
       submitOpcPay(form);
     });
     form.dataset.opcSubmitHandlerBound = '1';
@@ -608,9 +620,27 @@ function bindValidationListeners(form, payButton) {
         return;
       }
 
+      hasAttemptedSubmit = true;
       submitOpcPay(form);
     });
     payButton.dataset.opcSubmitHandlerBound = '1';
+  }
+
+  // A disabled button fires no click, so the disabled Pay button is set to pointer-events:none
+  // and the click falls through to this wrapper — letting us surface validation for the empty
+  // required fields that keep Pay disabled in the first place.
+  const payButtonWrapper = payButton.closest('.js-payment-confirmation') || payButton.parentElement;
+  if (payButtonWrapper instanceof HTMLElement && !payButtonWrapper.dataset.opcSubmitAttemptBound) {
+    payButtonWrapper.addEventListener('click', () => {
+      if (!payButton.disabled) {
+        return;
+      }
+
+      hasAttemptedSubmit = true;
+      validateForm();
+      form.reportValidity();
+    });
+    payButtonWrapper.dataset.opcSubmitAttemptBound = '1';
   }
 }
 
