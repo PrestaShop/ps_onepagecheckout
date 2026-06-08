@@ -62,6 +62,7 @@ final class Analytics
      */
     public const SEGMENT_PREPROD_KEY = 'SEGMENT_PREPROD_KEY';
     public const SEGMENT_PROD_KEY = 'SEGMENT_PROD_KEY';
+    public const URL_TRACKING_ENV_NAME = 'PS_URL_TRACKING';
 
     private static bool $clientInitialized = false;
 
@@ -120,7 +121,9 @@ final class Analytics
      */
     public static function trackEvent(string $eventName, array $properties, string $moduleVersion): void
     {
-        self::bootstrap(true);
+        $urlTrackingEnv = self::getEnv(self::URL_TRACKING_ENV_NAME);
+
+        self::bootstrap($urlTrackingEnv !== 'false' && $urlTrackingEnv !== '0');
         if (!self::$clientInitialized) {
             return;
         }
