@@ -54,6 +54,12 @@ $component-name: one-page-checkout;
   .opc-address-item .form-check-label {
     cursor: pointer;
   }
+
+  // While Pay is disabled, let clicks fall through to the wrapper so the checkout can
+  // surface validation feedback for the empty required fields that disabled it.
+  &__submit:disabled {
+    pointer-events: none;
+  }
 }
 
 .opc-payment-methods-wrapper {
