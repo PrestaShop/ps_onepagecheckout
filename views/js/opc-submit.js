@@ -627,8 +627,9 @@ function bindValidationListeners(form, payButton) {
   }
 
   // A disabled button fires no click, so the disabled Pay button is set to pointer-events:none
-  // and the click falls through to this wrapper — letting us surface validation for the empty
-  // required fields that keep Pay disabled in the first place.
+  // and the click falls through to this wrapper. Run the same precondition feedback as a real
+  // submit so blockers outside #opc-form (unchecked terms, missing payment) are surfaced too,
+  // not just the empty required fields inside the form.
   const payButtonWrapper = payButton.closest('.js-payment-confirmation') || payButton.parentElement;
   if (payButtonWrapper instanceof HTMLElement && !payButtonWrapper.dataset.opcSubmitAttemptBound) {
     payButtonWrapper.addEventListener('click', () => {
@@ -637,8 +638,7 @@ function bindValidationListeners(form, payButton) {
       }
 
       hasAttemptedSubmit = true;
-      validateForm();
-      form.reportValidity();
+      ensureSubmitPreconditions(form);
     });
     payButtonWrapper.dataset.opcSubmitAttemptBound = '1';
   }
