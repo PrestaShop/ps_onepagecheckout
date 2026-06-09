@@ -11,6 +11,8 @@
  * @property bool   $logged
  * @property bool   $is_guest
  * @property string $psopc_bo_configuration_saved
+ * @property string $psopc_bo_maintenance_enabled
+ * @property string $opc_temp_delivery_address
  */
 class Cookie
 {

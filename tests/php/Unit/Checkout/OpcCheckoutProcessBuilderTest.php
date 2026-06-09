@@ -16,6 +16,7 @@ use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessBuilder;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 class OpcCheckoutProcessBuilderTest extends TestCase
 {
@@ -80,26 +81,10 @@ class OpcCheckoutProcessBuilderTest extends TestCase
 
     private function createContextWithCart(bool $isVirtual): \Context
     {
-        $context = new class extends \Context {
-            public function __construct()
-            {
-            }
-        };
-        $context->cart = new class($isVirtual) extends \Cart {
-            private bool $isVirtual;
-
-            public function __construct(bool $isVirtual)
-            {
-                $this->isVirtual = $isVirtual;
-            }
-
-            public function isVirtualCart()
-            {
-                return $this->isVirtual;
-            }
-        };
-
-        return $context;
+        return CheckoutTestFixtures::context([
+            'cart' => CheckoutTestFixtures::virtualCart($isVirtual),
+            'smarty' => CheckoutTestFixtures::smarty(),
+        ]);
     }
 }
 

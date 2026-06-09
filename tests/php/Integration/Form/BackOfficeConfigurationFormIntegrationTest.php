@@ -47,6 +47,7 @@ class BackOfficeConfigurationFormIntegrationTest extends TestCase
     {
         $_GET = $this->backupGet;
         $_POST = $this->backupPost;
+        \Shop::setContext(\Shop::CONTEXT_ALL);
         parent::tearDown();
     }
 
@@ -142,6 +143,25 @@ class BackOfficeConfigurationFormIntegrationTest extends TestCase
         self::assertStringNotContainsString('[CONFIRMATION]', $secondGetContent);
         self::assertStringContainsString('twig-after-submit', $secondGetContent);
         self::assertCount(1, $module->confirmationMessages);
+    }
+
+    public function testItDoesNotPersistSubmittedValueOutsideSingleShopContext(): void
+    {
+        $_POST['submitPsOnePageCheckoutConfiguration'] = '1';
+        $_POST['PS_ONE_PAGE_CHECKOUT_ENABLED'] = '1';
+        \Shop::setContext(\Shop::CONTEXT_ALL);
+
+        $twig = new Environment(new ArrayLoader([
+            '@Modules/ps_onepagecheckout/views/templates/admin/checkout_layout_configuration.html.twig' => 'twig-after-submit',
+        ]));
+        $module = new IntegrationBackOfficeModuleStub($twig, new ContainerBuilder());
+        $form = new IntegrationBackOfficeConfigurationFormSpy($module, 'PS_ONE_PAGE_CHECKOUT_ENABLED');
+
+        $content = $form->renderBackOfficeConfiguration();
+
+        self::assertSame('', $content);
+        self::assertSame([], $form->persistedValues);
+        self::assertCount(1, $form->redirectedUrls);
     }
 }
 
@@ -244,8 +264,18 @@ class IntegrationBackOfficeControllerStub
      */
     public array $registeredCss = [];
 
+    /**
+     * @var string[]
+     */
+    public array $registeredJs = [];
+
     public function addCSS($css): void
     {
         $this->registeredCss[] = (string) $css;
+    }
+
+    public function addJS($js): void
+    {
+        $this->registeredJs[] = (string) $js;
     }
 }

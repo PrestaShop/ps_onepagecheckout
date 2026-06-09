@@ -380,8 +380,16 @@ class OpcGuestInitHandlerTest extends TestCase
         $handler->setCustomerById(55, $registeredCustomer);
 
         $opcForm
-            ->expects($this->never())
+            ->expects($this->once())
             ->method('submitGuestInit')
+            ->willReturn(false)
+        ;
+        $opcForm
+            ->expects($this->once())
+            ->method('getErrors')
+            ->willReturn([
+                'email' => ['Unable to save guest customer'],
+            ])
         ;
 
         $response = $handler->handle([
@@ -389,9 +397,8 @@ class OpcGuestInitHandlerTest extends TestCase
             'token' => 'expected-token',
         ]);
 
-        self::assertTrue($response['success']);
-        self::assertFalse($response['customer_created']);
-        self::assertSame(0, $response['id_customer']);
+        self::assertFalse($response['success']);
+        self::assertSame(['Unable to save guest customer'], $response['errors']['email']);
     }
 
     public function testItCreatesANewGuestWhenExistingGuestEmailIsSubmittedOnAnonymousCart(): void
@@ -405,8 +412,16 @@ class OpcGuestInitHandlerTest extends TestCase
         $handler->setCustomerIdByEmail('john@doe.example', 55);
 
         $opcForm
-            ->expects($this->never())
+            ->expects($this->once())
             ->method('submitGuestInit')
+            ->willReturn(false)
+        ;
+        $opcForm
+            ->expects($this->once())
+            ->method('getErrors')
+            ->willReturn([
+                'email' => ['Unable to save guest customer'],
+            ])
         ;
 
         $response = $handler->handle([
@@ -414,9 +429,8 @@ class OpcGuestInitHandlerTest extends TestCase
             'token' => 'expected-token',
         ]);
 
-        self::assertTrue($response['success']);
-        self::assertFalse($response['customer_created']);
-        self::assertSame(0, $response['id_customer']);
+        self::assertFalse($response['success']);
+        self::assertSame(['Unable to save guest customer'], $response['errors']['email']);
     }
 
     public function testItDoesNotNoopWhenCartCustomerReferenceIsStale(): void
@@ -466,8 +480,16 @@ class OpcGuestInitHandlerTest extends TestCase
         $handler->setFreshCartCustomerIdByCartId(1, 999);
 
         $opcForm
-            ->expects($this->never())
+            ->expects($this->once())
             ->method('submitGuestInit')
+            ->willReturn(false)
+        ;
+        $opcForm
+            ->expects($this->once())
+            ->method('getErrors')
+            ->willReturn([
+                'email' => ['Unable to save guest customer'],
+            ])
         ;
 
         $response = $handler->handle([
@@ -476,12 +498,11 @@ class OpcGuestInitHandlerTest extends TestCase
         ]);
 
         self::assertFalse($response['success']);
-        self::assertArrayHasKey('', $response['errors']);
-        self::assertNotEmpty($response['errors']['']);
+        self::assertSame(['Unable to save guest customer'], $response['errors']['email']);
         self::assertSame(999, (int) $cart->id_customer);
         self::assertSame(10, (int) \Context::getContext()->customer->id);
-        self::assertSame('updated@example.com', $guest->email);
-        self::assertSame('updated@example.com', (string) \Context::getContext()->customer->email);
+        self::assertSame('guest@example.com', $guest->email);
+        self::assertSame('guest@example.com', (string) \Context::getContext()->customer->email);
     }
 
     public function testItReturnsErrorWhenCartClaimLosesRaceAndFreshOwnerCannotBeReadInUnitDbMock(): void
@@ -836,6 +857,20 @@ class LightweightCustomer extends \Customer
 
     public function __construct()
     {
+    }
+
+    public function isGuest(): bool
+    {
+        return (bool) $this->is_guest;
+    }
+
+    public function isLogged($withGuest = false): bool
+    {
+        if ((int) $this->id <= 0) {
+            return false;
+        }
+
+        return !$this->isGuest() || $withGuest;
     }
 
     /**

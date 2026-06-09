@@ -24,7 +24,7 @@ class GuestInitControllerTest extends TestCase
         $controller = new TestGuestInitController();
         $controller->module = $this->createDisabledModule();
 
-        $response = $controller->callHandleGuestInit();
+        $response = $controller->callHandleOpcRequest();
 
         self::assertFalse($response['success']);
         self::assertSame('technical-error', $response['error']);
@@ -53,7 +53,7 @@ class GuestInitControllerTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $response = $controller->callHandleGuestInit();
+        $response = $controller->callHandleOpcRequest();
 
         self::assertTrue($response['success']);
         self::assertSame(42, $response['id_customer']);
@@ -72,7 +72,7 @@ class GuestInitControllerTest extends TestCase
             return true;
         }, E_WARNING);
         try {
-            $response = $controller->callHandleGuestInit();
+            $response = $controller->callHandleOpcRequest();
         } finally {
             restore_error_handler();
         }
@@ -102,9 +102,9 @@ class TestGuestInitController extends \Ps_OnepagecheckoutGuestInitModuleFrontCon
     {
     }
 
-    public function callHandleGuestInit(): array
+    public function callHandleOpcRequest(): array
     {
-        return $this->handleGuestInit();
+        return $this->handleOpcRequest();
     }
 
     protected function createGuestInitHandler(OnePageCheckoutFormFactory $opcFormFactory): OnePageCheckoutGuestInitHandler

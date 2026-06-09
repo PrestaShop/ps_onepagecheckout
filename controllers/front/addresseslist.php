@@ -1,0 +1,50 @@
+<?php
+
+/**
+ * AJAX endpoint for module-owned OPC addresses list.
+ */
+
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutAddressesListHandler;
+
+require_once __DIR__ . '/AbstractOpcJsonFrontController.php';
+
+class Ps_OnepagecheckoutAddressesListModuleFrontController extends Ps_OnepagecheckoutAbstractOpcJsonFrontController
+{
+    /**
+     * @return array<string,mixed>
+     */
+    protected function handleAvailableOpcRequest(): array
+    {
+        $handler = new OnePageCheckoutAddressesListHandler(
+            $this->context,
+            $this->module->getTranslator(),
+            new CheckoutCustomerContextResolver($this->context)
+        );
+        $response = $handler->handle();
+        if (empty($response['success'])) {
+            return $response;
+        }
+
+        return [
+            'success' => true,
+            'address_count' => (int) ($response['address_count'] ?? 0),
+            'delivery_html' => $this->renderModuleTemplate(
+                'checkout/_partials/one-page-checkout/address-list',
+                [
+                    'customer' => $response['customer'] ?? [],
+                    'prefix' => '',
+                    'selected_address' => (int) ($response['selected_delivery_address'] ?? 0),
+                ]
+            ),
+            'billing_html' => $this->renderModuleTemplate(
+                'checkout/_partials/one-page-checkout/address-list',
+                [
+                    'customer' => $response['customer'] ?? [],
+                    'prefix' => 'invoice_',
+                    'selected_address' => (int) ($response['selected_invoice_address'] ?? 0),
+                ]
+            ),
+        ];
+    }
+}

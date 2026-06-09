@@ -35,10 +35,6 @@ jobs:
   phpstan:
     name: PHPStan
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        presta-versions: ['latest']
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -48,11 +44,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Checkout PrestaShop core develop
+        uses: actions/checkout@v5
+        with:
+          repository: PrestaShop/PrestaShop
+          ref: develop
+          path: prestashop-core
+
+      - name: Install PrestaShop core dependencies
+        working-directory: prestashop-core
+        run: composer install --no-interaction --prefer-dist
+
       - name: Install dependencies
         run: composer install
 
-      - name: Execute PHPStan on PrestaShop (Tag ${{ matrix.presta-versions }})
-        run: ./tests/php/phpstan.sh ${{ matrix.presta-versions }}
+      - name: Execute PHPStan on PrestaShop develop
+        env:
+          PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
+        run: ./tests/php/phpstan.sh latest
 
   unit-tests:
     name: Unit tests
@@ -62,9 +71,9 @@ jobs:
       matrix:
         prestashop:
           # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
-          - label: latest
-            image_tag: latest
-            core_ref: ''
+          - label: 9.1.0
+            image_tag: 9.1.0
+            core_ref: 9.1.0
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -74,15 +83,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout PrestaShop core (default branch)
-        if: ${{ matrix.prestashop.core_ref == '' }}
-        uses: actions/checkout@v5
-        with:
-          repository: PrestaShop/PrestaShop
-          path: prestashop-core
-
       - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
-        if: ${{ matrix.prestashop.core_ref != '' }}
         uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop
@@ -106,9 +107,9 @@ jobs:
       matrix:
         prestashop:
           # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
-          - label: latest
-            image_tag: latest
-            core_ref: ''
+          - label: 9.1.0
+            image_tag: 9.1.0
+            core_ref: 9.1.0
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -118,15 +119,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout PrestaShop core (default branch)
-        if: ${{ matrix.prestashop.core_ref == '' }}
-        uses: actions/checkout@v5
-        with:
-          repository: PrestaShop/PrestaShop
-          path: prestashop-core
-
       - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
-        if: ${{ matrix.prestashop.core_ref != '' }}
         uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop
