@@ -169,8 +169,25 @@ class Ps_Onepagecheckout extends Module
             return;
         }
 
+        $guestCheckoutEnabled = (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED');
+
+        if (
+            !$guestCheckoutEnabled
+            && $this->context->customer
+            && !$this->context->customer->isLogged()
+        ) {
+            $backParams = [];
+            $orderPageUrl = $this->context->link->getPageLink('order');
+
+            if (Tools::urlBelongsToShop($orderPageUrl)) {
+                $backParams = ['back' => $orderPageUrl];
+            }
+
+            Tools::redirect($this->context->link->getPageLink('authentication', null, null, $backParams));
+        }
+
         Analytics::trackCheckoutStarted(
-            (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
+            $guestCheckoutEnabled ? 'yes' : 'no',
             (string) $this->version
         );
 
