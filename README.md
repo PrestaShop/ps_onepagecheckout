@@ -9,7 +9,7 @@
 
 ## Beta release
 
-Version `0.2.0` is a beta release intended for validation and integration testing only. It may receive breaking fixes before the first stable release.
+Version `0.3.0` is a beta release intended for validation and integration testing only. It may receive breaking fixes before the first stable release.
 
 ## Compatibility
 
