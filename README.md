@@ -9,7 +9,7 @@
 
 ## Compatibility
 
-PrestaShop: `9.0.0` or later.
+PrestaShop: `9.2.0` or later.
 
 ## What the module owns
 
