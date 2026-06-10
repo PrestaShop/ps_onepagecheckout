@@ -27,7 +27,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '1.0.0';
+        $this->version = '0.0.4';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -55,7 +55,7 @@ class Ps_Onepagecheckout extends Module
             [],
             'Modules.Onepagecheckout.Admin'
         );
-        $this->ps_versions_compliancy = ['min' => '9.0.0', 'max' => _PS_VERSION_];
+        $this->ps_versions_compliancy = ['min' => '9.2.0', 'max' => _PS_VERSION_];
         $this->controllers = [
             'guestinit',
             'addressform',
