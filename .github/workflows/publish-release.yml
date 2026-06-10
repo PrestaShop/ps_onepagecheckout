@@ -1,0 +1,263 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version without leading "v" (example: 0.0.4)'
+        required: true
+        type: string
+      prerelease:
+        description: Mark the GitHub release as a pre-release
+        required: true
+        default: true
+        type: boolean
+      draft:
+        description: Create the GitHub release as a draft. The git tag is still created.
+        required: true
+        default: true
+        type: boolean
+      notes_start_tag:
+        description: Previous release tag used to generate clean release notes. Auto-detected when empty.
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: publish-release-${{ github.repository }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-module:
+    name: Build module artifact
+    permissions:
+      contents: read
+    uses: PrestaShop/.github/.github/workflows/build-release.yml@master
+
+  publish-release:
+    name: Create exact release
+    runs-on: ubuntu-latest
+    needs: [build-module]
+    permissions:
+      contents: write
+      actions: read
+    env:
+      MODULE: ${{ github.event.repository.name }}
+      VERSION: ${{ inputs.version }}
+      PRERELEASE: ${{ inputs.prerelease }}
+      DRAFT: ${{ inputs.draft }}
+      NOTES_START_TAG: ${{ inputs.notes_start_tag }}
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate selected ref and version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE}" != "branch" ]]; then
+            echo "This workflow must be run from the release branch, not from ${GITHUB_REF_TYPE}." >&2
+            exit 1
+          fi
+
+          case "${GITHUB_REF_NAME}" in
+            main|master) ;;
+            *)
+              echo "This workflow must be run from main or master. Current ref: ${GITHUB_REF_NAME}" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ "${VERSION}" == v* ]]; then
+            echo "Use the version without leading v. Example: 0.0.4" >&2
+            exit 1
+          fi
+
+          if ! [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: ${VERSION}" >&2
+            exit 1
+          fi
+
+      - name: Validate source version markers
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -F "<version><![CDATA[${VERSION}]]></version>" config.xml
+          grep -F "<version><![CDATA[${VERSION}]]></version>" config_fr.xml
+          grep -F "\$this->version = '${VERSION}';" ps_onepagecheckout.php
+          grep -F "\"version\": \"${VERSION}\"" views/package.json
+          grep -F "\"version\": \"${VERSION}\"" views/package-lock.json
+
+      - name: Validate tag and release state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${VERSION}"
+
+          DRAFT_RELEASE="$(
+            gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft \
+              --jq ".[] | select(.tagName == \"${TAG}\" and .isDraft)"
+          )"
+
+          if [[ -n "${DRAFT_RELEASE}" ]]; then
+            echo "Draft release ${TAG} already exists. Delete it or publish it manually before running this workflow." >&2
+            exit 1
+          fi
+
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists." >&2
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            git fetch origin "refs/tags/${TAG}:refs/tags/${TAG}"
+            TAG_TARGET="$(git rev-list -n 1 "${TAG}")"
+
+            if [[ "${TAG_TARGET}" != "${GITHUB_SHA}" ]]; then
+              echo "Tag ${TAG} already exists and points to ${TAG_TARGET}, expected ${GITHUB_SHA}." >&2
+              exit 1
+            fi
+
+            echo "TAG_EXISTS=true" >> "${GITHUB_ENV}"
+          else
+            echo "TAG_EXISTS=false" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Resolve release notes range
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${VERSION}"
+
+          if [[ -n "${NOTES_START_TAG}" ]]; then
+            if [[ "${NOTES_START_TAG}" == "${TAG}" ]]; then
+              echo "notes_start_tag cannot be the tag being released." >&2
+              exit 1
+            fi
+
+            if ! git ls-remote --exit-code --tags origin "refs/tags/${NOTES_START_TAG}" >/dev/null 2>&1; then
+              echo "notes_start_tag ${NOTES_START_TAG} does not exist on origin." >&2
+              exit 1
+            fi
+          else
+            NOTES_START_TAG="$(
+              gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName,isDraft \
+                --jq 'map(select(.isDraft | not))[0].tagName // ""'
+            )"
+          fi
+
+          echo "NOTES_START_TAG=${NOTES_START_TAG}" >> "${GITHUB_ENV}"
+
+          if [[ -n "${NOTES_START_TAG}" ]]; then
+            echo "Release notes will start from ${NOTES_START_TAG}."
+          else
+            echo "No previous release found. Release notes will include all detected changes."
+          fi
+
+      - name: Download built module artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}
+          path: release-artifact
+
+      - name: Create release zip
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -d "release-artifact/${MODULE}" ]]; then
+            echo "Expected artifact directory release-artifact/${MODULE} was not found." >&2
+            find release-artifact -maxdepth 3 -type d -print >&2
+            exit 1
+          fi
+
+          cd release-artifact
+          zip -r "${MODULE}.zip" "${MODULE}"
+          mv "${MODULE}.zip" "${GITHUB_WORKSPACE}/${MODULE}.zip"
+
+      - name: Validate release zip
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZIP="${MODULE}.zip"
+
+          unzip -tqq "${ZIP}"
+
+          zipinfo -1 "${ZIP}" | grep -Fx "${MODULE}/vendor/autoload.php"
+          zipinfo -1 "${ZIP}" | grep -Fx "${MODULE}/ps_onepagecheckout.php"
+
+      - name: Create release tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${VERSION}"
+
+          if [[ "${TAG_EXISTS}" == "true" ]]; then
+            echo "Tag ${TAG} already exists on ${GITHUB_SHA}; reusing it."
+            exit 0
+          fi
+
+          TAG_SHA="$(
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/tags" \
+              -f "tag=${TAG}" \
+              -f "message=${TAG}" \
+              -f "object=${GITHUB_SHA}" \
+              -f "type=commit" \
+              -f "tagger[name]=github-actions[bot]" \
+              -f "tagger[email]=41898282+github-actions[bot]@users.noreply.github.com" \
+              -f "tagger[date]=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              --jq '.sha'
+          )"
+
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f "ref=refs/tags/${TAG}" \
+            -f "sha=${TAG_SHA}" \
+            >/dev/null
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${VERSION}"
+          RELEASE_ARGS=(
+            release create "${TAG}" "${MODULE}.zip"
+            --repo "${GITHUB_REPOSITORY}"
+            --target "${GITHUB_SHA}"
+            --verify-tag
+            --title "${TAG}"
+            --generate-notes
+          )
+
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            RELEASE_ARGS+=(--prerelease)
+          fi
+
+          if [[ "${DRAFT}" == "true" ]]; then
+            RELEASE_ARGS+=(--draft)
+          fi
+
+          if [[ -n "${NOTES_START_TAG}" ]]; then
+            RELEASE_ARGS+=(--notes-start-tag "${NOTES_START_TAG}")
+          fi
+
+          gh "${RELEASE_ARGS[@]}"

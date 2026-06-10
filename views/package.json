@@ -1,6 +1,6 @@
 {
   "name": "ps_onepagecheckout",
-  "version": "0.0.4",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "build": "NODE_ENV=production webpack --mode=production",
