@@ -37,6 +37,7 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
                 (string) $this->module->version
             );
         }
+
         return $result;
     }
 
