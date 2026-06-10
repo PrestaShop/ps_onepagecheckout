@@ -70,10 +70,11 @@ jobs:
       fail-fast: false
       matrix:
         prestashop:
-          # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
-          - label: 9.1.0
-            image_tag: 9.1.0
-            core_ref: 9.1.0
+          # Keep the checkout ref and nightly archive version aligned when adding more supported versions.
+          - label: 9.2.0-dev
+            image_tag: nightly
+            core_ref: develop
+            archive_version: develop
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -106,10 +107,11 @@ jobs:
       fail-fast: false
       matrix:
         prestashop:
-          # Keep the checkout ref and Docker image tag aligned when adding more supported versions.
-          - label: 9.1.0
-            image_tag: 9.1.0
-            core_ref: 9.1.0
+          # Keep the checkout ref and nightly archive version aligned when adding more supported versions.
+          - label: 9.2.0-dev
+            image_tag: nightly
+            core_ref: develop
+            archive_version: develop
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -133,4 +135,5 @@ jobs:
       - name: Execute integration tests on PrestaShop (Tag ${{ matrix.prestashop.image_tag }})
         env:
           PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
+          PS_IMAGE_VERSION: ${{ matrix.prestashop.archive_version }}
         run: ./scripts/run-tests.sh integration ${{ matrix.prestashop.image_tag }}
