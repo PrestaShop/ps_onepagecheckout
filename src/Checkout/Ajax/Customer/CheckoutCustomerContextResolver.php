@@ -27,6 +27,23 @@ class CheckoutCustomerContextResolver
         return $customer instanceof \Customer ? (int) $customer->id : 0;
     }
 
+    /**
+     * Whether the resolved checkout customer already owns at least one saved address.
+     * Used to decide if the typed-address draft still helps (guests and brand-new accounts
+     * have none) or if the saved-address flow has taken over.
+     */
+    public function hasSavedAddress(): bool
+    {
+        $customer = $this->resolve();
+        if (!$customer instanceof \Customer || (int) $customer->id <= 0) {
+            return false;
+        }
+
+        $addresses = $customer->getSimpleAddresses((int) ($this->context->language->id ?? 0));
+
+        return is_array($addresses) && $addresses !== [];
+    }
+
     private function resolvePersistedCartOwner(): ?\Customer
     {
         if (!\Validate::isLoadedObject($this->context->cart)) {

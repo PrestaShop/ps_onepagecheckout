@@ -27,6 +27,8 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitValidationStateStorage;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 use PrestaShop\PrestaShop\Adapter\Product\PriceFormatter;
@@ -62,6 +64,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
 
     private $validationErrors = [];
     private bool $clearPersistedValidationErrorsOnNextSave = false;
+    private bool $restoredFromFailedSubmit = false;
     private OnePageCheckoutSubmitValidationStateStorage $submitValidationStateStorage;
 
     /**
@@ -182,6 +185,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
 
         $this->hydrateOpcFromSession();
         $this->restoreLastFailedSubmitState();
+        $this->restoreAddressDraft();
 
         if (
             !$this->context->cart->isVirtualCart()
@@ -371,6 +375,7 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
 
         if ($submittedValues !== [] || $formErrors !== []) {
             $this->opcForm->restoreSubmissionState($submittedValues, $formErrors);
+            $this->restoredFromFailedSubmit = true;
         }
 
         $this->validationErrors = isset($submitState['validation_errors']) && is_array($submitState['validation_errors'])
@@ -380,6 +385,48 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         if ($this->validationErrors !== [] || $formErrors !== []) {
             $this->clearPersistedValidationErrorsOnNextSave = true;
         }
+    }
+
+    /**
+     * Restore the autosaved address draft so typed data survives leaving and returning to
+     * checkout — including the "I typed my address, then created an account" flow, where a
+     * brand-new customer has no saved address yet. Lowest precedence: never overrides a
+     * selected saved address or a restored failed-submit state, and stops once the customer
+     * has a saved address to pick from.
+     */
+    private function restoreAddressDraft(): void
+    {
+        if ($this->restoredFromFailedSubmit || (new CheckoutCustomerContextResolver($this->context))->hasSavedAddress()) {
+            return;
+        }
+
+        $session = $this->getCheckoutSession();
+        if ((int) $session->getIdAddressDelivery() > 0 || (int) $session->getIdAddressInvoice() > 0) {
+            return;
+        }
+
+        $draft = (new AddressDraftStorage($this->context))->get($this->opcForm->getAddressDraftFieldNames());
+        if ($draft === []) {
+            return;
+        }
+
+        // A logged-in account owns its identity: keep the account's first/last name (already
+        // prefilled from the customer) and only restore the address specifics that were typed
+        // before the account existed.
+        if ($this->isRegisteredCustomer()) {
+            unset($draft['firstname'], $draft['lastname']);
+        }
+
+        $this->opcForm->fillWith($draft);
+    }
+
+    private function isRegisteredCustomer(): bool
+    {
+        $customer = $this->context->customer;
+
+        return $customer instanceof \Customer
+            && (int) $customer->id > 0
+            && !$customer->isGuest();
     }
 
     /**

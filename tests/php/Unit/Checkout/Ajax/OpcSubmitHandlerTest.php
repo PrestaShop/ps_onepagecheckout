@@ -6,6 +6,7 @@ namespace Tests\Unit\Checkout\Ajax;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitHandler;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitProcessor;
@@ -56,7 +57,8 @@ class OpcSubmitHandlerTest extends TestCase
             $this->context,
             $this->checkoutSessionFactory,
             $this->submitProcessor,
-            $this->submitValidationStateStorage
+            $this->submitValidationStateStorage,
+            $this->createMock(AddressDraftStorage::class)
         );
     }
 

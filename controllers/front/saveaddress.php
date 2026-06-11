@@ -4,6 +4,7 @@
  * AJAX endpoint for module-owned OPC address save.
  */
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutSaveAddressHandler;
 
@@ -19,7 +20,8 @@ class Ps_OnepagecheckoutSaveAddressModuleFrontController extends Ps_Onepagecheck
         $handler = new OnePageCheckoutSaveAddressHandler(
             $this->context,
             $this->module->getTranslator(),
-            new CheckoutCustomerContextResolver($this->context)
+            new CheckoutCustomerContextResolver($this->context),
+            new AddressDraftStorage($this->context)
         );
 
         return $handler->handle(Tools::getAllValues());

@@ -622,6 +622,38 @@ class OnePageCheckoutForm extends \AbstractForm
         return $this->buildAddressFromGroup($fieldsByGroup['invoiceFields'], null, 'invoice_');
     }
 
+    /**
+     * Names of the editable address fields (delivery + invoice sections) plus the
+     * same-address flag, read from the live form definition. Driving the draft whitelist
+     * from here keeps it in sync with configurable per-country address formats and
+     * module-added custom address fields, instead of relying on a hardcoded list.
+     *
+     * @return array<int, string>
+     */
+    public function getAddressDraftFieldNames(): array
+    {
+        if (!$this->formFields) {
+            $this->formFields = $this->formatter->getFormat();
+            $this->stripAdditionalCustomerFieldsForConnectedCustomer();
+        }
+
+        $fieldsByGroup = $this->mapFieldsByGroup();
+        $names = ['use_same_address'];
+
+        foreach (['deliveryFields', 'invoiceFields'] as $group) {
+            foreach ($fieldsByGroup[$group] as $field) {
+                // Skip hidden technical fields such as id_address_delivery; they are not draft data.
+                if ($field->getType() === 'hidden') {
+                    continue;
+                }
+
+                $names[] = (string) $field->getName();
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
     public function getTemplateVariables()
     {
         if (!$this->formFields) {

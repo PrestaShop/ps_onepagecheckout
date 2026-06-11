@@ -2,6 +2,7 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit;
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 
 class OnePageCheckoutSubmitHandler
@@ -10,17 +11,20 @@ class OnePageCheckoutSubmitHandler
     private CheckoutSessionFactory $checkoutSessionFactory;
     private OnePageCheckoutSubmitProcessor $submitProcessor;
     private OnePageCheckoutSubmitValidationStateStorage $submitValidationStateStorage;
+    private AddressDraftStorage $addressDraftStorage;
 
     public function __construct(
         \Context $context,
         CheckoutSessionFactory $checkoutSessionFactory,
         OnePageCheckoutSubmitProcessor $submitProcessor,
         OnePageCheckoutSubmitValidationStateStorage $submitValidationStateStorage,
+        AddressDraftStorage $addressDraftStorage,
     ) {
         $this->context = $context;
         $this->checkoutSessionFactory = $checkoutSessionFactory;
         $this->submitProcessor = $submitProcessor;
         $this->submitValidationStateStorage = $submitValidationStateStorage;
+        $this->addressDraftStorage = $addressDraftStorage;
     }
 
     /**
@@ -52,6 +56,7 @@ class OnePageCheckoutSubmitHandler
         $processingResult = $this->submitProcessor->process($checkoutSession, $requestParameters);
         if (($processingResult['success'] ?? false) === true) {
             $this->submitValidationStateStorage->clear();
+            $this->addressDraftStorage->clear();
 
             return [
                 'success' => true,
