@@ -567,7 +567,11 @@ function bindAddressDraftAutosave(selectors) {
     }
 
     debounceTimer = setTimeout(() => {
-      $.post(draftUrl, collectAddressDraftPayload(addressContainer));
+      const payload = collectAddressDraftPayload(addressContainer);
+      // The endpoint validates the static front token (CSRF protection).
+      payload.token = String(prestashop.static_token || '');
+
+      $.post(draftUrl, payload);
     }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
   };
 

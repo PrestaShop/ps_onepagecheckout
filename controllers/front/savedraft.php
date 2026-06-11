@@ -18,6 +18,19 @@ class Ps_OnepagecheckoutSaveDraftModuleFrontController extends Ps_Onepagecheckou
      */
     protected function handleAvailableOpcRequest(): array
     {
+        if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            header('HTTP/1.1 405 Method Not Allowed');
+            header('Allow: POST');
+
+            return ['success' => false];
+        }
+
+        if (!$this->isTokenValid()) {
+            header('HTTP/1.1 403 Forbidden');
+
+            return ['success' => false];
+        }
+
         // The draft only helps customers who have no saved address yet (guests, and brand-new
         // accounts created mid-checkout). Once an address is saved, the saved-address flow takes
         // over and there is nothing to keep in a cookie.
@@ -25,9 +38,19 @@ class Ps_OnepagecheckoutSaveDraftModuleFrontController extends Ps_Onepagecheckou
             return ['success' => true];
         }
 
+        // Non-scalar values (e.g. `address1[]=x`) are never legitimate address form input.
+        $this->persistAddressDraft(array_filter(Tools::getAllValues(), 'is_scalar'));
+
+        return ['success' => true];
+    }
+
+    /**
+     * @param array<string,scalar> $requestParameters
+     */
+    protected function persistAddressDraft(array $requestParameters): void
+    {
         /** @var Ps_Onepagecheckout $module */
         $module = $this->module;
-        $requestParameters = Tools::getAllValues();
 
         // Build the form from the submitted data so the allowed field names reflect the
         // configured per-country address format and any module-added custom address fields.
@@ -38,7 +61,5 @@ class Ps_OnepagecheckoutSaveDraftModuleFrontController extends Ps_Onepagecheckou
             $requestParameters,
             $form->getAddressDraftFieldNames()
         );
-
-        return ['success' => true];
     }
 }

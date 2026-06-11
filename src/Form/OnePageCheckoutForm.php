@@ -96,7 +96,7 @@ class OnePageCheckoutForm extends \AbstractForm
         // Rebuild delivery field rules from selected country (state/postcode requirements).
         if (isset($params['id_country'])) {
             $country = (int) $params['id_country'] !== (int) $this->formatter->getCountry()->id
-                ? new \Country($params['id_country'], $this->language->id)
+                ? new \Country((int) $params['id_country'], $this->language->id)
                 : $this->formatter->getCountry()
             ;
         } elseif ($this->address) { // @phpstan-ignore elseif.alwaysTrue (defensive fallback when formatter country differs)
