@@ -133,7 +133,7 @@ class AddressDraftStorage
     {
         $result = [];
         foreach ($allowedFields as $field) {
-            if (!is_string($field) || !array_key_exists($field, $values)) {
+            if (!array_key_exists($field, $values)) {
                 continue;
             }
 

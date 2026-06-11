@@ -39,9 +39,7 @@ class CheckoutCustomerContextResolver
             return false;
         }
 
-        $addresses = $customer->getSimpleAddresses((int) ($this->context->language->id ?? 0));
-
-        return is_array($addresses) && $addresses !== [];
+        return !empty($customer->getSimpleAddresses((int) ($this->context->language->id ?? 0)));
     }
 
     private function resolvePersistedCartOwner(): ?\Customer
