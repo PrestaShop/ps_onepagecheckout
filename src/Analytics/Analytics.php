@@ -123,7 +123,8 @@ final class Analytics
     {
         $urlTrackingEnv = self::getEnv(self::URL_TRACKING_ENV_NAME);
 
-        self::bootstrap($urlTrackingEnv !== 'false' && $urlTrackingEnv !== '0');
+        $isTrackingEnabled = $urlTrackingEnv !== 'false' && $urlTrackingEnv !== '0';
+        self::bootstrap($isTrackingEnabled);
         if (!self::$clientInitialized) {
             return;
         }
