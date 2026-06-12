@@ -4,7 +4,7 @@ This document describes the **configuration** and **technical integration** of S
 
 **Current behavior**: `Segment::init()` is initialized when conditions are met. **No** `track` / `flush` calls are sent from the module yet — this will be addressed in future tickets.
 
-**Summary**: write key read from a file/environment variables (`SEGMENT_PREPROD_KEY`, `SEGMENT_PROD_KEY`) → `Segment::init()` is executed **on demand**, on the **first tracking call** (no hook dependency).
+**Summary**: write key read from a file/environment variables (`PS_OPC_SEGMENT_PREPROD_KEY`, `PS_OPC_SEGMENT_PROD_KEY`) → `Segment::init()` is executed **on demand**, on the **first tracking call** (no hook dependency).
 
 The PHP class is named **`Analytics`** (intentionally **generic**) to minimize renames if the provider changes.
 
@@ -18,13 +18,13 @@ The PHP class is named **`Analytics`** (intentionally **generic**) to minimize r
 
 | Source | Identifier | Role | Default |
 |--------|------------|------|---------|
-| Environment | `SEGMENT_PREPROD_KEY` | Write key for the Segment **PHP source** (preprod) — **single source of truth** (no `configuration`). | `''` |
-| Environment | `SEGMENT_PROD_KEY` | Write key for the Segment **PHP source** (prod) — **single source of truth** (no `configuration`). | `''` |
+| Environment | `PS_OPC_SEGMENT_PREPROD_KEY` | Write key for the Segment **PHP source** (preprod) — **single source of truth** (no `configuration`). | `''` |
+| Environment | `PS_OPC_SEGMENT_PROD_KEY` | Write key for the Segment **PHP source** (prod) — **single source of truth** (no `configuration`). | `''` |
 
 ### Key Selection Rule
 
-- If `_PS_MODE_DEV_` is `false` → uses `SEGMENT_PROD_KEY`
-- If `_PS_MODE_DEV_` is `true` → uses `SEGMENT_PREPROD_KEY`
+- If `_PS_MODE_DEV_` is `false` → uses `PS_OPC_SEGMENT_PROD_KEY`
+- If `_PS_MODE_DEV_` is `true` → uses `PS_OPC_SEGMENT_PREPROD_KEY`
 
 ## PHP Architecture
 
@@ -37,7 +37,7 @@ The module no longer depends on a hook to initialize Segment: the client is init
 ### Notable Differences from the Old (Browser) Version
 
 - No more `window.psopc_segment` or `opc-segment-init.bundle.js`.
-- The **PHP** keys (`SEGMENT_PREPROD_KEY` / `SEGMENT_PROD_KEY`) are not the same Segment source as the old **JavaScript** key; configure it in the Segment workspace (PHP source).
+- The **PHP** keys (`PS_OPC_SEGMENT_PREPROD_KEY` / `PS_OPC_SEGMENT_PROD_KEY`) are not the same Segment source as the old **JavaScript** key; configure it in the Segment workspace (PHP source).
 
 ## Execution Context
 
