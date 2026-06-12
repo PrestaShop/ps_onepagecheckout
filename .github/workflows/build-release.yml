@@ -14,3 +14,6 @@ jobs:
   build-and-release-draft:
     name: Build & Release draft
     uses: PrestaShop/.github/.github/workflows/build-release.yml@master
+    with:
+      # Scope the bundled Segment SDK into the module namespace (see Makefile + scoper.inc.php).
+      makefile_rule: scoper

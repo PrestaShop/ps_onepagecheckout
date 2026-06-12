@@ -4,6 +4,8 @@
 /tests/e2e/artifacts
 /tests/e2e/.env
 /vendor
+/php-scoper.phar
+/build-scoped
 /views/node_modules
 /.php_cs.cache
 .php-cs-fixer.cache

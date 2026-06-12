@@ -10,12 +10,11 @@
     }
   ],
   "require": {
-    "php": ">=8.1",
-    "segmentio/analytics-php": "^3.0",
-    "symfony/dotenv": "^6.4"
+    "php": ">=8.1"
   },
   "require-dev": {
-    "prestashop/php-dev-tools": "^4.3"
+    "prestashop/php-dev-tools": "^4.3",
+    "segmentio/analytics-php": "^3.0"
   },
   "config": {
     "preferred-install": "dist",
@@ -25,7 +24,8 @@
   },
   "autoload": {
     "psr-4": {
-      "PrestaShop\\Module\\PsOnePageCheckout\\": "src/"
+      "PrestaShop\\Module\\PsOnePageCheckout\\": "src/",
+      "PrestaShop\\Module\\PsOnePageCheckout\\Vendor\\Segment\\": "vendor/segmentio/analytics-php/lib"
     },
     "classmap": [
       "ps_onepagecheckout.php",
