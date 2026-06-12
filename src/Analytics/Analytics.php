@@ -34,7 +34,7 @@ use Segment\Segment;
 final class Analytics
 {
     private const EVENT_OPC_CHECKOUT_STARTED = '[OPC] Checkout Started';
-    private const EVENT_OPC_CHECKOUT_COMPLETED = '[OPC] Checkout Completed';
+    private const EVENT_OPC_CHECKOUT_SUBMITTED = '[OPC] Checkout Submitted';
 
     /**
      * Segment event name emitted on critical OPC errors (technical / blocking errors, no PII).
@@ -88,9 +88,9 @@ final class Analytics
         ], $moduleVersion);
     }
 
-    public static function trackCheckoutCompleted(string $guestCheckoutActive, string $paymentMethod, string $moduleVersion): void
+    public static function trackCheckoutSubmitted(string $guestCheckoutActive, string $paymentMethod, string $moduleVersion): void
     {
-        self::trackEvent(self::EVENT_OPC_CHECKOUT_COMPLETED, [
+        self::trackEvent(self::EVENT_OPC_CHECKOUT_SUBMITTED, [
             'guest_checkout_active' => $guestCheckoutActive,
             'payment_method' => $paymentMethod,
         ], $moduleVersion);

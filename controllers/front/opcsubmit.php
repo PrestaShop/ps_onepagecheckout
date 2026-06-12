@@ -30,8 +30,8 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
         }
 
         $result = $this->createSubmitHandler()->handle($requestParameters, $this->buildTechnicalErrorResponse());
-        if (($result['success'] ?? false) === true && $this->module instanceof Ps_Onepagecheckout) {
-            Analytics::trackCheckoutCompleted(
+        if (($result['success'] ?? false) === true) {
+            Analytics::trackCheckoutSubmitted(
                 (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
                 trim((string) (Tools::getValue('paymentMethod') ?? '')),
                 (string) $this->module->version
