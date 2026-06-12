@@ -405,9 +405,23 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
             return;
         }
 
-        $draft = (new AddressDraftStorage($this->context))->get($this->opcForm->getAddressDraftFieldNames());
+        $storage = new AddressDraftStorage($this->context);
+
+        // First read against the current (default-country) field list. The country selectors
+        // are part of every country's format, so the saved country choice survives this pass
+        // even though country-specific fields (id_state, ...) may not yet be in the list.
+        $draft = $storage->get($this->opcForm->getAddressDraftFieldNames());
         if ($draft === []) {
             return;
+        }
+
+        // Apply the saved delivery/invoice country first so the form rebuilds its field list
+        // for that country (exposing fields such as id_state / invoice_id_state), then re-read
+        // the draft against that country-aware list so those values are no longer filtered out.
+        $countrySelection = array_intersect_key($draft, array_flip(['id_country', 'invoice_id_country']));
+        if ($countrySelection !== []) {
+            $this->opcForm->fillWith($countrySelection);
+            $draft = $storage->get($this->opcForm->getAddressDraftFieldNames());
         }
 
         // A logged-in account owns its identity: keep the account's first/last name (already

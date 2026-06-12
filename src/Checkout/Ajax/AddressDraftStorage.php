@@ -104,6 +104,10 @@ class AddressDraftStorage
         ]);
 
         if (!is_string($payload) || strlen($payload) > self::MAX_SERIALIZED_LENGTH) {
+            // The new draft cannot be stored, so drop any previous one rather than leaving a
+            // stale draft behind that would later be restored as if it were current.
+            $this->clear();
+
             return;
         }
 

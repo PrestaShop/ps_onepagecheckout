@@ -266,6 +266,45 @@ class CheckoutOnePageStepRequestPersistenceTest extends TestCase
         self::assertSame('', $this->context->cart->checkout_session_data);
     }
 
+    public function testItRestoresCountrySpecificDraftFieldsAfterApplyingSavedCountry(): void
+    {
+        $this->context->cookie->values['opc_address_draft'] = json_encode([
+            'ts' => time(),
+            'cart_id' => 42,
+            'values' => [
+                'id_country' => '21',
+                'firstname' => 'Ada',
+                'city' => 'New York',
+                'id_state' => '33',
+            ],
+        ]);
+
+        // id_state only appears in the field list once the saved (state-bearing) country
+        // has been applied, mirroring how the live form rebuilds its format per country.
+        $this->opcForm->method('getAddressDraftFieldNames')->willReturnOnConsecutiveCalls(
+            ['id_country', 'firstname', 'city'],
+            ['id_country', 'firstname', 'city', 'id_state']
+        );
+
+        $fillWithCalls = [];
+        $this->opcForm->method('fillWith')->willReturnCallback(function (array $params) use (&$fillWithCalls) {
+            $fillWithCalls[] = $params;
+
+            return $this->opcForm;
+        });
+
+        $this->step->handleRequest([]);
+
+        self::assertNotEmpty($fillWithCalls);
+        $finalDraft = end($fillWithCalls);
+        // Without the country-aware re-read, id_state would have been filtered out before
+        // the country was applied and lost on restore.
+        self::assertSame('33', $finalDraft['id_state'] ?? null);
+        self::assertSame('New York', $finalDraft['city'] ?? null);
+        // Registered customer keeps its account identity rather than the draft's name.
+        self::assertArrayNotHasKey('firstname', $finalDraft);
+    }
+
     public function testDeliveryOptionNotPersistedOnVirtualCart(): void
     {
         $cart = $this->createMock(\Cart::class);

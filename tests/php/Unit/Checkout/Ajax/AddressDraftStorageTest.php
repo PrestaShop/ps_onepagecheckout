@@ -168,6 +168,25 @@ class AddressDraftStorageTest extends TestCase
         self::assertArrayNotHasKey(self::COOKIE_KEY, $cookie->values);
     }
 
+    public function testAnOversizedDraftDropsThePreviousOne(): void
+    {
+        $cookie = $this->makeCookie();
+        $storage = new AddressDraftStorage($this->makeContext($cookie));
+        $storage->saveFromRequest(['city' => 'Paris'], self::ALLOWED_FIELDS);
+        self::assertNotSame([], $storage->get(self::ALLOWED_FIELDS));
+
+        // Several maxed-out fields push the serialized payload past MAX_SERIALIZED_LENGTH,
+        // so the previous draft must be dropped rather than left behind as stale data.
+        $oversized = [];
+        foreach (['firstname', 'lastname', 'address1', 'city', 'invoice_city', 'custom_module_field'] as $field) {
+            $oversized[$field] = str_repeat('a', 255);
+        }
+        $storage->saveFromRequest($oversized, self::ALLOWED_FIELDS);
+
+        self::assertSame([], $storage->get(self::ALLOWED_FIELDS));
+        self::assertArrayNotHasKey(self::COOKIE_KEY, $cookie->values);
+    }
+
     public function testClearRemovesTheDraft(): void
     {
         $cookie = $this->makeCookie();

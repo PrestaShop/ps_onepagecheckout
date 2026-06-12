@@ -549,6 +549,43 @@ function bindAddressDraftAutosave(selectors) {
   }
 
   let debounceTimer = null;
+  let pendingContainer = null;
+
+  const buildDraftPayload = (addressContainer) => {
+    const payload = collectAddressDraftPayload(addressContainer);
+    // The endpoint validates the static front token (CSRF protection).
+    payload.token = String(prestashop.static_token || '');
+
+    return payload;
+  };
+
+  // Flush the latest pending draft. On page teardown a regular async XHR is unreliable, so
+  // prefer sendBeacon (a keepalive POST) which still carries the token and form fields.
+  const flushPendingDraft = (useBeacon) => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+
+    if (!pendingContainer || !pendingContainer.length) {
+      pendingContainer = null;
+
+      return;
+    }
+
+    const payload = buildDraftPayload(pendingContainer);
+    pendingContainer = null;
+
+    if (useBeacon && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const formData = new FormData();
+      Object.keys(payload).forEach((key) => formData.append(key, payload[key]));
+      navigator.sendBeacon(draftUrl, formData);
+
+      return;
+    }
+
+    $.post(draftUrl, payload);
+  };
 
   const scheduleAutosave = (event) => {
     const target = $(event.target);
@@ -562,21 +599,19 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
+    pendingContainer = addressContainer;
+
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
 
-    debounceTimer = setTimeout(() => {
-      const payload = collectAddressDraftPayload(addressContainer);
-      // The endpoint validates the static front token (CSRF protection).
-      payload.token = String(prestashop.static_token || '');
-
-      $.post(draftUrl, payload);
-    }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
+    debounceTimer = setTimeout(() => flushPendingDraft(false), DRAFT_AUTOSAVE_DEBOUNCE_MS);
   };
 
   $('body').on('input', `${selectors.address} input, ${selectors.address} textarea`, scheduleAutosave);
   $('body').on('change', `${selectors.address} select, ${selectors.address} input[type="checkbox"]`, scheduleAutosave);
+  // Don't lose the last edits if the customer leaves before the debounce timer fires.
+  $(window).on('pagehide', () => flushPendingDraft(true));
 }
 
 function handleOpcCountryChange(selectors) {
