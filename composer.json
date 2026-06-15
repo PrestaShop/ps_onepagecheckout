@@ -24,8 +24,7 @@
   },
   "autoload": {
     "psr-4": {
-      "PrestaShop\\Module\\PsOnePageCheckout\\": "src/",
-      "PrestaShop\\Module\\PsOnePageCheckout\\Vendor\\Segment\\": "vendor/segmentio/analytics-php/lib"
+      "PrestaShop\\Module\\PsOnePageCheckout\\": "src/"
     },
     "classmap": [
       "ps_onepagecheckout.php",
@@ -35,8 +34,8 @@
   },
   "scripts": {
     "phpstan": "./tests/php/phpstan.sh latest",
-    "cs-fixer:fix": "./vendor/bin/php-cs-fixer fix . --diff --using-cache=no --sequential --config=vendor/prestashop/php-dev-tools/templates/cs-fixer/.php-cs-fixer.dist.php",
-    "cs-fixer:dry": "./vendor/bin/php-cs-fixer fix . --dry-run --diff --using-cache=no --sequential --config=vendor/prestashop/php-dev-tools/templates/cs-fixer/.php-cs-fixer.dist.php",
+    "cs-fixer:fix": "./vendor/bin/php-cs-fixer fix --diff --using-cache=no --sequential --config=.php-cs-fixer.dist.php",
+    "cs-fixer:dry": "./vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no --sequential --config=.php-cs-fixer.dist.php",
     "test:unit": "./scripts/run-tests.sh unit",
     "test:integration": "./scripts/run-tests.sh integration"
   },

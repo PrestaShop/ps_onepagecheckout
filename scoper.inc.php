@@ -22,58 +22,34 @@
 use Isolated\Symfony\Component\Finder\Finder;
 
 /*
- * php-scoper configuration for ps_onepagecheckout.
+ * php-scoper configuration used ONLY to (re)generate the committed, namespace-prefixed
+ * Segment SDK under src/Vendor/Segment.
  *
- * Goal: ship the Segment analytics SDK under a module-specific namespace so it
- * is never a runtime dependency of PrestaShop Core (see require-dev in
- * composer.json) and never collides with another module bundling Segment.
+ * This is a manual maintenance step, run via `make scope-segment` when bumping
+ * segmentio/analytics-php. It is intentionally NOT part of the release build: the
+ * scoped SDK is committed to the repository so every install path (release zip,
+ * Packagist/Composer source, Core bundling) ships runnable, conflict-free code.
  *
- * Same intent as PrestaShopCorp/ps_accounts and PrestaShopCorp/ps_metrics, which
- * scope their bundled SDKs the same way. Those modules could not scope Segment
- * because they ship Segment ^1.8 (PSR-0); this module ships Segment ^3.0, which
- * is PSR-4 and therefore scopes cleanly.
- *
- * Two trees are scoped:
- *   - vendor/segmentio/analytics-php : the SDK itself (namespace Segment\)
- *   - src/Analytics                  : the only module code that imports Segment\
- *
- * The module's own namespace is excluded from prefixing, so scoping src/Analytics
- * only rewrites `use Segment\Segment;` into the prefixed namespace and leaves the
- * module classes untouched. This lets the committed source keep `use Segment\Segment;`
- * (resolved from require-dev in local dev) while the released bundle resolves the
- * prefixed `use PrestaShop\Module\PsOnePageCheckout\Vendor\Segment\Segment;`.
+ * The SDK is prefixed with PrestaShop\Module\PsOnePageCheckout\Vendor so two modules
+ * bundling different Segment versions cannot collide on the global Segment\ namespace.
  */
-
-$scopedTrees = [
-    'vendor/segmentio/analytics-php',
-    'src/Analytics',
-];
-
-$fileExcludes = '/LICENSE|.*\\.md|.*\\.dist|Makefile|composer\\.json|composer\\.lock/';
 
 return [
     'prefix' => 'PrestaShop\\Module\\PsOnePageCheckout\\Vendor',
 
-    // The base output directory is provided on the command line (--output-dir).
     'output-dir' => '',
 
-    'finders' => array_map(static function ($tree) use ($fileExcludes) {
-        return Finder::create()
+    'finders' => [
+        Finder::create()
             ->files()
             ->ignoreVCS(true)
-            ->notName($fileExcludes)
-            ->exclude(['test', 'tests', 'Test', 'Tests'])
-            ->in($tree);
-    }, $scopedTrees),
+            ->in('vendor/segmentio/analytics-php/lib'),
+    ],
 
     'exclude-files' => [],
-
     'patchers' => [],
 
-    // Namespaces left untouched. The module's own namespace must NOT be prefixed:
-    // scoping src/Analytics should only rewrite the imported Segment\ namespace.
     'exclude-namespaces' => [
-        '~^PrestaShop\\\\Module\\\\PsOnePageCheckout~',
         '~^Composer~',
         // Polyfills can't be scoped by essence.
         'Symfony\\Polyfill\\Apcu\\',
@@ -88,7 +64,7 @@ return [
     'exclude-functions' => [],
     'exclude-constants' => [],
 
-    // Leave the global namespace (PrestaShop legacy classes, _PS_VERSION_, etc.) untouched.
+    // Leave the global namespace (e.g. the $SEGMENT_VERSION global) untouched.
     'expose-global-constants' => true,
     'expose-global-classes' => true,
     'expose-global-functions' => true,

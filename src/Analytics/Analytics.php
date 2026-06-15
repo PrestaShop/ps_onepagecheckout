@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\PsOnePageCheckout\Analytics;
 
-use Segment\Segment;
+use PrestaShop\Module\PsOnePageCheckout\Vendor\Segment\Segment;
 
 /**
  * Segment PHP SDK bootstrap, same approach as

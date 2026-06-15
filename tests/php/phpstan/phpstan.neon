@@ -14,4 +14,10 @@ parameters:
     - %currentWorkingDirectory%/controllers/
     - %currentWorkingDirectory%/src/
     - %currentWorkingDirectory%/upgrade/
+  # The bundled, namespace-prefixed Segment SDK is committed third-party code.
+  # Exclude it from reporting (analyse) while keeping its symbols discoverable so
+  # references from src/Analytics still resolve.
+  excludePaths:
+    analyse:
+      - %currentWorkingDirectory%/src/Vendor
   level: 5
