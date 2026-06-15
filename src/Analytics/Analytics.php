@@ -77,6 +77,14 @@ final class Analytics
             return;
         }
 
+        // The Segment SDK is a dev-only dependency that ships scoped inside the
+        // released module. On a Composer source install (e.g. when bundled through
+        // Core with --no-dev) it can be absent. Analytics is best effort and must
+        // never break checkout, so degrade silently rather than fatal here.
+        if (!class_exists(Segment::class)) {
+            return;
+        }
+
         Segment::init($writeKey);
         self::$clientInitialized = true;
     }

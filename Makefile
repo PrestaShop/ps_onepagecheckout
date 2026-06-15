@@ -14,6 +14,9 @@ PHP ?= php
 COMPOSER ?= composer
 
 PHP_SCOPER_VERSION ?= 0.18.19
+# SHA-256 of the pinned release asset. GitHub release assets are immutable, so a
+# mismatch means a corrupted or tampered download — the build must fail.
+PHP_SCOPER_SHA256 := 170fb84bd3390defb30f99f7dc39c9a89d10c29973accc26f31c00abc5b25933
 PHP_SCOPER_PHAR := php-scoper.phar
 PHP_SCOPER_URL := https://github.com/humbug/php-scoper/releases/download/$(PHP_SCOPER_VERSION)/php-scoper.phar
 SCOPED_OUTPUT_DIR := build-scoped
@@ -22,9 +25,12 @@ SCOPED_OUTPUT_DIR := build-scoped
 
 # Download the pinned php-scoper PHAR (self-contained, mirrors ps_accounts/ps_metrics).
 # A version-pinned PHAR avoids dragging php-scoper's own dependencies into the
-# module's vendor tree and keeps the build reproducible.
+# module's vendor tree and keeps the build reproducible. The checksum is verified
+# before the PHAR is made executable, so the release is never built by untrusted code.
 $(PHP_SCOPER_PHAR):
 	curl -s -f -L -o $(PHP_SCOPER_PHAR) "$(PHP_SCOPER_URL)"
+	@command -v sha256sum >/dev/null 2>&1 && SHA="sha256sum" || SHA="shasum -a 256"; \
+		echo "$(PHP_SCOPER_SHA256)  $(PHP_SCOPER_PHAR)" | $$SHA -c -
 	chmod +x $(PHP_SCOPER_PHAR)
 
 scoper: $(PHP_SCOPER_PHAR)
