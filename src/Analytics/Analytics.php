@@ -34,7 +34,7 @@ use Segment\Segment;
 final class Analytics
 {
     private const EVENT_OPC_CHECKOUT_STARTED = '[OPC] Checkout Started';
-    private const EVENT_OPC_CHECKOUT_COMPLETED = '[OPC] Checkout Completed';
+    private const EVENT_OPC_CHECKOUT_SUBMITTED = '[OPC] Checkout Submitted';
 
     /**
      * Segment event name emitted on critical OPC errors (technical / blocking errors, no PII).
@@ -60,8 +60,8 @@ final class Analytics
     /**
      * Segment PHP source write keys env vars — single source of truth (not stored in configuration).
      */
-    public const SEGMENT_PREPROD_KEY = 'SEGMENT_PREPROD_KEY';
-    public const SEGMENT_PROD_KEY = 'SEGMENT_PROD_KEY';
+    public const PS_OPC_SEGMENT_PREPROD_KEY = 'PS_OPC_SEGMENT_PREPROD_KEY';
+    public const PS_OPC_SEGMENT_PROD_KEY = 'PS_OPC_SEGMENT_PROD_KEY';
     public const URL_TRACKING_ENV_NAME = 'PS_URL_TRACKING';
 
     private static bool $clientInitialized = false;
@@ -88,9 +88,9 @@ final class Analytics
         ], $moduleVersion);
     }
 
-    public static function trackCheckoutCompleted(string $guestCheckoutActive, string $paymentMethod, string $moduleVersion): void
+    public static function trackCheckoutSubmitted(string $guestCheckoutActive, string $paymentMethod, string $moduleVersion): void
     {
-        self::trackEvent(self::EVENT_OPC_CHECKOUT_COMPLETED, [
+        self::trackEvent(self::EVENT_OPC_CHECKOUT_SUBMITTED, [
             'guest_checkout_active' => $guestCheckoutActive,
             'payment_method' => $paymentMethod,
         ], $moduleVersion);
@@ -158,7 +158,7 @@ final class Analytics
     private static function getWriteKey(): string
     {
         $isDevMode = defined('_PS_MODE_DEV_') && (bool) _PS_MODE_DEV_;
-        $writeKeyEnvVar = $isDevMode ? self::SEGMENT_PREPROD_KEY : self::SEGMENT_PROD_KEY;
+        $writeKeyEnvVar = $isDevMode ? self::PS_OPC_SEGMENT_PREPROD_KEY : self::PS_OPC_SEGMENT_PROD_KEY;
 
         return self::getEnv($writeKeyEnvVar);
     }
