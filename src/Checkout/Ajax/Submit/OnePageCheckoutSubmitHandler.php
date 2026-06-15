@@ -135,6 +135,11 @@ class OnePageCheckoutSubmitHandler
         $this->submitValidationStateStorage->save([
             'cart_id' => $this->getRequiredCurrentCartId(),
         ] + $state);
+
+        // The submitted values are now carried by the one-shot failed-submit state above.
+        // Drop the older address draft so once that state is consumed a later reload cannot
+        // restore stale fields and silently roll the address back.
+        $this->addressDraftStorage->clear();
     }
 
     private function getRequiredCurrentCartId(): int

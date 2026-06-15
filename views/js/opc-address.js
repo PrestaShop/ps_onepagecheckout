@@ -539,10 +539,6 @@ function collectAddressDraftPayload(addressContainer) {
  * @param selectors
  */
 function bindAddressDraftAutosave(selectors) {
-  if (!shouldPersistAddressDraft()) {
-    return;
-  }
-
   const draftUrl = getConfiguredOpcUrl(SAVE_DRAFT_URL_KEY);
   if (draftUrl === '') {
     return;
@@ -588,6 +584,12 @@ function bindAddressDraftAutosave(selectors) {
   };
 
   const scheduleAutosave = (event) => {
+    // Checked per event (not once at bind time) so autosave starts working the moment the
+    // flow becomes no-saved-address — e.g. after the customer deletes their last address.
+    if (!shouldPersistAddressDraft()) {
+      return;
+    }
+
     const target = $(event.target);
 
     if (target.closest(ADDRESS_MODAL_SELECTOR).length > 0) {

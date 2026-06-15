@@ -5,6 +5,7 @@ import {
   getConfiguredOpcMessage,
   getConfiguredOpcUrl,
   normalizeErrorEventResponse,
+  setOpcRuntimePersistAddressDraft,
 } from './runtime/opc-runtime';
 
 /**
@@ -1007,6 +1008,10 @@ function refreshAddressLists(options = {}) {
       }
 
       const addressCount = parseInt(response.address_count, 10) || 0;
+
+      // Once the count is known, keep draft autosave aligned with it: enabled while no saved
+      // address remains (e.g. after deleting the last one), disabled once one exists.
+      setOpcRuntimePersistAddressDraft(addressCount <= 0);
 
       if (addressCount <= 0) {
         return refreshAddressesSection(options);
