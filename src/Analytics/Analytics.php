@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\PsOnePageCheckout\Analytics;
 
-use Segment\Segment;
+use Symfony\Component\HttpClient\HttpClient;
 
 /**
  * Segment PHP SDK bootstrap, same approach as
@@ -64,11 +64,11 @@ final class Analytics
     public const PS_OPC_SEGMENT_PROD_KEY = 'PS_OPC_SEGMENT_PROD_KEY';
     public const URL_TRACKING_ENV_NAME = 'PS_URL_TRACKING';
 
-    private static bool $clientInitialized = false;
+    private static ?SegmentClient $client = null;
 
     public static function bootstrap(bool $moduleSegmentEnabled): void
     {
-        if (!$moduleSegmentEnabled || self::$clientInitialized) {
+        if (!$moduleSegmentEnabled || self::$client !== null) {
             return;
         }
 
@@ -77,8 +77,7 @@ final class Analytics
             return;
         }
 
-        Segment::init($writeKey);
-        self::$clientInitialized = true;
+        self::$client = new SegmentClient(HttpClient::create(), $writeKey);
     }
 
     public static function trackCheckoutStarted(string $guestCheckoutActive, string $moduleVersion): void
@@ -125,17 +124,16 @@ final class Analytics
 
         $isTrackingEnabled = $urlTrackingEnv !== 'false' && $urlTrackingEnv !== '0';
         self::bootstrap($isTrackingEnabled);
-        if (!self::$clientInitialized) {
+        if (self::$client === null) {
             return;
         }
 
         try {
-            Segment::track([
-                'userId' => self::SHARED_USER_ID,
-                'event' => $eventName,
-                'properties' => array_merge($properties, self::buildCommonProps($moduleVersion)),
-            ]);
-            Segment::flush();
+            self::$client->track(
+                self::SHARED_USER_ID,
+                $eventName,
+                array_merge($properties, self::buildCommonProps($moduleVersion))
+            );
         } catch (\Throwable) {
             // Never block checkout because of analytics.
         }

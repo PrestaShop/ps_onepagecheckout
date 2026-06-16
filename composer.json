@@ -11,8 +11,8 @@
   ],
   "require": {
     "php": ">=8.1",
-    "segmentio/analytics-php": "^3.0",
-    "symfony/dotenv": "^6.4"
+    "symfony/dotenv": "^6.4",
+    "symfony/http-client": "^6.4"
   },
   "require-dev": {
     "prestashop/php-dev-tools": "^4.3"
