@@ -11,15 +11,18 @@ class OnePageCheckoutSaveAddressHandler
     private \Context $context;
     private TranslatorInterface $translator;
     private CheckoutCustomerContextResolver $customerResolver;
+    private AddressDraftStorage $addressDraftStorage;
 
     public function __construct(
         \Context $context,
         TranslatorInterface $translator,
         CheckoutCustomerContextResolver $customerResolver,
+        AddressDraftStorage $addressDraftStorage,
     ) {
         $this->context = $context;
         $this->translator = $translator;
         $this->customerResolver = $customerResolver;
+        $this->addressDraftStorage = $addressDraftStorage;
     }
 
     /**
@@ -74,6 +77,9 @@ class OnePageCheckoutSaveAddressHandler
 
             $this->context->cart->update();
         }
+
+        // The typed address is now a real saved address, so the cookie draft is obsolete.
+        $this->addressDraftStorage->clear();
 
         return [
             'success' => true,

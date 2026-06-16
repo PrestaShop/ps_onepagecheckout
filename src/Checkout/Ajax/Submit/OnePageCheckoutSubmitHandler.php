@@ -2,6 +2,7 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit;
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 
 class OnePageCheckoutSubmitHandler
@@ -10,17 +11,20 @@ class OnePageCheckoutSubmitHandler
     private CheckoutSessionFactory $checkoutSessionFactory;
     private OnePageCheckoutSubmitProcessor $submitProcessor;
     private OnePageCheckoutSubmitValidationStateStorage $submitValidationStateStorage;
+    private AddressDraftStorage $addressDraftStorage;
 
     public function __construct(
         \Context $context,
         CheckoutSessionFactory $checkoutSessionFactory,
         OnePageCheckoutSubmitProcessor $submitProcessor,
         OnePageCheckoutSubmitValidationStateStorage $submitValidationStateStorage,
+        AddressDraftStorage $addressDraftStorage,
     ) {
         $this->context = $context;
         $this->checkoutSessionFactory = $checkoutSessionFactory;
         $this->submitProcessor = $submitProcessor;
         $this->submitValidationStateStorage = $submitValidationStateStorage;
+        $this->addressDraftStorage = $addressDraftStorage;
     }
 
     /**
@@ -52,6 +56,7 @@ class OnePageCheckoutSubmitHandler
         $processingResult = $this->submitProcessor->process($checkoutSession, $requestParameters);
         if (($processingResult['success'] ?? false) === true) {
             $this->submitValidationStateStorage->clear();
+            $this->addressDraftStorage->clear();
 
             return [
                 'success' => true,
@@ -130,6 +135,11 @@ class OnePageCheckoutSubmitHandler
         $this->submitValidationStateStorage->save([
             'cart_id' => $this->getRequiredCurrentCartId(),
         ] + $state);
+
+        // The submitted values are now carried by the one-shot failed-submit state above.
+        // Drop the older address draft so once that state is consumed a later reload cannot
+        // restore stale fields and silently roll the address back.
+        $this->addressDraftStorage->clear();
     }
 
     private function getRequiredCurrentCartId(): int

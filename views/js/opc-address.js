@@ -3,6 +3,7 @@ import {emitAddressUpdate} from './address-events';
 import OPC_SELECTORS from './selectors';
 import {getConfiguredOpcMessage} from './runtime/opc-runtime';
 import {getConfiguredOpcUrl} from './runtime/opc-runtime';
+import {getOpcRuntimeConfiguration} from './runtime/opc-runtime';
 import {normalizeErrorEventResponse} from './runtime/opc-runtime';
 
 /**
@@ -34,6 +35,8 @@ const $ = window.$ || window.jQuery;
 const prestashop = window.prestashop || {};
 
 const MODULE_ADDRESS_FORM_URL_KEY = 'addressForm';
+const SAVE_DRAFT_URL_KEY = 'saveDraft';
+const DRAFT_AUTOSAVE_DEBOUNCE_MS = 700;
 const OPC_ADDRESSES_SECTION_SELECTOR = OPC_SELECTORS.opc.addressesSection;
 const BILLING_SECTION_SELECTOR = OPC_SELECTORS.opc.billingSection;
 const DELIVERY_SECTION_SELECTOR = OPC_SELECTORS.opc.deliverySection;
@@ -474,6 +477,145 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
   });
 }
 
+function shouldPersistAddressDraft() {
+  const configuration = getOpcRuntimeConfiguration();
+
+  return Boolean(configuration && configuration.persistAddressDraft);
+}
+
+/**
+ * Serialize the address-section fields for the guest draft autosave.
+ * Server-side whitelisting decides what is actually stored, so over-sending is harmless;
+ * fields inside the address modal and non-data inputs (file/submit/buttons/hidden) are skipped.
+ *
+ * @param {jQuery} addressContainer
+ *
+ * @returns {Object<string, string>}
+ */
+function collectAddressDraftPayload(addressContainer) {
+  const payload = Object.create(null);
+
+  addressContainer.find('input, select, textarea').each(function () {
+    const $field = $(this);
+
+    if ($field.closest(ADDRESS_MODAL_SELECTOR).length > 0) {
+      return;
+    }
+
+    const name = String($field.prop('name') || '');
+    if (!name) {
+      return;
+    }
+
+    const type = getFieldType($field);
+    if (NON_PRESERVABLE_FIELD_TYPES.has(type)) {
+      return;
+    }
+
+    if (type === 'checkbox') {
+      payload[name] = $field.is(':checked') ? '1' : '0';
+
+      return;
+    }
+
+    if (type === 'radio') {
+      if ($field.is(':checked')) {
+        payload[name] = String($field.val() || '');
+      }
+
+      return;
+    }
+
+    payload[name] = String($field.val() || '');
+  });
+
+  return payload;
+}
+
+/**
+ * Autosave the guest's in-progress address fields (debounced) so they survive
+ * leaving and returning to checkout. Best-effort: failures are silently ignored.
+ *
+ * @param selectors
+ */
+function bindAddressDraftAutosave(selectors) {
+  const draftUrl = getConfiguredOpcUrl(SAVE_DRAFT_URL_KEY);
+  if (draftUrl === '') {
+    return;
+  }
+
+  let debounceTimer = null;
+  let pendingContainer = null;
+
+  const buildDraftPayload = (addressContainer) => {
+    const payload = collectAddressDraftPayload(addressContainer);
+    // The endpoint validates the static front token (CSRF protection).
+    payload.token = String(prestashop.static_token || '');
+
+    return payload;
+  };
+
+  // Flush the latest pending draft. On page teardown a regular async XHR is unreliable, so
+  // prefer sendBeacon (a keepalive POST) which still carries the token and form fields.
+  const flushPendingDraft = (useBeacon) => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+
+    if (!pendingContainer || !pendingContainer.length) {
+      pendingContainer = null;
+
+      return;
+    }
+
+    const payload = buildDraftPayload(pendingContainer);
+    pendingContainer = null;
+
+    if (useBeacon && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const formData = new FormData();
+      Object.keys(payload).forEach((key) => formData.append(key, payload[key]));
+      navigator.sendBeacon(draftUrl, formData);
+
+      return;
+    }
+
+    $.post(draftUrl, payload);
+  };
+
+  const scheduleAutosave = (event) => {
+    // Checked per event (not once at bind time) so autosave starts working the moment the
+    // flow becomes no-saved-address — e.g. after the customer deletes their last address.
+    if (!shouldPersistAddressDraft()) {
+      return;
+    }
+
+    const target = $(event.target);
+
+    if (target.closest(ADDRESS_MODAL_SELECTOR).length > 0) {
+      return;
+    }
+
+    const addressContainer = target.closest(selectors.address);
+    if (!addressContainer.length) {
+      return;
+    }
+
+    pendingContainer = addressContainer;
+
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    debounceTimer = setTimeout(() => flushPendingDraft(false), DRAFT_AUTOSAVE_DEBOUNCE_MS);
+  };
+
+  $('body').on('input', `${selectors.address} input, ${selectors.address} textarea`, scheduleAutosave);
+  $('body').on('change', `${selectors.address} select, ${selectors.address} input[type="checkbox"]`, scheduleAutosave);
+  // Don't lose the last edits if the customer leaves before the debounce timer fires.
+  $(window).on('pagehide', () => flushPendingDraft(true));
+}
+
 function handleOpcCountryChange(selectors) {
   $('body').on('change', `${OPC_SELECTORS.opc.deliveryFields} select[name="id_country"], ${OPC_SELECTORS.opc.billingFields} select[name="invoice_id_country"]`, (event) => {
     refreshOpcAddressFormForCountryChange($(event.target), selectors);
@@ -488,5 +630,6 @@ $(() => {
   handleOpcCountryChange(selectors);
   bindBillingToggleListener(selectors);
   initializeBillingSectionConstraints(selectors);
+  bindAddressDraftAutosave(selectors);
 });
 })();

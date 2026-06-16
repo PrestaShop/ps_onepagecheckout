@@ -15,6 +15,8 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 require __DIR__ . '/bootstrap.php';
 
 use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
@@ -86,6 +88,7 @@ class Ps_Onepagecheckout extends Module
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('actionFrontControllerSetVariables')
             && $this->registerHook('actionModuleUpgradeAfter')
+            && $this->registerHook('actionCustomerLogoutAfter')
             && $this->registerHook('displayOverrideTemplate');
     }
 
@@ -195,6 +198,10 @@ class Ps_Onepagecheckout extends Module
 
         $opcRuntimeConfiguration = [
             'enabled' => true,
+            // Customers with no saved address yet (guests, and accounts created mid-checkout)
+            // have no address persistence until final submit, so their typed address draft is
+            // autosaved to a cookie. Once an address is saved, the saved-address flow takes over.
+            'persistAddressDraft' => !(new CheckoutCustomerContextResolver($this->context))->hasSavedAddress(),
             'urls' => [
                 'guestInit' => $this->context->link->getModuleLink(
                     $this->name,
@@ -236,6 +243,15 @@ class Ps_Onepagecheckout extends Module
                     $this->name,
                     'saveaddress',
                     ['ajax' => 1, 'action' => 'saveOpcAddress'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'saveDraft' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'savedraft',
+                    ['ajax' => 1, 'action' => 'opcSaveDraft'],
                     null,
                     null,
                     null,
@@ -354,6 +370,12 @@ class Ps_Onepagecheckout extends Module
         }
 
         $params['templateVars']['is_one_page_checkout_enabled'] = $this->isOnePageCheckoutEnabled();
+    }
+
+    public function hookActionCustomerLogoutAfter(array $params): void
+    {
+        // Drop any address draft so personal data does not survive a logout on a shared device.
+        (new AddressDraftStorage($this->context))->clear();
     }
 
     public function hookDisplayOverrideTemplate(array $params)

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Checkout\Ajax;
 
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutSaveAddressHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -297,7 +298,12 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
 
     private function createHandler(\Context $context, TranslatorInterface $translator): OnePageCheckoutSaveAddressHandler
     {
-        return new OnePageCheckoutSaveAddressHandler($context, $translator, new CheckoutCustomerContextResolver($context));
+        return new OnePageCheckoutSaveAddressHandler(
+            $context,
+            $translator,
+            new CheckoutCustomerContextResolver($context),
+            new AddressDraftStorage($context)
+        );
     }
 
     private function createCustomer(): \Customer
