@@ -23,7 +23,7 @@ if (!$) {
 const MODAL_SELECTOR = OPC_SELECTORS.modals.address;
 const SAVE_SELECTOR = '#submit-address-modal, .js-opc-save-address';
 const COUNTRY_SELECTOR = '[name="id_country"], [name$="id_country"]';
-const STATE_SELECTOR = '[name="id_state"], [name$="id_state"]';
+const MODAL_FIELDS_CONTAINER_SELECTOR = '.js-opc-address-modal-fields';
 const MODAL_SCOPES = MODAL_SELECTOR.split(',').map((selector) => selector.trim());
 const SAVE_TARGETS = SAVE_SELECTOR.split(',').map((selector) => selector.trim());
 const COUNTRY_TARGETS = COUNTRY_SELECTOR.split(',').map((selector) => selector.trim());
@@ -38,7 +38,7 @@ const MODAL_FIELD_SELECTOR = MODAL_SCOPES.flatMap((modalSelector) => {
 }).join(', ');
 const URL_KEYS = {
   addressesList: 'addressesList',
-  states: 'states',
+  addressModal: 'addressModal',
   saveAddress: 'saveAddress',
   deleteAddress: 'deleteAddress',
   addressForm: 'addressForm',
@@ -499,71 +499,98 @@ function getModalType($trigger) {
   return String($trigger.attr('data-type') || 'create');
 }
 
-function readStateUiTargets($modal) {
-  return {
-    $wrapper: $modal.find('.state-field-wrapper, #state-field-wrapper').first(),
-    $select: $modal.find(STATE_SELECTOR).first(),
-    $row: $modal.find('.address-country-row, #address-country-row').first(),
-  };
+function getAddressTypeForModal($modal) {
+  return $modal.is('#modal-invoice') ? 'invoice' : 'delivery';
 }
 
-function updateStateFieldUi($modal, response, selectedStateId) {
-  const {$wrapper, $select, $row} = readStateUiTargets($modal);
+/**
+ * Snapshot the user-entered values inside the modal fields container before it is
+ * re-rendered. The country select is skipped so the server-selected country wins.
+ *
+ * @return {Object<string, (string|boolean)>}
+ */
+function captureModalFieldValues($scope) {
+  const values = Object.create(null);
 
-  if (!$wrapper.length || !$select.length) {
-    return;
-  }
+  $scope.find('input, select, textarea').each((_, field) => {
+    const $field = $(field);
+    const name = String($field.attr('name') || '');
 
-  const states = response && Array.isArray(response.states) ? response.states : [];
-  const hasStates = Boolean(response && response.hasStates) || states.length > 0;
-
-  if (!hasStates) {
-    $wrapper.hide();
-    $select.prop('required', false).val('');
-    if ($row.length) {
-      $row.removeClass('opc-form-fields-row--3').addClass('opc-form-fields-row--2');
+    if (name === '' || /id_country$/.test(name)) {
+      return;
     }
 
+    const type = getFieldType($field);
+    values[name] = type === 'checkbox' || type === 'radio'
+      ? $field.is(':checked')
+      : $field.val();
+  });
+
+  return values;
+}
+
+function applyModalFieldValues($scope, values) {
+  if (!values) {
     return;
   }
 
-  const placeholder = String($select.attr('data-select-placeholder') || '');
-  $select.empty();
-  $select.append($('<option>', {value: '', text: placeholder}));
+  Object.keys(values).forEach((name) => {
+    if (/id_country$/.test(name)) {
+      return;
+    }
 
-  states.forEach((state) => {
-    const stateId = String(state.id_state || '');
-    $select.append($('<option>', {
-      value: stateId,
-      text: String(state.name || ''),
-      selected: selectedStateId !== '' && stateId === selectedStateId,
-    }));
+    const $field = $scope.find(`[name="${name}"], [name$="${name}"]`).first();
+    if (!$field.length) {
+      return;
+    }
+
+    const type = getFieldType($field);
+    if (type === 'checkbox' || type === 'radio') {
+      $field.prop('checked', Boolean(values[name]));
+
+      return;
+    }
+
+    $field.val(typeof values[name] === 'undefined' ? '' : values[name]);
   });
-
-  $wrapper.show();
-  $select.prop('required', true);
-  if ($row.length) {
-    $row.removeClass('opc-form-fields-row--2').addClass('opc-form-fields-row--3');
-  }
 }
 
-function refreshStates($modal, countryId, selectedStateId) {
-  const statesUrl = getConfiguredOpcUrl(URL_KEYS.states);
+/**
+ * Re-render the modal fields for the selected country so per-country rules (postcode
+ * length/required, state field, identification number, field order) stay in sync.
+ * Values are preserved across the swap: `valuesToApply` (an address) when provided,
+ * otherwise the in-progress field values captured before the swap.
+ */
+function refreshModalFields($modal, countryId, valuesToApply) {
+  const addressModalUrl = getConfiguredOpcUrl(URL_KEYS.addressModal);
+  const $container = $modal.find(MODAL_FIELDS_CONTAINER_SELECTOR).first();
 
-  if (!statesUrl || countryId === '') {
-    updateStateFieldUi($modal, {hasStates: false, states: []}, '');
+  if (!addressModalUrl || !$container.length || String(countryId || '') === '') {
+    updateModalSaveState($modal);
 
     return $.Deferred().resolve().promise();
   }
 
-  return $.get(statesUrl, {id_country: countryId}).done((response) => {
-    updateStateFieldUi($modal, response || {}, selectedStateId);
+  const valuesToRestore = valuesToApply || captureModalFieldValues($container);
+
+  return $.post(addressModalUrl, {
+    id_country: String(countryId),
+    address_type: getAddressTypeForModal($modal),
+  }).done((response) => {
+    if (!response || response.success === false || typeof response.fields_html !== 'string') {
+      emitHandleError('opcAddressModalFields', response, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
+      updateModalSaveState($modal);
+
+      return;
+    }
+
+    $container.html(response.fields_html);
+    applyModalFieldValues($container, valuesToRestore);
+    setModalFieldsDisabled($modal, false);
     updateModalSaveState($modal);
   }).fail((jqXHR) => {
-    const fallbackMessage = getConfiguredOpcMessage('statesLoadFailed', 'Unable to load states.');
-    updateStateFieldUi($modal, {hasStates: false, states: []}, '');
+    emitHandleError('opcAddressModalFields', jqXHR && jqXHR.responseJSON, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
     updateModalSaveState($modal);
-    emitHandleError('opcAddressStates', jqXHR && jqXHR.responseJSON, fallbackMessage);
   });
 }
 
@@ -1077,21 +1104,19 @@ $(document).on('show.bs.modal', MODAL_SELECTOR, (event) => {
   updateModalTitle($modal, modalType);
   clearValidationErrors($modal);
   resetModalFields($modal);
+  setModalFieldsDisabled($modal, false);
 
   if (modalType === 'edit') {
     triggerAddress = getAddressFromTrigger($trigger);
     populateForm($modal, triggerAddress);
+    // Rebuild the fields for the edited address country, then re-apply its values:
+    // the server-rendered modal reflects the checkout country, which may differ.
+    refreshModalFields($modal, String(triggerAddress.id_country || ''), triggerAddress);
+
+    return;
   }
 
-  const selectedCountryId = modalType === 'edit' && triggerAddress
-    ? String(triggerAddress.id_country || '')
-    : String(getModalField($modal, 'id_country').val() || '');
-  const selectedStateId = modalType === 'edit' && triggerAddress
-    ? String(triggerAddress.id_state || '')
-    : String(getModalField($modal, 'id_state').val() || '');
-
-  setModalFieldsDisabled($modal, false);
-  refreshStates($modal, selectedCountryId, selectedStateId);
+  updateModalSaveState($modal);
 });
 
 $(document).on('shown.bs.modal', MODAL_SELECTOR, (event) => {
@@ -1112,7 +1137,7 @@ $(document).on('change', MODAL_COUNTRY_SELECTOR, (event) => {
   const $modal = $(event.currentTarget).closest(MODAL_SELECTOR);
   const countryId = String($(event.currentTarget).val() || '');
 
-  refreshStates($modal, countryId, '');
+  refreshModalFields($modal, countryId);
 });
 
 $(document).on('input change', MODAL_FIELD_SELECTOR, (event) => {

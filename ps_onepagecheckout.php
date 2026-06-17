@@ -182,6 +182,15 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+                'addressModal' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'addressmodal',
+                    ['ajax' => 1, 'action' => 'opcAddressModal'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
                 'addressesList' => $this->context->link->getModuleLink(
                     $this->name,
                     'addresseslist',
@@ -301,6 +310,7 @@ class Ps_Onepagecheckout extends Module
                 'missingPaymentSelectionPayload' => $this->trans('Missing payment selection payload.', [], 'Modules.Onepagecheckout.Shop'),
                 'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], 'Modules.Onepagecheckout.Shop'),
                 'statesLoadFailed' => $this->trans('Unable to load states.', [], 'Modules.Onepagecheckout.Shop'),
+                'addressFieldsLoadFailed' => $this->trans('Unable to load address fields.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'saveAddressFailed' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], 'Modules.Onepagecheckout.Shop'),
@@ -378,6 +388,7 @@ class Ps_Onepagecheckout extends Module
             [
                 'position' => 'bottom',
                 'priority' => 151,
+                'version' => time(),
             ]
         );
 
