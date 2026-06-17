@@ -388,7 +388,6 @@ class Ps_Onepagecheckout extends Module
             [
                 'position' => 'bottom',
                 'priority' => 151,
-                'version' => time(),
             ]
         );
 

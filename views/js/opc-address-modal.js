@@ -402,7 +402,28 @@ function isModalFieldValid(field) {
     return true;
   }
 
-  return field.checkValidity();
+  if (!field.checkValidity()) {
+    return false;
+  }
+
+  // checkValidity() ignores minLength/maxLength for values set programmatically (e.g. restored
+  // after a country re-render), because the HTML "dirty value" flag is only set by user typing.
+  // Enforce them manually so a value that is too short/long for the newly selected country
+  // disables Save immediately, instead of only after a failed save round-trip.
+  const value = String(field.value || '');
+  if (value !== '') {
+    const minLength = parseInt(field.getAttribute('minlength') || '', 10);
+    if (!Number.isNaN(minLength) && value.length < minLength) {
+      return false;
+    }
+
+    const maxLength = parseInt(field.getAttribute('maxlength') || '', 10);
+    if (!Number.isNaN(maxLength) && value.length > maxLength) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function updateModalSaveState($modal) {
