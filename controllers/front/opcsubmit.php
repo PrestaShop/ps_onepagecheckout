@@ -1,6 +1,5 @@
 <?php
 
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitHandler;
@@ -30,16 +29,7 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
             ];
         }
 
-        $result = $this->createSubmitHandler()->handle($requestParameters, $this->buildTechnicalErrorResponse());
-        if (($result['success'] ?? false) === true) {
-            Analytics::trackCheckoutSubmitted(
-                (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
-                trim((string) (Tools::getValue('paymentMethod') ?? '')),
-                (string) $this->module->version
-            );
-        }
-
-        return $result;
+        return $this->createSubmitHandler()->handle($requestParameters, $this->buildTechnicalErrorResponse());
     }
 
     protected function createSubmitHandler(): OnePageCheckoutSubmitHandler

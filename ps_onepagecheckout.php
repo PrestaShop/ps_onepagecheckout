@@ -12,9 +12,6 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
-require __DIR__ . '/bootstrap.php';
-
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
@@ -87,19 +84,13 @@ class Ps_Onepagecheckout extends Module
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('actionFrontControllerSetVariables')
-            && $this->registerHook('actionModuleUpgradeAfter')
             && $this->registerHook('actionCustomerLogoutAfter')
             && $this->registerHook('displayOverrideTemplate');
     }
 
     public function enable($force_all = false)
     {
-        $result = $this->enableInParent((bool) $force_all);
-        if ($result) {
-            Analytics::trackEvent(Analytics::EVENT_MODULE_ENABLED, [], (string) $this->version);
-        }
-
-        return $result;
+        return $this->enableInParent((bool) $force_all);
     }
 
     /**
@@ -111,39 +102,14 @@ class Ps_Onepagecheckout extends Module
      */
     public function disable($force_all = false)
     {
-        $result = $this->disableOnePageCheckoutConfigurationForCurrentContext()
+        return $this->disableOnePageCheckoutConfigurationForCurrentContext()
             && $this->disableInParent((bool) $force_all);
-
-        if ($result) {
-            Analytics::trackEvent(Analytics::EVENT_MODULE_DISABLED, [], (string) $this->version);
-        }
-
-        return $result;
     }
 
     public function uninstall()
     {
-        $result = $this->uninstallOnePageCheckoutConfiguration()
+        return $this->uninstallOnePageCheckoutConfiguration()
             && $this->uninstallInParent();
-
-        if ($result) {
-            Analytics::trackEvent(Analytics::EVENT_MODULE_UNINSTALLED, [], (string) $this->version);
-        }
-
-        return $result;
-    }
-
-    public function hookActionModuleUpgradeAfter(array $params): void
-    {
-        if (!isset($params['object']) || !($params['object'] instanceof Module)) {
-            return;
-        }
-
-        if ($params['object']->name !== $this->name) {
-            return;
-        }
-
-        Analytics::trackEvent(Analytics::EVENT_MODULE_UPDATED, [], (string) $this->version);
     }
 
     public function getContent()
@@ -190,11 +156,6 @@ class Ps_Onepagecheckout extends Module
 
             Tools::redirect($this->context->link->getPageLink('authentication', null, null, $backParams));
         }
-
-        Analytics::trackCheckoutStarted(
-            $guestCheckoutEnabled ? 'yes' : 'no',
-            (string) $this->version
-        );
 
         $opcRuntimeConfiguration = [
             'enabled' => true,

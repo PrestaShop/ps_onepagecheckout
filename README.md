@@ -17,8 +17,7 @@ PrestaShop: `9.2.0` or later.
 - front office AJAX endpoints for guest initialization and address form refresh,
 - back office configuration for enabling or disabling one-page checkout,
 - checkout layout configuration assets and templates shipped by the module,
-- checkout runtime flag exposure for the order page,
-- optional Segment PHP client bootstrap (`segmentio/analytics-php`) on module configuration pages (see [`docs/SEGMENT.md`](./docs/SEGMENT.md)).
+- checkout runtime flag exposure for the order page.
 
 ## Code map
 
@@ -44,7 +43,7 @@ Before opening a PR:
 
 ### PHP dependencies and autoload
 
-From the repository root, install Composer dependencies (required for `segmentio/analytics-php` and the module autoload):
+From the repository root, install Composer dependencies (required for the module autoload):
 
 ```bash
 composer install -d
@@ -103,7 +102,6 @@ For end-to-end checks, use the dedicated runbook:
 
 - implementation rules: [`docs/RULES.md`](./docs/RULES.md)
 - architectural decisions: [`docs/DECISIONS.md`](./docs/DECISIONS.md)
-- Segment (configuration & usage): [`docs/SEGMENT.md`](./docs/SEGMENT.md)
 - translations (i18n): [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md)
 - contributors: [`CONTRIBUTORS.md`](./CONTRIBUTORS.md)
 
