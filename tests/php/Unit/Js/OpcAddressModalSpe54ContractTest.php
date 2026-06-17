@@ -13,7 +13,7 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-address-modal.js');
 
         self::assertStringContainsString('addressesList', $script);
-        self::assertStringContainsString('states', $script);
+        self::assertStringContainsString('addressModal', $script);
         self::assertStringContainsString('saveAddress', $script);
         self::assertStringContainsString('deleteAddress', $script);
         self::assertStringContainsString('updatedOpcAddressForm', $script);
