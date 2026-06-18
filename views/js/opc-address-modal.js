@@ -36,6 +36,8 @@ const MODAL_COUNTRY_SELECTOR = MODAL_SCOPES.flatMap((modalSelector) => {
 const MODAL_FIELD_SELECTOR = MODAL_SCOPES.flatMap((modalSelector) => {
   return ['input', 'select', 'textarea'].map((fieldSelector) => `${modalSelector} ${fieldSelector}`);
 }).join(', ');
+const MODAL_FOOTER_SELECTOR = MODAL_SCOPES.map((modalSelector) => `${modalSelector} .modal-footer`).join(', ');
+const SAVE_ATTEMPTED_ATTRIBUTE = 'data-opc-save-attempted';
 const URL_KEYS = {
   addressesList: 'addressesList',
   addressModal: 'addressModal',
@@ -426,6 +428,64 @@ function isModalFieldValid(field) {
   return true;
 }
 
+function isModalFormValid($modal) {
+  return $modal
+    .find('input, select, textarea')
+    .toArray()
+    .every((field) => isModalFieldValid(field));
+}
+
+function isModalRefreshPending($modal) {
+  return Boolean($modal.data('opcRefreshPending'));
+}
+
+// Mirrors the guest "Pay" form (markFieldsValidity): flag invalid fields with `is-invalid` so
+// the customer sees which fields block Save. Uses the same validity rule as the Save gate
+// (including the manual minLength/maxLength check), so highlights match why Save is disabled.
+function markModalFieldsValidity($modal) {
+  $modal.find('input, select, textarea').each((_, field) => {
+    if (
+      !(field instanceof HTMLInputElement)
+      && !(field instanceof HTMLSelectElement)
+      && !(field instanceof HTMLTextAreaElement)
+    ) {
+      return;
+    }
+
+    const $field = $(field);
+    if (field.disabled || !isVisibleModalField(field)) {
+      $field.removeClass('is-invalid');
+
+      return;
+    }
+
+    $field.toggleClass('is-invalid', !isModalFieldValid(field));
+  });
+}
+
+function reportModalFirstInvalidField($modal) {
+  const invalidField = $modal.find('input, select, textarea').toArray().find((field) => (
+    (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)
+    && !field.disabled
+    && isVisibleModalField(field)
+    && !isModalFieldValid(field)
+  ));
+
+  if (!invalidField) {
+    return;
+  }
+
+  // Native bubble for browser-enforced constraints (e.g. empty required); fall back to focus
+  // for values the browser passes but the manual length check rejects.
+  if (typeof invalidField.reportValidity === 'function' && !invalidField.checkValidity()) {
+    invalidField.reportValidity();
+
+    return;
+  }
+
+  $(invalidField).trigger('focus');
+}
+
 function updateModalSaveState($modal) {
   const $saveButtons = $modal.find(SAVE_SELECTOR);
 
@@ -441,12 +501,15 @@ function updateModalSaveState($modal) {
     return;
   }
 
-  const isValid = $modal
-    .find('input, select, textarea')
-    .toArray()
-    .every((field) => isModalFieldValid(field));
-
+  // Keep Save unavailable while a country re-render is in flight, so the customer cannot submit
+  // against the stale field set before the country-specific fields/constraints are applied.
+  const isValid = !isModalRefreshPending($modal) && isModalFormValid($modal);
   $saveButtons.prop('disabled', !isValid);
+
+  // After a save attempt, keep the invalid-field highlights in sync as the customer edits.
+  if ($modal.attr(SAVE_ATTEMPTED_ATTRIBUTE) === '1') {
+    markModalFieldsValidity($modal);
+  }
 }
 
 function updateModalTitle($modal, type) {
@@ -549,6 +612,38 @@ function applyAddressValuesToContainer($scope, address) {
 }
 
 /**
+ * Resolve the swappable fields container, creating it for backward compatibility when a theme
+ * still overrides the pre-refactor address-modal.tpl (which has no `.js-opc-address-modal-fields`
+ * wrapper). The legacy markup is migrated once: the hidden technical controls (id_address, token,
+ * address_type) stay at the modal-body level and the country-dependent fields are wrapped, so the
+ * refresh works instead of silently no-ooping.
+ *
+ * @return {jQuery}
+ */
+function ensureModalFieldsContainer($modal) {
+  const $existing = $modal.find(MODAL_FIELDS_CONTAINER_SELECTOR).first();
+  if ($existing.length) {
+    return $existing;
+  }
+
+  const $body = $modal.find('.modal-body').first();
+  if (!$body.length) {
+    return $();
+  }
+
+  const hiddenNames = ['id_address', 'token', 'address_type'];
+  const $hidden = $body
+    .find('input[type="hidden"]')
+    .filter((_, el) => hiddenNames.includes(String($(el).attr('name') || '')));
+  const $container = $('<div>', {'class': 'js-opc-address-modal-fields'});
+
+  $container.append($body.children().not($hidden));
+  $body.empty().append($hidden).append($container);
+
+  return $container;
+}
+
+/**
  * Re-render the modal fields for the selected country so per-country rules (postcode
  * length/required, state field, identification number, field order) stay in sync.
  *
@@ -557,12 +652,13 @@ function applyAddressValuesToContainer($scope, address) {
  * is provided (edit mode), the saved address is applied on top once the new country's
  * fields - including its state list - exist.
  *
- * A per-modal refresh generation guards against out-of-order responses: a slower earlier
+ * While the request is in flight the modal is marked pending so Save stays disabled, and a
+ * per-modal refresh generation guards against out-of-order responses: a slower earlier
  * response is ignored once a newer country change has been requested.
  */
 function refreshModalFields($modal, countryId, addressValues) {
   const addressModalUrl = getConfiguredOpcUrl(URL_KEYS.addressModal);
-  const $container = $modal.find(MODAL_FIELDS_CONTAINER_SELECTOR).first();
+  const $container = ensureModalFieldsContainer($modal);
 
   if (!addressModalUrl || !$container.length || String(countryId || '') === '') {
     updateModalSaveState($modal);
@@ -572,6 +668,8 @@ function refreshModalFields($modal, countryId, addressValues) {
 
   const generation = (Number($modal.data('opcRefreshGeneration')) || 0) + 1;
   $modal.data('opcRefreshGeneration', generation);
+  $modal.data('opcRefreshPending', true);
+  updateModalSaveState($modal);
   const isStale = () => Number($modal.data('opcRefreshGeneration')) !== generation;
   const preservedFields = preserveAddressesSectionFields($container);
 
@@ -583,8 +681,18 @@ function refreshModalFields($modal, countryId, addressValues) {
       return;
     }
 
+    $modal.data('opcRefreshPending', false);
+
     if (!response || response.success === false || typeof response.fields_html !== 'string') {
       emitHandleError('opcAddressModalFields', response, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
+      updateModalSaveState($modal);
+
+      return;
+    }
+
+    // Do not resurrect a modal the customer has already closed: its controls live inside the
+    // checkout form and re-enabling them would let a later checkout submit include them.
+    if (!$modal.hasClass('show')) {
       updateModalSaveState($modal);
 
       return;
@@ -600,6 +708,7 @@ function refreshModalFields($modal, countryId, addressValues) {
       return;
     }
 
+    $modal.data('opcRefreshPending', false);
     emitHandleError('opcAddressModalFields', jqXHR && jqXHR.responseJSON, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
     updateModalSaveState($modal);
   });
@@ -1116,6 +1225,8 @@ $(document).on('show.bs.modal', MODAL_SELECTOR, (event) => {
   clearValidationErrors($modal);
   resetModalFields($modal);
   setModalFieldsDisabled($modal, false);
+  $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
+  $modal.data('opcRefreshPending', false);
 
   if (modalType === 'edit') {
     triggerAddress = getAddressFromTrigger($trigger);
@@ -1140,6 +1251,10 @@ $(document).on('hidden.bs.modal', MODAL_SELECTOR, (event) => {
   const $modal = $(event.currentTarget);
   restoreRememberedSelection($modal);
   clearValidationErrors($modal);
+  // Clear in-flight refresh state so a reopened modal starts clean (a pending response that
+  // resolves after close is already guarded by the generation + visibility checks).
+  $modal.data('opcRefreshPending', false);
+  $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   setModalFieldsDisabled($modal, true);
   updateModalSaveState($modal);
 });
@@ -1216,8 +1331,27 @@ $(document).on('click', '[data-opc-action="retry-addresses"]', (event) => {
   refreshAddressLists(pendingAddressListRefreshOptions || {});
 });
 
+// The disabled Save button has pointer-events:none (see SCSS), so a click on it falls through
+// to the footer. Mirror the guest "Pay" form: surface which fields are invalid instead of doing
+// nothing, so the customer learns why Save is unavailable.
+$(document).on('click', MODAL_FOOTER_SELECTOR, (event) => {
+  const $modal = $(event.currentTarget).closest(MODAL_SELECTOR);
+  const $button = $modal.find(SAVE_SELECTOR).first();
+
+  if (!$button.length || !$button.prop('disabled')) {
+    return;
+  }
+
+  $modal.attr(SAVE_ATTEMPTED_ATTRIBUTE, '1');
+  markModalFieldsValidity($modal);
+  reportModalFirstInvalidField($modal);
+});
+
 $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   event.preventDefault();
+  // Stop the click from also reaching the footer pass-through handler (only meant for the
+  // disabled button, which has pointer-events:none).
+  event.stopPropagation();
 
   const saveAddressUrl = getConfiguredOpcUrl(URL_KEYS.saveAddress);
   const $button = $(event.currentTarget);
@@ -1234,6 +1368,22 @@ $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   }
 
   setModalFieldsDisabled($modal, false);
+
+  // Like the guest "Pay" form: on an explicit submit, surface field validation and an error
+  // notification instead of silently posting when something is invalid.
+  $modal.attr(SAVE_ATTEMPTED_ATTRIBUTE, '1');
+  markModalFieldsValidity($modal);
+  if (!isModalFormValid($modal)) {
+    reportModalFirstInvalidField($modal);
+    emitHandleError(
+      'opcSaveAddress',
+      null,
+      getConfiguredOpcMessage('addressFieldsInvalid', 'Please correct the highlighted address fields.')
+    );
+
+    return;
+  }
+
   const initialText = String($button.attr('data-text') || $button.text());
   const loadingText = String($button.attr('data-loading-text') || initialText);
   const payload = serializeModalFields($modal);

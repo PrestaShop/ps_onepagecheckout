@@ -51,7 +51,7 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         self::assertStringContainsString("$(document).on('change', MODAL_COUNTRY_SELECTOR", $script);
 
         // Out-of-order responses are guarded by a per-modal refresh generation.
-        self::assertStringContainsString("$modal.data('opcRefreshGeneration', generation);", $script);
+        self::assertStringContainsString("\$modal.data('opcRefreshGeneration', generation);", $script);
         self::assertStringContainsString('if (isStale()) {', $script);
 
         // Field values are preserved across the swap with the shared group-aware helpers,
@@ -66,5 +66,35 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         self::assertStringContainsString('updateModalSaveState($modal);', $script);
         self::assertStringContainsString("getAttribute('minlength')", $script);
         self::assertStringContainsString("getAttribute('maxlength')", $script);
+
+        // Save stays disabled while a refresh is in flight, and an in-flight response is not
+        // applied to a modal that has since been closed.
+        self::assertStringContainsString("\$modal.data('opcRefreshPending', true);", $script);
+        self::assertStringContainsString('isModalRefreshPending($modal)', $script);
+        self::assertStringContainsString("if (!\$modal.hasClass('show')) {", $script);
+
+        // A theme that overrides the legacy modal markup (no wrapper) is migrated rather than no-oped.
+        self::assertStringContainsString('function ensureModalFieldsContainer(', $script);
+    }
+
+    public function testModalSaveButtonValidationFeedbackContract(): void
+    {
+        $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-address-modal.js');
+
+        // Mirror the guest Pay form: clicking the disabled Save button (which has pointer-events:none)
+        // falls through to the footer and surfaces field validation feedback.
+        self::assertStringContainsString("$(document).on('click', MODAL_FOOTER_SELECTOR", $script);
+        self::assertStringContainsString('function markModalFieldsValidity(', $script);
+        self::assertStringContainsString('function reportModalFirstInvalidField(', $script);
+        self::assertStringContainsString("toggleClass('is-invalid'", $script);
+
+        // Clicking the enabled Save button with invalid fields shows validation + an error
+        // notification instead of posting.
+        self::assertStringContainsString('if (!isModalFormValid($modal)) {', $script);
+        self::assertStringContainsString('addressFieldsInvalid', $script);
+
+        $scss = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/scss/one-page-checkout.scss');
+        self::assertStringContainsString('#submit-address-modal:disabled', $scss);
+        self::assertStringContainsString('pointer-events: none;', $scss);
     }
 }
