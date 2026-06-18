@@ -21,94 +21,15 @@
       </div>
       <hr>
       <div class="modal-body">
-        <div class="row">
-          <input type="hidden" name="id_address" value="">
-          <input type="hidden" name="token" value="{$token}">
-          <input type="hidden" name="address_type" value="{$address_type}">
-          {assign var="_key_alias" value="{$prefix}alias"}
-          {assign var="_key_id_country" value="{$prefix}id_country"}
-          {assign var="_key_firstname" value="{$prefix}firstname"}
-          {assign var="_key_lastname" value="{$prefix}lastname"}
-          {assign var="_key_company" value="{$prefix}company"}
-          {assign var="_key_vat_number" value="{$prefix}vat_number"}
-          {assign var="_key_address1" value="{$prefix}address1"}
-          {assign var="_key_address2" value="{$prefix}address2"}
-          {assign var="_key_city" value="{$prefix}city"}
-          {assign var="_key_postcode" value="{$prefix}postcode"}
-          {assign var="_key_id_state" value="{$prefix}id_state"}
-          {assign var="_key_phone" value="{$prefix}phone"}
-
-          {if isset($formFields[$_key_id_country])}
-            <div class="form-group mb-3">
-              <label class="form-label{if $formFields[$_key_id_country].required} required{/if}" for="{$modal_id}-field-id_country">
-                {$formFields[$_key_id_country].label}
-              </label>
-              <select
-                class="form-select"
-                name="{$formFields[$_key_id_country].name}"
-                id="{$modal_id}-field-id_country"
-                {if $formFields[$_key_id_country].required}required{/if}
-              >
-                <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
-                {foreach from=$formFields[$_key_id_country].availableValues item="label" key="value"}
-                  <option value="{$value}" {if (string) $value === (string) $formFields[$_key_id_country].value}selected{/if}>{$label}</option>
-                {/foreach}
-              </select>
-            </div>
-          {/if}
-
-          {if isset($formFields[$_key_alias])}{form_field field=$formFields[$_key_alias]}{/if}
-
-          {if isset($formFields[$_key_firstname]) && isset($formFields[$_key_lastname])}
-            {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl' fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]}
-          {/if}
-
-          {if isset($formFields[$_key_company])}{form_field field=$formFields[$_key_company]}{/if}
-
-          {if isset($formFields[$_key_vat_number])}{form_field field=$formFields[$_key_vat_number]}{/if}
-
-          {if isset($formFields[$_key_address1])}{form_field field=$formFields[$_key_address1]}{/if}
-
-          {if isset($formFields[$_key_address2])}{form_field field=$formFields[$_key_address2]}{/if}
-
-          <div class="opc-form-fields-row opc-form-fields-row--2 address-country-row">
-            {if isset($formFields[$_key_city])}{form_field field=$formFields[$_key_city]}{/if}
-            <div class="form-group mb-3 state-field-wrapper" style="{if !isset($formFields[$_key_id_state]) || empty($formFields[$_key_id_state].availableValues)}display: none;{/if}">
-              <label class="form-label{if isset($formFields[$_key_id_state]) && $formFields[$_key_id_state].required} required{/if}" for="{$modal_id}-field-id_state">
-                {l s='State' d='Modules.Onepagecheckout.Shop'}
-              </label>
-              <select
-                class="form-select"
-                name="{if isset($formFields[$_key_id_state])}{$formFields[$_key_id_state].name}{else}{$prefix}id_state{/if}"
-                id="{$modal_id}-field-id_state"
-                data-select-placeholder="{l s='-- please choose --' d='Modules.Onepagecheckout.Shop' js=1}"
-              >
-                <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
-                {if isset($formFields[$_key_id_state]) && isset($formFields[$_key_id_state].availableValues)}
-                  {foreach from=$formFields[$_key_id_state].availableValues item="label" key="value"}
-                    <option value="{$value}" {if $value eq $formFields[$_key_id_state].value}selected{/if}>{$label}</option>
-                  {/foreach}
-                {/if}
-              </select>
-            </div>
-            {if isset($formFields[$_key_postcode])}{form_field field=$formFields[$_key_postcode]}{/if}
-          </div>
-
-          {if isset($formFields[$_key_phone])}{form_field field=$formFields[$_key_phone]}{/if}
-
-          {* Render any additional fields not covered above (phone_mobile, dni, other, hook fields) *}
-          {assign var="_static_fields" value=['alias', 'id_country', 'firstname', 'lastname', 'company', 'vat_number', 'address1', 'address2', 'city', 'postcode', 'id_state', 'phone']}
-          {foreach from=$formFields item="field" key="fieldKey"}
-            {if $prefix && strpos($field.name, $prefix) !== 0}{continue}{/if}
-            {if !$prefix && strpos($field.name, 'invoice_') === 0}{continue}{/if}
-            {if $prefix}
-              {assign var="_base" value=$field.name|substr:($prefix|strlen)}
-            {else}
-              {assign var="_base" value=$field.name}
-            {/if}
-            {if in_array($_base, $_static_fields)}{continue}{/if}
-            {form_field field=$field}
-          {/foreach}
+        <input type="hidden" name="id_address" value="">
+        <input type="hidden" name="token" value="{$token}">
+        <input type="hidden" name="address_type" value="{$address_type}">
+        {* Country-dependent fields, swapped in place by opc-address-modal.js on country change. *}
+        <div class="js-opc-address-modal-fields">
+          {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-modal-fields.tpl'
+            formFields=$formFields
+            prefix=$prefix
+            modal_id=$modal_id}
         </div>
       </div>
       <div class="modal-footer">
