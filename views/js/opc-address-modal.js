@@ -525,37 +525,16 @@ function getAddressTypeForModal($modal) {
 }
 
 /**
- * Snapshot the user-entered values inside the modal fields container before it is
- * re-rendered. The country select is skipped so the server-selected country wins.
- *
- * @return {Object<string, (string|boolean)>}
+ * Apply a saved address (flat name => value map) onto the freshly rendered modal fields.
+ * Used in edit mode, where the address country may differ from the page-rendered modal.
+ * The country select is skipped so the server-selected country (and its state list) wins.
  */
-function captureModalFieldValues($scope) {
-  const values = Object.create(null);
-
-  $scope.find('input, select, textarea').each((_, field) => {
-    const $field = $(field);
-    const name = String($field.attr('name') || '');
-
-    if (name === '' || /id_country$/.test(name)) {
-      return;
-    }
-
-    const type = getFieldType($field);
-    values[name] = type === 'checkbox' || type === 'radio'
-      ? $field.is(':checked')
-      : $field.val();
-  });
-
-  return values;
-}
-
-function applyModalFieldValues($scope, values) {
-  if (!values) {
+function applyAddressValuesToContainer($scope, address) {
+  if (!address) {
     return;
   }
 
-  Object.keys(values).forEach((name) => {
+  Object.keys(address).forEach((name) => {
     if (/id_country$/.test(name)) {
       return;
     }
@@ -565,24 +544,23 @@ function applyModalFieldValues($scope, values) {
       return;
     }
 
-    const type = getFieldType($field);
-    if (type === 'checkbox' || type === 'radio') {
-      $field.prop('checked', Boolean(values[name]));
-
-      return;
-    }
-
-    $field.val(typeof values[name] === 'undefined' ? '' : values[name]);
+    restoreFieldValue($field, address[name]);
   });
 }
 
 /**
  * Re-render the modal fields for the selected country so per-country rules (postcode
  * length/required, state field, identification number, field order) stay in sync.
- * Values are preserved across the swap: `valuesToApply` (an address) when provided,
- * otherwise the in-progress field values captured before the swap.
+ *
+ * In-progress values are preserved across the swap using the shared preserve/restore
+ * helpers (so grouped checkbox/radio hook fields keep their values). When `addressValues`
+ * is provided (edit mode), the saved address is applied on top once the new country's
+ * fields - including its state list - exist.
+ *
+ * A per-modal refresh generation guards against out-of-order responses: a slower earlier
+ * response is ignored once a newer country change has been requested.
  */
-function refreshModalFields($modal, countryId, valuesToApply) {
+function refreshModalFields($modal, countryId, addressValues) {
   const addressModalUrl = getConfiguredOpcUrl(URL_KEYS.addressModal);
   const $container = $modal.find(MODAL_FIELDS_CONTAINER_SELECTOR).first();
 
@@ -592,12 +570,19 @@ function refreshModalFields($modal, countryId, valuesToApply) {
     return $.Deferred().resolve().promise();
   }
 
-  const valuesToRestore = valuesToApply || captureModalFieldValues($container);
+  const generation = (Number($modal.data('opcRefreshGeneration')) || 0) + 1;
+  $modal.data('opcRefreshGeneration', generation);
+  const isStale = () => Number($modal.data('opcRefreshGeneration')) !== generation;
+  const preservedFields = preserveAddressesSectionFields($container);
 
   return $.post(addressModalUrl, {
     id_country: String(countryId),
     address_type: getAddressTypeForModal($modal),
   }).done((response) => {
+    if (isStale()) {
+      return;
+    }
+
     if (!response || response.success === false || typeof response.fields_html !== 'string') {
       emitHandleError('opcAddressModalFields', response, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
       updateModalSaveState($modal);
@@ -606,10 +591,15 @@ function refreshModalFields($modal, countryId, valuesToApply) {
     }
 
     $container.html(response.fields_html);
-    applyModalFieldValues($container, valuesToRestore);
+    restoreAddressesSectionFields($container, preservedFields);
+    applyAddressValuesToContainer($container, addressValues);
     setModalFieldsDisabled($modal, false);
     updateModalSaveState($modal);
   }).fail((jqXHR) => {
+    if (isStale()) {
+      return;
+    }
+
     emitHandleError('opcAddressModalFields', jqXHR && jqXHR.responseJSON, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
     updateModalSaveState($modal);
   });
