@@ -7,7 +7,7 @@
     "watch": "webpack --mode=development --watch"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.0",
+    "@babel/core": "^8.0.1",
     "@babel/preset-env": "^7.26.0",
     "babel-loader": "^9.2.1",
     "bootstrap": "^5.3.8",
