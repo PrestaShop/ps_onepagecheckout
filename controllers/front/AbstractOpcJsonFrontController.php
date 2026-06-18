@@ -1,7 +1,5 @@
 <?php
 
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
-
 abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFrontController
 {
     /** @var bool */
@@ -93,12 +91,6 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
             'Module',
             (int) $this->module->id,
             true
-        );
-
-        Analytics::trackOpcCriticalError(
-            'unknown',
-            (bool) Configuration::get('PS_GUEST_CHECKOUT_ENABLED') ? 'yes' : 'no',
-            (string) $this->module->version
         );
 
         return $this->buildTechnicalErrorResponse();

@@ -96,7 +96,7 @@ class OnePageCheckoutForm extends \AbstractForm
         // Rebuild delivery field rules from selected country (state/postcode requirements).
         if (isset($params['id_country'])) {
             $country = (int) $params['id_country'] !== (int) $this->formatter->getCountry()->id
-                ? new \Country($params['id_country'], $this->language->id)
+                ? new \Country((int) $params['id_country'], $this->language->id)
                 : $this->formatter->getCountry()
             ;
         } elseif ($this->address) { // @phpstan-ignore elseif.alwaysTrue (defensive fallback when formatter country differs)
@@ -620,6 +620,38 @@ class OnePageCheckoutForm extends \AbstractForm
         $fieldsByGroup = $this->mapFieldsByGroup();
 
         return $this->buildAddressFromGroup($fieldsByGroup['invoiceFields'], null, 'invoice_');
+    }
+
+    /**
+     * Names of the editable address fields (delivery + invoice sections) plus the
+     * same-address flag, read from the live form definition. Driving the draft whitelist
+     * from here keeps it in sync with configurable per-country address formats and
+     * module-added custom address fields, instead of relying on a hardcoded list.
+     *
+     * @return array<int, string>
+     */
+    public function getAddressDraftFieldNames(): array
+    {
+        if (!$this->formFields) {
+            $this->formFields = $this->formatter->getFormat();
+            $this->stripAdditionalCustomerFieldsForConnectedCustomer();
+        }
+
+        $fieldsByGroup = $this->mapFieldsByGroup();
+        $names = ['use_same_address'];
+
+        foreach (['deliveryFields', 'invoiceFields'] as $group) {
+            foreach ($fieldsByGroup[$group] as $field) {
+                // Skip hidden technical fields such as id_address_delivery; they are not draft data.
+                if ($field->getType() === 'hidden') {
+                    continue;
+                }
+
+                $names[] = (string) $field->getName();
+            }
+        }
+
+        return array_values(array_unique($names));
     }
 
     public function getTemplateVariables()

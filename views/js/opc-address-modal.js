@@ -5,6 +5,7 @@ import {
   getConfiguredOpcMessage,
   getConfiguredOpcUrl,
   normalizeErrorEventResponse,
+  setOpcRuntimePersistAddressDraft,
 } from './runtime/opc-runtime';
 
 /**
@@ -22,7 +23,7 @@ if (!$) {
 const MODAL_SELECTOR = OPC_SELECTORS.modals.address;
 const SAVE_SELECTOR = '#submit-address-modal, .js-opc-save-address';
 const COUNTRY_SELECTOR = '[name="id_country"], [name$="id_country"]';
-const STATE_SELECTOR = '[name="id_state"], [name$="id_state"]';
+const MODAL_FIELDS_CONTAINER_SELECTOR = '.js-opc-address-modal-fields';
 const MODAL_SCOPES = MODAL_SELECTOR.split(',').map((selector) => selector.trim());
 const SAVE_TARGETS = SAVE_SELECTOR.split(',').map((selector) => selector.trim());
 const COUNTRY_TARGETS = COUNTRY_SELECTOR.split(',').map((selector) => selector.trim());
@@ -35,9 +36,11 @@ const MODAL_COUNTRY_SELECTOR = MODAL_SCOPES.flatMap((modalSelector) => {
 const MODAL_FIELD_SELECTOR = MODAL_SCOPES.flatMap((modalSelector) => {
   return ['input', 'select', 'textarea'].map((fieldSelector) => `${modalSelector} ${fieldSelector}`);
 }).join(', ');
+const MODAL_FOOTER_SELECTOR = MODAL_SCOPES.map((modalSelector) => `${modalSelector} .modal-footer`).join(', ');
+const SAVE_ATTEMPTED_ATTRIBUTE = 'data-opc-save-attempted';
 const URL_KEYS = {
   addressesList: 'addressesList',
-  states: 'states',
+  addressModal: 'addressModal',
   saveAddress: 'saveAddress',
   deleteAddress: 'deleteAddress',
   addressForm: 'addressForm',
@@ -401,7 +404,92 @@ function isModalFieldValid(field) {
     return true;
   }
 
-  return field.checkValidity();
+  if (!field.checkValidity()) {
+    return false;
+  }
+
+  // checkValidity() ignores minLength/maxLength for values set programmatically (e.g. restored
+  // after a country re-render), because the HTML "dirty value" flag is only set by user typing.
+  // Enforce them manually so a value that is too short/long for the newly selected country
+  // disables Save immediately, instead of only after a failed save round-trip.
+  const value = String(field.value || '');
+  if (value !== '') {
+    const minLength = parseInt(field.getAttribute('minlength') || '', 10);
+    if (!Number.isNaN(minLength) && value.length < minLength) {
+      return false;
+    }
+
+    const maxLength = parseInt(field.getAttribute('maxlength') || '', 10);
+    if (!Number.isNaN(maxLength) && value.length > maxLength) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isModalFormValid($modal) {
+  return $modal
+    .find('input, select, textarea')
+    .toArray()
+    .every((field) => isModalFieldValid(field));
+}
+
+function isModalRefreshPending($modal) {
+  return Boolean($modal.data('opcRefreshPending'));
+}
+
+// A refresh that failed leaves the field set on the previous country while the select shows the
+// new one; keep Save blocked until a later refresh succeeds (or the modal is reopened).
+function isModalRefreshFailed($modal) {
+  return Boolean($modal.data('opcRefreshFailed'));
+}
+
+// Mirrors the guest "Pay" form (markFieldsValidity): flag invalid fields with `is-invalid` so
+// the customer sees which fields block Save. Uses the same validity rule as the Save gate
+// (including the manual minLength/maxLength check), so highlights match why Save is disabled.
+function markModalFieldsValidity($modal) {
+  $modal.find('input, select, textarea').each((_, field) => {
+    if (
+      !(field instanceof HTMLInputElement)
+      && !(field instanceof HTMLSelectElement)
+      && !(field instanceof HTMLTextAreaElement)
+    ) {
+      return;
+    }
+
+    const $field = $(field);
+    if (field.disabled || !isVisibleModalField(field)) {
+      $field.removeClass('is-invalid');
+
+      return;
+    }
+
+    $field.toggleClass('is-invalid', !isModalFieldValid(field));
+  });
+}
+
+function reportModalFirstInvalidField($modal) {
+  const invalidField = $modal.find('input, select, textarea').toArray().find((field) => (
+    (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)
+    && !field.disabled
+    && isVisibleModalField(field)
+    && !isModalFieldValid(field)
+  ));
+
+  if (!invalidField) {
+    return;
+  }
+
+  // Native bubble for browser-enforced constraints (e.g. empty required); fall back to focus
+  // for values the browser passes but the manual length check rejects.
+  if (typeof invalidField.reportValidity === 'function' && !invalidField.checkValidity()) {
+    invalidField.reportValidity();
+
+    return;
+  }
+
+  $(invalidField).trigger('focus');
 }
 
 function updateModalSaveState($modal) {
@@ -419,12 +507,17 @@ function updateModalSaveState($modal) {
     return;
   }
 
-  const isValid = $modal
-    .find('input, select, textarea')
-    .toArray()
-    .every((field) => isModalFieldValid(field));
-
+  // Keep Save unavailable while a country re-render is in flight or has failed, so the customer
+  // cannot submit against a field set that does not match the selected country.
+  const isValid = !isModalRefreshPending($modal)
+    && !isModalRefreshFailed($modal)
+    && isModalFormValid($modal);
   $saveButtons.prop('disabled', !isValid);
+
+  // After a save attempt, keep the invalid-field highlights in sync as the customer edits.
+  if ($modal.attr(SAVE_ATTEMPTED_ATTRIBUTE) === '1') {
+    markModalFieldsValidity($modal);
+  }
 }
 
 function updateModalTitle($modal, type) {
@@ -498,71 +591,141 @@ function getModalType($trigger) {
   return String($trigger.attr('data-type') || 'create');
 }
 
-function readStateUiTargets($modal) {
-  return {
-    $wrapper: $modal.find('.state-field-wrapper, #state-field-wrapper').first(),
-    $select: $modal.find(STATE_SELECTOR).first(),
-    $row: $modal.find('.address-country-row, #address-country-row').first(),
-  };
+function getAddressTypeForModal($modal) {
+  return $modal.is('#modal-invoice') ? 'invoice' : 'delivery';
 }
 
-function updateStateFieldUi($modal, response, selectedStateId) {
-  const {$wrapper, $select, $row} = readStateUiTargets($modal);
-
-  if (!$wrapper.length || !$select.length) {
+/**
+ * Apply a saved address (flat name => value map) onto the freshly rendered modal fields.
+ * Used in edit mode, where the address country may differ from the page-rendered modal.
+ * The country select is skipped so the server-selected country (and its state list) wins.
+ */
+function applyAddressValuesToContainer($scope, address) {
+  if (!address) {
     return;
   }
 
-  const states = response && Array.isArray(response.states) ? response.states : [];
-  const hasStates = Boolean(response && response.hasStates) || states.length > 0;
-
-  if (!hasStates) {
-    $wrapper.hide();
-    $select.prop('required', false).val('');
-    if ($row.length) {
-      $row.removeClass('opc-form-fields-row--3').addClass('opc-form-fields-row--2');
+  Object.keys(address).forEach((name) => {
+    if (/id_country$/.test(name)) {
+      return;
     }
 
-    return;
-  }
+    const $field = $scope.find(`[name="${name}"], [name$="${name}"]`).first();
+    if (!$field.length) {
+      return;
+    }
 
-  const placeholder = String($select.attr('data-select-placeholder') || '');
-  $select.empty();
-  $select.append($('<option>', {value: '', text: placeholder}));
-
-  states.forEach((state) => {
-    const stateId = String(state.id_state || '');
-    $select.append($('<option>', {
-      value: stateId,
-      text: String(state.name || ''),
-      selected: selectedStateId !== '' && stateId === selectedStateId,
-    }));
+    restoreFieldValue($field, address[name]);
   });
-
-  $wrapper.show();
-  $select.prop('required', true);
-  if ($row.length) {
-    $row.removeClass('opc-form-fields-row--2').addClass('opc-form-fields-row--3');
-  }
 }
 
-function refreshStates($modal, countryId, selectedStateId) {
-  const statesUrl = getConfiguredOpcUrl(URL_KEYS.states);
+/**
+ * Resolve the swappable fields container, creating it for backward compatibility when a theme
+ * still overrides the pre-refactor address-modal.tpl (which has no `.js-opc-address-modal-fields`
+ * wrapper). The legacy markup is migrated once: the hidden technical controls (id_address, token,
+ * address_type) stay at the modal-body level and the country-dependent fields are wrapped, so the
+ * refresh works instead of silently no-ooping.
+ *
+ * @return {jQuery}
+ */
+function ensureModalFieldsContainer($modal) {
+  const $existing = $modal.find(MODAL_FIELDS_CONTAINER_SELECTOR).first();
+  if ($existing.length) {
+    return $existing;
+  }
 
-  if (!statesUrl || countryId === '') {
-    updateStateFieldUi($modal, {hasStates: false, states: []}, '');
+  const $body = $modal.find('.modal-body').first();
+  if (!$body.length) {
+    return $();
+  }
+
+  const hiddenNames = ['id_address', 'token', 'address_type'];
+  const $hidden = $body
+    .find('input[type="hidden"]')
+    .filter((_, el) => hiddenNames.includes(String($(el).attr('name') || '')));
+  const $container = $('<div>', {'class': 'js-opc-address-modal-fields'});
+
+  $container.append($body.children().not($hidden));
+  $body.empty().append($hidden).append($container);
+
+  return $container;
+}
+
+/**
+ * Re-render the modal fields for the selected country so per-country rules (postcode
+ * length/required, state field, identification number, field order) stay in sync.
+ *
+ * In-progress values are preserved across the swap using the shared preserve/restore
+ * helpers (so grouped checkbox/radio hook fields keep their values). When `addressValues`
+ * is provided (edit mode), the saved address is applied on top once the new country's
+ * fields - including its state list - exist.
+ *
+ * While the request is in flight the modal is marked pending so Save stays disabled, and a
+ * per-modal refresh generation guards against out-of-order responses: a slower earlier
+ * response is ignored once a newer country change has been requested.
+ */
+function refreshModalFields($modal, countryId, addressValues) {
+  const addressModalUrl = getConfiguredOpcUrl(URL_KEYS.addressModal);
+  const $container = ensureModalFieldsContainer($modal);
+
+  if (!addressModalUrl || !$container.length || String(countryId || '') === '') {
+    updateModalSaveState($modal);
 
     return $.Deferred().resolve().promise();
   }
 
-  return $.get(statesUrl, {id_country: countryId}).done((response) => {
-    updateStateFieldUi($modal, response || {}, selectedStateId);
+  const generation = (Number($modal.data('opcRefreshGeneration')) || 0) + 1;
+  $modal.data('opcRefreshGeneration', generation);
+  $modal.data('opcRefreshPending', true);
+  $modal.data('opcRefreshFailed', false);
+  updateModalSaveState($modal);
+  const isStale = () => Number($modal.data('opcRefreshGeneration')) !== generation;
+
+  return $.post(addressModalUrl, {
+    id_country: String(countryId),
+    address_type: getAddressTypeForModal($modal),
+  }).done((response) => {
+    if (isStale()) {
+      return;
+    }
+
+    $modal.data('opcRefreshPending', false);
+
+    if (!response || response.success === false || typeof response.fields_html !== 'string') {
+      // The field set still belongs to the previous country while the select shows the new one.
+      // Keep Save disabled until a successful retry so a stale structure can't be submitted.
+      $modal.data('opcRefreshFailed', true);
+      emitHandleError('opcAddressModalFields', response, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
+      updateModalSaveState($modal);
+
+      return;
+    }
+
+    // Do not resurrect a modal the customer has already closed: its controls live inside the
+    // checkout form and re-enabling them would let a later checkout submit include them.
+    if (!$modal.hasClass('show')) {
+      updateModalSaveState($modal);
+
+      return;
+    }
+
+    // Recapture the latest values immediately before the swap so edits typed during the
+    // in-flight window are preserved (not overwritten by a snapshot taken before the request).
+    const preservedFields = preserveAddressesSectionFields($container);
+    $container.html(response.fields_html);
+    restoreAddressesSectionFields($container, preservedFields);
+    applyAddressValuesToContainer($container, addressValues);
+    setModalFieldsDisabled($modal, false);
     updateModalSaveState($modal);
   }).fail((jqXHR) => {
-    const fallbackMessage = getConfiguredOpcMessage('statesLoadFailed', 'Unable to load states.');
-    updateStateFieldUi($modal, {hasStates: false, states: []}, '');
+    if (isStale()) {
+      return;
+    }
+
+    $modal.data('opcRefreshPending', false);
+    $modal.data('opcRefreshFailed', true);
+    emitHandleError('opcAddressModalFields', jqXHR && jqXHR.responseJSON, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
     updateModalSaveState($modal);
-    emitHandleError('opcAddressStates', jqXHR && jqXHR.responseJSON, fallbackMessage);
   });
 }
 
@@ -1008,6 +1171,10 @@ function refreshAddressLists(options = {}) {
 
       const addressCount = parseInt(response.address_count, 10) || 0;
 
+      // Once the count is known, keep draft autosave aligned with it: enabled while no saved
+      // address remains (e.g. after deleting the last one), disabled once one exists.
+      setOpcRuntimePersistAddressDraft(addressCount <= 0);
+
       if (addressCount <= 0) {
         return refreshAddressesSection(options);
       }
@@ -1072,21 +1239,22 @@ $(document).on('show.bs.modal', MODAL_SELECTOR, (event) => {
   updateModalTitle($modal, modalType);
   clearValidationErrors($modal);
   resetModalFields($modal);
+  setModalFieldsDisabled($modal, false);
+  $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
+  $modal.data('opcRefreshPending', false);
+  $modal.data('opcRefreshFailed', false);
 
   if (modalType === 'edit') {
     triggerAddress = getAddressFromTrigger($trigger);
     populateForm($modal, triggerAddress);
+    // Rebuild the fields for the edited address country, then re-apply its values:
+    // the server-rendered modal reflects the checkout country, which may differ.
+    refreshModalFields($modal, String(triggerAddress.id_country || ''), triggerAddress);
+
+    return;
   }
 
-  const selectedCountryId = modalType === 'edit' && triggerAddress
-    ? String(triggerAddress.id_country || '')
-    : String(getModalField($modal, 'id_country').val() || '');
-  const selectedStateId = modalType === 'edit' && triggerAddress
-    ? String(triggerAddress.id_state || '')
-    : String(getModalField($modal, 'id_state').val() || '');
-
-  setModalFieldsDisabled($modal, false);
-  refreshStates($modal, selectedCountryId, selectedStateId);
+  updateModalSaveState($modal);
 });
 
 $(document).on('shown.bs.modal', MODAL_SELECTOR, (event) => {
@@ -1099,6 +1267,11 @@ $(document).on('hidden.bs.modal', MODAL_SELECTOR, (event) => {
   const $modal = $(event.currentTarget);
   restoreRememberedSelection($modal);
   clearValidationErrors($modal);
+  // Clear in-flight refresh state so a reopened modal starts clean (a pending response that
+  // resolves after close is already guarded by the generation + visibility checks).
+  $modal.data('opcRefreshPending', false);
+  $modal.data('opcRefreshFailed', false);
+  $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   setModalFieldsDisabled($modal, true);
   updateModalSaveState($modal);
 });
@@ -1107,7 +1280,7 @@ $(document).on('change', MODAL_COUNTRY_SELECTOR, (event) => {
   const $modal = $(event.currentTarget).closest(MODAL_SELECTOR);
   const countryId = String($(event.currentTarget).val() || '');
 
-  refreshStates($modal, countryId, '');
+  refreshModalFields($modal, countryId);
 });
 
 $(document).on('input change', MODAL_FIELD_SELECTOR, (event) => {
@@ -1175,8 +1348,27 @@ $(document).on('click', '[data-opc-action="retry-addresses"]', (event) => {
   refreshAddressLists(pendingAddressListRefreshOptions || {});
 });
 
+// The disabled Save button has pointer-events:none (see SCSS), so a click on it falls through
+// to the footer. Mirror the guest "Pay" form: surface which fields are invalid instead of doing
+// nothing, so the customer learns why Save is unavailable.
+$(document).on('click', MODAL_FOOTER_SELECTOR, (event) => {
+  const $modal = $(event.currentTarget).closest(MODAL_SELECTOR);
+  const $button = $modal.find(SAVE_SELECTOR).first();
+
+  if (!$button.length || !$button.prop('disabled')) {
+    return;
+  }
+
+  $modal.attr(SAVE_ATTEMPTED_ATTRIBUTE, '1');
+  markModalFieldsValidity($modal);
+  reportModalFirstInvalidField($modal);
+});
+
 $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   event.preventDefault();
+  // Stop the click from also reaching the footer pass-through handler (only meant for the
+  // disabled button, which has pointer-events:none).
+  event.stopPropagation();
 
   const saveAddressUrl = getConfiguredOpcUrl(URL_KEYS.saveAddress);
   const $button = $(event.currentTarget);
@@ -1193,6 +1385,22 @@ $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   }
 
   setModalFieldsDisabled($modal, false);
+
+  // Like the guest "Pay" form: on an explicit submit, surface field validation and an error
+  // notification instead of silently posting when something is invalid.
+  $modal.attr(SAVE_ATTEMPTED_ATTRIBUTE, '1');
+  markModalFieldsValidity($modal);
+  if (!isModalFormValid($modal)) {
+    reportModalFirstInvalidField($modal);
+    emitHandleError(
+      'opcSaveAddress',
+      null,
+      getConfiguredOpcMessage('addressFieldsInvalid', 'Please correct the highlighted address fields.')
+    );
+
+    return;
+  }
+
   const initialText = String($button.attr('data-text') || $button.text());
   const loadingText = String($button.attr('data-loading-text') || initialText);
   const payload = serializeModalFields($modal);

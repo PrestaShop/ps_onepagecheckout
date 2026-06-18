@@ -6,6 +6,7 @@ namespace Tests\Unit\Checkout\Ajax;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitHandler;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitProcessor;
@@ -17,6 +18,7 @@ class OpcSubmitHandlerTest extends TestCase
     private CheckoutSessionFactory|MockObject $checkoutSessionFactory;
     private OnePageCheckoutSubmitProcessor|MockObject $submitProcessor;
     private OnePageCheckoutSubmitValidationStateStorage|MockObject $submitValidationStateStorage;
+    private AddressDraftStorage|MockObject $addressDraftStorage;
     private \CheckoutSession|MockObject $checkoutSession;
     private OnePageCheckoutSubmitHandler $handler;
 
@@ -51,12 +53,14 @@ class OpcSubmitHandlerTest extends TestCase
         $this->checkoutSession->method('getCheckoutURL')->willReturn('/commande');
 
         $this->checkoutSessionFactory->method('create')->willReturn($this->checkoutSession);
+        $this->addressDraftStorage = $this->createMock(AddressDraftStorage::class);
 
         $this->handler = new OnePageCheckoutSubmitHandler(
             $this->context,
             $this->checkoutSessionFactory,
             $this->submitProcessor,
-            $this->submitValidationStateStorage
+            $this->submitValidationStateStorage,
+            $this->addressDraftStorage
         );
     }
 
@@ -119,6 +123,8 @@ class OpcSubmitHandlerTest extends TestCase
                     'firstname' => 'Ada',
                 ],
             ]);
+
+        $this->addressDraftStorage->expects($this->once())->method('clear');
 
         $response = $this->handler->handle([
         ]);

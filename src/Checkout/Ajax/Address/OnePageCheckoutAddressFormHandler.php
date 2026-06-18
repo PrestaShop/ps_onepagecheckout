@@ -11,6 +11,19 @@ use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 class OnePageCheckoutAddressFormHandler
 {
     /**
+     * The only request parameters this handler accepts. The raw request is reduced to
+     * these (scalar-valued) parameters at the entry point; address ids are additionally
+     * ownership-checked before being forwarded to the form.
+     */
+    private const ALLOWED_REQUEST_PARAMETERS = [
+        'id_country',
+        'invoice_id_country',
+        'use_same_address',
+        'id_address_delivery',
+        'id_address_invoice',
+    ];
+
+    /**
      * @var OnePageCheckoutForm
      */
     private $opcForm;
@@ -34,11 +47,11 @@ class OnePageCheckoutAddressFormHandler
      */
     public function getTemplateVariables(array $requestParameters): array
     {
+        $requestParameters = $this->extractAllowedScalarParameters($requestParameters);
+
         $deliveryAddressId = (int) ($requestParameters['id_address_delivery'] ?? 0);
         $ownedDeliveryAddress = null;
         $customer = $this->customerResolver->resolve();
-        $useSameAddress = array_key_exists('use_same_address', $requestParameters)
-            && (string) $requestParameters['use_same_address'] !== '0';
 
         if ($customer instanceof \Customer) {
             $this->opcForm->fillFromCustomer($customer);
@@ -53,7 +66,7 @@ class OnePageCheckoutAddressFormHandler
 
         $formParams = [];
 
-        foreach (['id_country', 'invoice_id_country', 'use_same_address', 'id_address_delivery', 'id_address_invoice'] as $name) {
+        foreach (self::ALLOWED_REQUEST_PARAMETERS as $name) {
             if (!isset($requestParameters[$name])) {
                 continue;
             }
@@ -85,6 +98,27 @@ class OnePageCheckoutAddressFormHandler
         }
 
         return $this->buildAddressesSectionTemplateVariables();
+    }
+
+    /**
+     * Reduce the raw request to the allowed parameters, dropping non-scalar values
+     * (e.g. `?id_country[]=1`) so downstream casts never operate on arrays.
+     *
+     * @param array<string,mixed> $requestParameters
+     *
+     * @return array<string,scalar>
+     */
+    private function extractAllowedScalarParameters(array $requestParameters): array
+    {
+        $parameters = [];
+
+        foreach (self::ALLOWED_REQUEST_PARAMETERS as $name) {
+            if (isset($requestParameters[$name]) && is_scalar($requestParameters[$name])) {
+                $parameters[$name] = $requestParameters[$name];
+            }
+        }
+
+        return $parameters;
     }
 
     /**

@@ -1,5 +1,6 @@
 <?php
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutSessionFactory;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitHandler;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\Submit\OnePageCheckoutSubmitProcessor;
@@ -49,7 +50,8 @@ class Ps_OnepagecheckoutOpcSubmitModuleFrontController extends Ps_Onepagecheckou
                 new PaymentOptionsFinder(),
                 new ConditionsToApproveFinder($this->context, $translator)
             ),
-            $this->createSubmitValidationStateStorage()
+            $this->createSubmitValidationStateStorage(),
+            new AddressDraftStorage($this->context)
         );
     }
 

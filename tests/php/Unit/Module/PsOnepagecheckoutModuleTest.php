@@ -28,7 +28,7 @@ class PsOnepagecheckoutModuleTest extends TestCase
             'actionCheckoutBuildProcess',
             'actionFrontControllerSetMedia',
             'actionFrontControllerSetVariables',
-            'actionModuleUpgradeAfter',
+            'actionCustomerLogoutAfter',
             'displayOverrideTemplate',
         ], $module->registerHookCalls);
     }
@@ -139,11 +139,11 @@ class PsOnepagecheckoutModuleTest extends TestCase
         $module = $this->createModule();
         $module->name = 'ps_onepagecheckout';
         $module->isEnabled = true;
-        $module->setModuleContext((object) [
-            'controller' => new DummyOrderController(),
-            'smarty' => new DummySmarty(),
-            'link' => new DummyLink(),
-        ]);
+        $context = new \Context();
+        $context->controller = new DummyOrderController();
+        $context->smarty = new DummySmarty();
+        $context->link = new DummyLink();
+        $module->setModuleContext($context);
 
         $module->hookActionFrontControllerSetMedia();
 

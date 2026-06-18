@@ -12,7 +12,8 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require __DIR__ . '/vendor/autoload.php';
 }
 
-use PrestaShop\Module\PsOnePageCheckout\Analytics\Analytics;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutAvailability;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\OnePageCheckoutProcessProvider;
 use PrestaShop\Module\PsOnePageCheckout\Form\BackOfficeConfigurationForm;
@@ -27,7 +28,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '1.0.0';
+        $this->version = '0.5.0';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -55,7 +56,7 @@ class Ps_Onepagecheckout extends Module
             [],
             'Modules.Onepagecheckout.Admin'
         );
-        $this->ps_versions_compliancy = ['min' => '9.0.0', 'max' => _PS_VERSION_];
+        $this->ps_versions_compliancy = ['min' => '9.2.0', 'max' => _PS_VERSION_];
         $this->controllers = [
             'guestinit',
             'addressform',
@@ -83,18 +84,13 @@ class Ps_Onepagecheckout extends Module
             && $this->registerHook('actionCheckoutBuildProcess')
             && $this->registerHook('actionFrontControllerSetMedia')
             && $this->registerHook('actionFrontControllerSetVariables')
-            && $this->registerHook('actionModuleUpgradeAfter')
+            && $this->registerHook('actionCustomerLogoutAfter')
             && $this->registerHook('displayOverrideTemplate');
     }
 
     public function enable($force_all = false)
     {
-        $result = $this->enableInParent((bool) $force_all);
-        if ($result) {
-            Analytics::trackEvent(Analytics::EVENT_MODULE_ENABLED, [], (string) $this->version);
-        }
-
-        return $result;
+        return $this->enableInParent((bool) $force_all);
     }
 
     /**
@@ -106,39 +102,14 @@ class Ps_Onepagecheckout extends Module
      */
     public function disable($force_all = false)
     {
-        $result = $this->disableOnePageCheckoutConfigurationForCurrentContext()
+        return $this->disableOnePageCheckoutConfigurationForCurrentContext()
             && $this->disableInParent((bool) $force_all);
-
-        if ($result) {
-            Analytics::trackEvent(Analytics::EVENT_MODULE_DISABLED, [], (string) $this->version);
-        }
-
-        return $result;
     }
 
     public function uninstall()
     {
-        $result = $this->uninstallOnePageCheckoutConfiguration()
+        return $this->uninstallOnePageCheckoutConfiguration()
             && $this->uninstallInParent();
-
-        if ($result) {
-            Analytics::trackEvent(Analytics::EVENT_MODULE_UNINSTALLED, [], (string) $this->version);
-        }
-
-        return $result;
-    }
-
-    public function hookActionModuleUpgradeAfter(array $params): void
-    {
-        if (!isset($params['object']) || !($params['object'] instanceof Module)) {
-            return;
-        }
-
-        if ($params['object']->name !== $this->name) {
-            return;
-        }
-
-        Analytics::trackEvent(Analytics::EVENT_MODULE_UPDATED, [], (string) $this->version);
     }
 
     public function getContent()
@@ -186,13 +157,12 @@ class Ps_Onepagecheckout extends Module
             Tools::redirect($this->context->link->getPageLink('authentication', null, null, $backParams));
         }
 
-        Analytics::trackCheckoutStarted(
-            $guestCheckoutEnabled ? 'yes' : 'no',
-            (string) $this->version
-        );
-
         $opcRuntimeConfiguration = [
             'enabled' => true,
+            // Customers with no saved address yet (guests, and accounts created mid-checkout)
+            // have no address persistence until final submit, so their typed address draft is
+            // autosaved to a cookie. Once an address is saved, the saved-address flow takes over.
+            'persistAddressDraft' => !(new CheckoutCustomerContextResolver($this->context))->hasSavedAddress(),
             'urls' => [
                 'guestInit' => $this->context->link->getModuleLink(
                     $this->name,
@@ -207,6 +177,15 @@ class Ps_Onepagecheckout extends Module
                     $this->name,
                     'addressform',
                     ['ajax' => 1, 'action' => 'opcAddressForm'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'addressModal' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'addressmodal',
+                    ['ajax' => 1, 'action' => 'opcAddressModal'],
                     null,
                     null,
                     null,
@@ -234,6 +213,15 @@ class Ps_Onepagecheckout extends Module
                     $this->name,
                     'saveaddress',
                     ['ajax' => 1, 'action' => 'saveOpcAddress'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'saveDraft' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'savedraft',
+                    ['ajax' => 1, 'action' => 'opcSaveDraft'],
                     null,
                     null,
                     null,
@@ -322,6 +310,7 @@ class Ps_Onepagecheckout extends Module
                 'missingPaymentSelectionPayload' => $this->trans('Missing payment selection payload.', [], 'Modules.Onepagecheckout.Shop'),
                 'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], 'Modules.Onepagecheckout.Shop'),
                 'statesLoadFailed' => $this->trans('Unable to load states.', [], 'Modules.Onepagecheckout.Shop'),
+                'addressFieldsLoadFailed' => $this->trans('Unable to load address fields.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'saveAddressFailed' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], 'Modules.Onepagecheckout.Shop'),
@@ -352,6 +341,12 @@ class Ps_Onepagecheckout extends Module
         }
 
         $params['templateVars']['is_one_page_checkout_enabled'] = $this->isOnePageCheckoutEnabled();
+    }
+
+    public function hookActionCustomerLogoutAfter(array $params): void
+    {
+        // Drop any address draft so personal data does not survive a logout on a shared device.
+        (new AddressDraftStorage($this->context))->clear();
     }
 
     public function hookDisplayOverrideTemplate(array $params)

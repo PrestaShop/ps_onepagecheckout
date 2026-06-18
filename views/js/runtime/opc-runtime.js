@@ -87,6 +87,21 @@ export function getOpcRuntimeConfiguration() {
   return window.ps_onepagecheckout;
 }
 
+/**
+ * Keep the address-draft persistence flag in sync with the live saved-address count.
+ * Autosave only helps while no saved address exists, so this is flipped on as soon as the
+ * last address is deleted (inline form becomes the active flow) and off once one is saved.
+ *
+ * @param {boolean} shouldPersist
+ */
+export function setOpcRuntimePersistAddressDraft(shouldPersist) {
+  const runtimeConfiguration = getOpcRuntimeConfiguration();
+
+  if (runtimeConfiguration) {
+    runtimeConfiguration.persistAddressDraft = Boolean(shouldPersist);
+  }
+}
+
 export function getConfiguredOpcUrl(urlKey) {
   const runtimeConfiguration = getOpcRuntimeConfiguration();
 

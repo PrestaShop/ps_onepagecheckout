@@ -62,6 +62,12 @@ $component-name: one-page-checkout;
   }
 }
 
+// Same pattern as the Pay button: while the address modal Save button is disabled, let the
+// click fall through to the modal footer so the modal can surface field validation feedback.
+#submit-address-modal:disabled {
+  pointer-events: none;
+}
+
 .opc-payment-methods-wrapper {
   min-height: 6rem;
 }

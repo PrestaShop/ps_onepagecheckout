@@ -11,6 +11,7 @@ PHPUNIT_IMAGE=${PHPUNIT_IMAGE:-prestashop/prestashop:${PS_VERSION}}
 MYSQL_IMAGE=${MYSQL_IMAGE:-mysql:8.4}
 PS_ROOT_DIR_HOST=${PS_ROOT_DIR_HOST:-${REPO_DIR}/../prestashop}
 PS_INSTALL_TIMEOUT=${PS_INSTALL_TIMEOUT:-900}
+PS_IMAGE_VERSION=${PS_IMAGE_VERSION:-}
 
 RUN_ID="${TEST_SUITE:-unknown}-$$"
 PS_CONTAINER="temp-ps-phpunit-${RUN_ID}"
@@ -29,6 +30,7 @@ Environment variables:
 - PHPUNIT_IMAGE: override the PrestaShop Docker image used for the test environment
 - MYSQL_IMAGE: override the MySQL Docker image used for integration tests
 - PS_INSTALL_TIMEOUT: maximum time in seconds to wait for the PrestaShop auto-install during integration tests
+- PS_IMAGE_VERSION: optional PrestaShop archive version used by nightly Docker images
 EOF
 }
 
@@ -163,6 +165,11 @@ prepare_integration_database() {
 start_integration_services() {
   echo "Start MySQL"
 
+  local ps_version_args=()
+  if [ -n "${PS_IMAGE_VERSION}" ]; then
+    ps_version_args=(-e PS_VERSION="${PS_IMAGE_VERSION}")
+  fi
+
   docker network create "${PS_NETWORK}" >/dev/null
   docker volume create "${DB_VOLUME}" >/dev/null
 
@@ -198,6 +205,7 @@ start_integration_services() {
     -e PS_FOLDER_INSTALL=install-dev \
     -e PS_FOLDER_ADMIN=admin-dev \
     -e PS_DEV_MODE=1 \
+    "${ps_version_args[@]}" \
     "${PHPUNIT_IMAGE}" >/dev/null
 
   echo "Wait for PrestaShop installation"
