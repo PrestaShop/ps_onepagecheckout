@@ -73,6 +73,15 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         self::assertStringContainsString('isModalRefreshPending($modal)', $script);
         self::assertStringContainsString("if (!\$modal.hasClass('show')) {", $script);
 
+        // A failed/invalid refresh keeps Save disabled until a successful retry instead of letting
+        // the customer submit against the previous country's field set.
+        self::assertStringContainsString("\$modal.data('opcRefreshFailed', true);", $script);
+        self::assertStringContainsString('isModalRefreshFailed($modal)', $script);
+
+        // The snapshot is taken inside the success handler (right before the swap) so edits made
+        // while the request was in flight are not overwritten by a pre-request snapshot.
+        self::assertStringContainsString('const preservedFields = preserveAddressesSectionFields($container);', $script);
+
         // A theme that overrides the legacy modal markup (no wrapper) is migrated rather than no-oped.
         self::assertStringContainsString('function ensureModalFieldsContainer(', $script);
     }

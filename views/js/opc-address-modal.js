@@ -439,6 +439,12 @@ function isModalRefreshPending($modal) {
   return Boolean($modal.data('opcRefreshPending'));
 }
 
+// A refresh that failed leaves the field set on the previous country while the select shows the
+// new one; keep Save blocked until a later refresh succeeds (or the modal is reopened).
+function isModalRefreshFailed($modal) {
+  return Boolean($modal.data('opcRefreshFailed'));
+}
+
 // Mirrors the guest "Pay" form (markFieldsValidity): flag invalid fields with `is-invalid` so
 // the customer sees which fields block Save. Uses the same validity rule as the Save gate
 // (including the manual minLength/maxLength check), so highlights match why Save is disabled.
@@ -501,9 +507,11 @@ function updateModalSaveState($modal) {
     return;
   }
 
-  // Keep Save unavailable while a country re-render is in flight, so the customer cannot submit
-  // against the stale field set before the country-specific fields/constraints are applied.
-  const isValid = !isModalRefreshPending($modal) && isModalFormValid($modal);
+  // Keep Save unavailable while a country re-render is in flight or has failed, so the customer
+  // cannot submit against a field set that does not match the selected country.
+  const isValid = !isModalRefreshPending($modal)
+    && !isModalRefreshFailed($modal)
+    && isModalFormValid($modal);
   $saveButtons.prop('disabled', !isValid);
 
   // After a save attempt, keep the invalid-field highlights in sync as the customer edits.
@@ -669,9 +677,9 @@ function refreshModalFields($modal, countryId, addressValues) {
   const generation = (Number($modal.data('opcRefreshGeneration')) || 0) + 1;
   $modal.data('opcRefreshGeneration', generation);
   $modal.data('opcRefreshPending', true);
+  $modal.data('opcRefreshFailed', false);
   updateModalSaveState($modal);
   const isStale = () => Number($modal.data('opcRefreshGeneration')) !== generation;
-  const preservedFields = preserveAddressesSectionFields($container);
 
   return $.post(addressModalUrl, {
     id_country: String(countryId),
@@ -684,6 +692,9 @@ function refreshModalFields($modal, countryId, addressValues) {
     $modal.data('opcRefreshPending', false);
 
     if (!response || response.success === false || typeof response.fields_html !== 'string') {
+      // The field set still belongs to the previous country while the select shows the new one.
+      // Keep Save disabled until a successful retry so a stale structure can't be submitted.
+      $modal.data('opcRefreshFailed', true);
       emitHandleError('opcAddressModalFields', response, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
       updateModalSaveState($modal);
 
@@ -698,6 +709,9 @@ function refreshModalFields($modal, countryId, addressValues) {
       return;
     }
 
+    // Recapture the latest values immediately before the swap so edits typed during the
+    // in-flight window are preserved (not overwritten by a snapshot taken before the request).
+    const preservedFields = preserveAddressesSectionFields($container);
     $container.html(response.fields_html);
     restoreAddressesSectionFields($container, preservedFields);
     applyAddressValuesToContainer($container, addressValues);
@@ -709,6 +723,7 @@ function refreshModalFields($modal, countryId, addressValues) {
     }
 
     $modal.data('opcRefreshPending', false);
+    $modal.data('opcRefreshFailed', true);
     emitHandleError('opcAddressModalFields', jqXHR && jqXHR.responseJSON, getConfiguredOpcMessage('addressFieldsLoadFailed', 'Unable to load address fields.'));
     updateModalSaveState($modal);
   });
@@ -1227,6 +1242,7 @@ $(document).on('show.bs.modal', MODAL_SELECTOR, (event) => {
   setModalFieldsDisabled($modal, false);
   $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   $modal.data('opcRefreshPending', false);
+  $modal.data('opcRefreshFailed', false);
 
   if (modalType === 'edit') {
     triggerAddress = getAddressFromTrigger($trigger);
@@ -1254,6 +1270,7 @@ $(document).on('hidden.bs.modal', MODAL_SELECTOR, (event) => {
   // Clear in-flight refresh state so a reopened modal starts clean (a pending response that
   // resolves after close is already guarded by the generation + visibility checks).
   $modal.data('opcRefreshPending', false);
+  $modal.data('opcRefreshFailed', false);
   $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   setModalFieldsDisabled($modal, true);
   updateModalSaveState($modal);
