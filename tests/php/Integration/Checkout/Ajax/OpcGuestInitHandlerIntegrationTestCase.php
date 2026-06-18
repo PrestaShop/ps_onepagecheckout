@@ -307,7 +307,7 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
         self::assertSame((int) $winner->id, $response['id_customer']);
     }
 
-    protected function scenarioItUsesContextCartOwnerWhenFreshCartRowIsMissing(): void
+    protected function scenarioItReturnsErrorWhenFreshCartRowIsMissing(): void
     {
         $winner = $this->createCustomer($this->uniqueEmail('missing-row-owner'), false);
         $persistedCart = $this->prepareEligibleCartContext((int) $winner->id);
@@ -330,12 +330,14 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
             'token' => self::EXPECTED_TOKEN,
         ]);
 
-        self::assertTrue($response['success']);
+        self::assertFalse($response['success']);
+        self::assertArrayHasKey('', $response['errors']);
+        self::assertNotEmpty($response['errors']['']);
         self::assertFalse($response['customer_created']);
-        self::assertSame((int) $winner->id, $response['id_customer']);
+        self::assertSame(0, $response['id_customer']);
     }
 
-    protected function scenarioItReturnsNoopWhenEmailBelongsToExistingAccountAndNoGuestIsLinked(): void
+    protected function scenarioItFallsBackToGuestCreationWhenEmailBelongsToExistingAccountAndNoGuestIsLinked(): void
     {
         $registered = $this->createCustomer($this->uniqueEmail('existing-no-guest-linked'), false);
         $this->prepareEligibleCartContext(0);
@@ -343,8 +345,16 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
-            ->expects($this->never())
+            ->expects($this->once())
             ->method('submitGuestInit')
+            ->willReturn(false)
+        ;
+        $opcForm
+            ->expects($this->once())
+            ->method('getErrors')
+            ->willReturn([
+                'email' => ['Unable to save guest customer'],
+            ])
         ;
 
         $handler = $this->buildHandler($opcForm);
@@ -354,9 +364,8 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
             'token' => self::EXPECTED_TOKEN,
         ]);
 
-        self::assertTrue($response['success']);
-        self::assertFalse($response['customer_created']);
-        self::assertSame(0, $response['id_customer']);
+        self::assertFalse($response['success']);
+        self::assertSame(['Unable to save guest customer'], $response['errors']['email']);
     }
 
     protected function scenarioItCreatesGuestAndClaimsUnassignedCart(): void
@@ -517,6 +526,42 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
         self::assertFalse($response['customer_created']);
         self::assertSame((int) $guest->id, $response['id_customer']);
         self::assertSame($updatedEmail, (string) $freshGuest->email);
+    }
+
+    protected function scenarioItCreatesNewGuestForNewAnonymousCartEvenWhenGuestEmailAlreadyExists(): void
+    {
+        $guest = $this->createCustomer($this->uniqueEmail('existing-guest-anonymous-cart'), true);
+        $persistedCart = $this->prepareEligibleCartContext(0);
+        self::getContext()->customer = new \Customer();
+
+        $createdGuest = $this->createCustomer((string) $guest->email, true);
+
+        $opcForm = $this->buildOpcFormMock();
+        $opcForm
+            ->expects($this->once())
+            ->method('submitGuestInit')
+            ->willReturnCallback(function () use ($createdGuest): bool {
+                self::getContext()->customer = $createdGuest;
+
+                return true;
+            })
+        ;
+
+        $handler = $this->buildHandler($opcForm);
+
+        $response = $handler->handle([
+            'email' => (string) $guest->email,
+            'token' => self::EXPECTED_TOKEN,
+        ]);
+
+        self::assertTrue($response['success']);
+        self::assertTrue($response['customer_created']);
+        self::assertSame((int) $createdGuest->id, $response['id_customer']);
+        self::assertSame((int) $createdGuest->id, $this->getPersistedCartCustomerId((int) $persistedCart->id));
+        self::assertNotSame((int) $guest->id, (int) $createdGuest->id);
+        self::assertSame((int) $createdGuest->id, (int) self::getContext()->customer->id);
+        self::assertSame((int) $createdGuest->id, (int) self::getContext()->cookie->id_customer);
+        self::assertSame((string) $guest->email, (string) self::getContext()->cookie->email);
     }
 
     protected function scenarioItUpdatesCartOwnerGuestAndRealignsContextWhenUpdatingEmailFromMismatchedContextCustomer(): void
@@ -1227,8 +1272,16 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
 
         $opcForm = $this->buildOpcFormMock();
         $opcForm
-            ->expects($this->never())
+            ->expects($this->once())
             ->method('submitGuestInit')
+            ->willReturn(false)
+        ;
+        $opcForm
+            ->expects($this->once())
+            ->method('getErrors')
+            ->willReturn([
+                'email' => ['Unable to save guest customer'],
+            ])
         ;
 
         $handler = $this->buildHandler($opcForm);
@@ -1239,8 +1292,7 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
         ]);
 
         self::assertFalse($response['success']);
-        self::assertArrayHasKey('', $response['errors']);
-        self::assertNotEmpty($response['errors']['']);
+        self::assertSame(['Unable to save guest customer'], $response['errors']['email']);
         self::assertSame(self::EXPECTED_TOKEN, $response['token']);
         self::assertSame(self::EXPECTED_TOKEN, $response['static_token']);
     }

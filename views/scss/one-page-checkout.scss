@@ -1,0 +1,73 @@
+/**
+ * For the full copyright and license information, please view the
+ * docs/licenses/LICENSE.txt file that was distributed with this source code.
+ */
+
+// Pull only Bootstrap's declaration-only files so we can use mixins like
+// `media-breakpoint-up` without emitting any Bootstrap CSS from this stylesheet.
+@import "~bootstrap/scss/functions";
+@import "~bootstrap/scss/variables";
+@import "~bootstrap/scss/maps";
+@import "~bootstrap/scss/mixins";
+
+$component-name: one-page-checkout;
+
+@import "opc-form-fields-row";
+
+.#{$component-name} {
+  @include media-breakpoint-up(lg) {
+    padding-right: 2em;
+  }
+
+  &__section {
+    padding-top: 1em;
+    padding-bottom: 1em;
+
+    & + &,
+    .js-opc-addresses-section + & {
+      padding-top: 2em;
+      border-top: 1px solid var(--bs-border-color);
+    }
+  }
+
+  &__links {
+    display: flex;
+    flex-wrap: wrap-reverse;
+    gap: 0.5rem;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  &__field {
+    margin-bottom: 1rem;
+  }
+
+  &__footer {
+    padding-top: 2em;
+
+    .form-check {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .opc-address-item .form-check-input,
+  .opc-address-item .form-check-label {
+    cursor: pointer;
+  }
+
+  // While Pay is disabled, let clicks fall through to the wrapper so the checkout can
+  // surface validation feedback for the empty required fields that disabled it.
+  &__submit:disabled {
+    pointer-events: none;
+  }
+}
+
+// Same pattern as the Pay button: while the address modal Save button is disabled, let the
+// click fall through to the modal footer so the modal can surface field validation feedback.
+#submit-address-modal:disabled {
+  pointer-events: none;
+}
+
+.opc-payment-methods-wrapper {
+  min-height: 6rem;
+}

@@ -17,24 +17,21 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Form\AddressFormValidationTrait;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
 class AddressFormValidationTraitTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        $this->defineGlobalStubs();
-    }
-
     public function testItFailsWhenDeliveryPostcodeIsInvalid(): void
     {
-        $sut = new AddressFormValidationTraitHarness($this->buildTranslator(), (object) ['id' => 1]);
+        $sut = $this->createHarness();
 
-        $deliveryCountry = new \Country();
-        $deliveryCountry->need_zip_code = true;
-        $deliveryCountry->zip_code_format = 'NNNNN';
-        $deliveryCountry->validZipCodes = ['75001'];
+        $deliveryCountry = $this->createCountry([
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNNN',
+            'validZipCodes' => ['75001'],
+        ]);
 
         $postcode = (new \FormField())
             ->setRequired(true)
@@ -48,12 +45,13 @@ class AddressFormValidationTraitTest extends TestCase
 
     public function testItValidatesInvoicePostcodeAgainstInvoiceCountryField(): void
     {
-        $sut = new AddressFormValidationTraitHarness($this->buildTranslator(), (object) ['id' => 1]);
+        $sut = $this->createHarness();
 
-        $deliveryCountry = new \Country();
-        $deliveryCountry->need_zip_code = true;
-        $deliveryCountry->zip_code_format = 'NNNNN';
-        $deliveryCountry->validZipCodes = ['75001'];
+        $deliveryCountry = $this->createCountry([
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNNN',
+            'validZipCodes' => ['75001'],
+        ]);
 
         \Country::$registry[2] = [
             'need_zip_code' => true,
@@ -77,14 +75,39 @@ class AddressFormValidationTraitTest extends TestCase
         self::assertNotEmpty($invoicePostcode->getErrors());
     }
 
+    public function testItValidatesInvoicePostcodeAgainstDeliveryCountryWhenNoInvoiceCountryIsProvided(): void
+    {
+        $sut = $this->createHarness();
+
+        $deliveryCountry = $this->createCountry([
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNNN',
+            'validZipCodes' => ['75001'],
+        ]);
+
+        $invoicePostcode = (new \FormField())
+            ->setRequired(true)
+            ->setValue('99999');
+
+        $isValid = $sut->exposeValidateAddressPostcode(
+            null,
+            $deliveryCountry,
+            $invoicePostcode
+        );
+
+        self::assertFalse($isValid);
+        self::assertNotEmpty($invoicePostcode->getErrors());
+    }
+
     public function testItSkipsInvoicePostcodeCheckWhenInvoiceCountryDoesNotNeedZipCode(): void
     {
-        $sut = new AddressFormValidationTraitHarness($this->buildTranslator(), (object) ['id' => 1]);
+        $sut = $this->createHarness();
 
-        $deliveryCountry = new \Country();
-        $deliveryCountry->need_zip_code = true;
-        $deliveryCountry->zip_code_format = 'NNNNN';
-        $deliveryCountry->validZipCodes = ['75001'];
+        $deliveryCountry = $this->createCountry([
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNNN',
+            'validZipCodes' => ['75001'],
+        ]);
 
         \Country::$registry[3] = [
             'need_zip_code' => false,
@@ -110,12 +133,13 @@ class AddressFormValidationTraitTest extends TestCase
 
     public function testItReturnsTrueWhenNoRequiredPostcodesAreProvided(): void
     {
-        $sut = new AddressFormValidationTraitHarness($this->buildTranslator(), (object) ['id' => 1]);
+        $sut = $this->createHarness();
 
-        $country = new \Country();
-        $country->need_zip_code = true;
-        $country->zip_code_format = 'NNNNN';
-        $country->validZipCodes = [];
+        $country = $this->createCountry([
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNNN',
+            'validZipCodes' => [],
+        ]);
 
         $deliveryPostcode = (new \FormField())
             ->setRequired(false)
@@ -133,7 +157,7 @@ class AddressFormValidationTraitTest extends TestCase
 
     public function testItReturnsFalseWhenValidationHookReturnsFalse(): void
     {
-        $sut = new AddressFormValidationTraitHarness($this->buildTranslator(), (object) ['id' => 1]);
+        $sut = $this->createHarness();
         \Hook::$responses['actionValidateCustomerAddressForm'] = false;
 
         self::assertFalse($sut->exposeValidateAddressFormHook());
@@ -141,7 +165,7 @@ class AddressFormValidationTraitTest extends TestCase
 
     public function testItReturnsTrueWhenValidationHookReturnsNull(): void
     {
-        $sut = new AddressFormValidationTraitHarness($this->buildTranslator(), (object) ['id' => 1]);
+        $sut = $this->createHarness();
         \Hook::$responses['actionValidateCustomerAddressForm'] = null;
 
         self::assertTrue($sut->exposeValidateAddressFormHook());
@@ -149,77 +173,20 @@ class AddressFormValidationTraitTest extends TestCase
 
     private function buildTranslator(): object
     {
-        return new class {
-            public function trans(string $message, array $parameters = [], string $domain = ''): string
-            {
-                return strtr($message, $parameters);
-            }
-        };
+        return CheckoutTestFixtures::translator();
     }
 
-    private function defineGlobalStubs(): void
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    private function createCountry(array $overrides): \Country
     {
-        if (!class_exists('FormField', false)) {
-            eval(<<<'PHP'
-class FormField
-{
-    private bool $required = false;
-    private $value = null;
-    private array $errors = [];
-
-    public function setRequired($required) { $this->required = (bool) $required; return $this; }
-    public function isRequired() { return $this->required; }
-    public function setValue($value) { $this->value = $value; return $this; }
-    public function getValue() { return $this->value; }
-    public function addError($error) { $this->errors[] = $error; return $this; }
-    public function getErrors() { return $this->errors; }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Country', false)) {
-            eval(<<<'PHP'
-class Country
-{
-    public static array $registry = [];
-    public bool $need_zip_code = false;
-    public string $zip_code_format = '';
-    public array $validZipCodes = [];
-
-    public function __construct(int $id = 0, int $idLang = 0)
-    {
-        if ($id > 0 && isset(self::$registry[$id])) {
-            $data = self::$registry[$id];
-            $this->need_zip_code = (bool) ($data['need_zip_code'] ?? false);
-            $this->zip_code_format = (string) ($data['zip_code_format'] ?? '');
-            $this->validZipCodes = (array) ($data['validZipCodes'] ?? []);
-        }
+        return CheckoutTestFixtures::country($overrides);
     }
 
-    public function checkZipCode($postcode): bool
+    private function createHarness(): AddressFormValidationTraitHarness
     {
-        return in_array((string) $postcode, $this->validZipCodes, true);
-    }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Hook', false)) {
-            eval(<<<'PHP'
-class Hook
-{
-    public static array $responses = [];
-
-    public static function exec($hookName, $params = [])
-    {
-        return self::$responses[$hookName] ?? null;
-    }
-}
-PHP
-            );
-        }
+        return new AddressFormValidationTraitHarness($this->buildTranslator(), (object) ['id' => 1]);
     }
 }
 

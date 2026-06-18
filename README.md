@@ -9,7 +9,7 @@
 
 ## Compatibility
 
-PrestaShop: `9.0.0` or later.
+PrestaShop: `9.2.0` or later.
 
 ## What the module owns
 
@@ -41,11 +41,12 @@ Before opening a PR:
 
 ## Local development
 
-### PHP autoload
+### PHP dependencies and autoload
 
-From the repository root:
+From the repository root, install Composer dependencies (required for the module autoload):
 
 ```bash
+composer install -d
 composer dump-autoload -d
 ```
 

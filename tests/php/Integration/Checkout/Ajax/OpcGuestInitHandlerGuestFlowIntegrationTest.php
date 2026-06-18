@@ -43,14 +43,14 @@ class OpcGuestInitHandlerGuestFlowIntegrationTest extends AbstractOpcGuestInitHa
         $this->scenarioItUsesFreshCartOwnerWhenContextCartSnapshotIsOutdated();
     }
 
-    public function testItUsesContextCartOwnerWhenFreshCartRowIsMissing(): void
+    public function testItReturnsErrorWhenFreshCartRowIsMissing(): void
     {
-        $this->scenarioItUsesContextCartOwnerWhenFreshCartRowIsMissing();
+        $this->scenarioItReturnsErrorWhenFreshCartRowIsMissing();
     }
 
-    public function testItReturnsNoopWhenEmailBelongsToExistingAccountAndNoGuestIsLinked(): void
+    public function testItFallsBackToGuestCreationWhenEmailBelongsToExistingAccountAndNoGuestIsLinked(): void
     {
-        $this->scenarioItReturnsNoopWhenEmailBelongsToExistingAccountAndNoGuestIsLinked();
+        $this->scenarioItFallsBackToGuestCreationWhenEmailBelongsToExistingAccountAndNoGuestIsLinked();
     }
 
     public function testItCreatesGuestAndClaimsUnassignedCart(): void
@@ -66,6 +66,11 @@ class OpcGuestInitHandlerGuestFlowIntegrationTest extends AbstractOpcGuestInitHa
     public function testItUpdatesExistingGuestEmailWithoutCreatingNewCustomer(): void
     {
         $this->scenarioItUpdatesExistingGuestEmailWithoutCreatingNewCustomer();
+    }
+
+    public function testItCreatesNewGuestForNewAnonymousCartEvenWhenGuestEmailAlreadyExists(): void
+    {
+        $this->scenarioItCreatesNewGuestForNewAnonymousCartEvenWhenGuestEmailAlreadyExists();
     }
 
     public function testItUpdatesCartOwnerGuestAndRealignsContextWhenUpdatingEmailFromMismatchedContextCustomer(): void

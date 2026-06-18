@@ -3,6 +3,7 @@
 ## Scope
 
 These rules are mandatory for one-page checkout implementation in the native `ps_onepagecheckout` module.
+The migration reference document is [`docs/CORE_PORTING_PLAYBOOK.md`](./CORE_PORTING_PLAYBOOK.md).
 
 ## Architecture
 
@@ -39,6 +40,21 @@ Both entry points must render the same module-owned configuration flow (no redir
 - `npm run watch`
 - `npm run build`
 3. When changing files under `views/js`, developers must regenerate and commit the built assets shipped by the module from `views/public` (including `*.LICENSE.txt` files). See [`README.md` → Front assets](../README.md#front-assets).
+
+## Core to module migration
+
+1. Triage every future checkout change using the playbook before coding.
+2. Correct existing parity gaps in the module before porting new Core behavior.
+3. Keep Core changes to the minimal no-override surface only.
+4. Keep all OPC step DOM, styles, and runtime JS inside the module. The theme owns only its own page chrome (checkout page wrapper, cart summary, page-level notifications).
+
+## Test workflow
+
+1. Each migration lot must be implemented with a story/test pair and incremental automated verification.
+2. Every lot must ship unit tests for local logic and integration tests for observable behavior.
+3. After JS changes, rebuild `views/public/*` and verify the runtime contracts through tests.
+4. Automated E2E investigation must start with incremental scope (`test:file`, `test:lot`, or `tests/e2e` `test:all:incremental`) before widening execution.
+5. When a human explicitly asks for a full rerun to inventory failures, use exhaustive execution so `serial` suites cannot mask later failures (`tests/e2e` `npm run test:all` or `npm run test:all:exhaustive`).
 
 ## Delivery checklist
 

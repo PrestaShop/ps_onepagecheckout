@@ -119,11 +119,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->isOnePageCheckoutEnabled) {
             return $this->errorResponse(
                 self::ERROR_FIELD_GLOBAL,
-                $this->translator->trans(
-                    'One-page checkout is not enabled.',
-                    [],
-                    'Shop.Notifications.Error'
-                )
+                $this->translator->trans('One-page checkout is not enabled.', [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -136,13 +132,13 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->isTokenValid($requestParameters)) {
             return $this->errorResponse(
                 self::ERROR_FIELD_TOKEN,
-                $this->translator->trans(
-                    'Invalid security token.',
-                    [],
-                    'Shop.Notifications.Error'
-                ),
+                $this->translator->trans('Invalid security token.', [], 'Modules.Onepagecheckout.Shop'),
                 false
             );
+        }
+
+        if (!$this->hasFreshPersistedCartRow()) {
+            return $this->cartSyncErrorResponse();
         }
 
         $existingCustomerState = $this->resolveExistingCustomerState();
@@ -284,28 +280,20 @@ class OnePageCheckoutGuestInitHandler
      */
     private function resolveExistingCustomerId(): int
     {
-        $contextCustomerId = (int) $this->context->customer->id;
         if (!\Validate::isLoadedObject($this->context->cart)) {
-            return $contextCustomerId;
+            return (int) $this->context->customer->id;
         }
 
-        // Read latest persisted owner before using in-memory cart value.
         $freshCartCustomerId = $this->getFreshCartCustomerId();
         if ($freshCartCustomerId > 0 && $this->isLoadedCustomerId($freshCartCustomerId)) {
             return $freshCartCustomerId;
         }
 
         if ($freshCartCustomerId > 0) {
-            // Ignore stale persisted owner and continue with current request context.
-            return $contextCustomerId > 0 ? $contextCustomerId : self::CUSTOMER_ID_NONE;
+            return self::CUSTOMER_ID_NONE;
         }
 
-        $contextCartCustomerId = (int) $this->context->cart->id_customer;
-        if ($contextCartCustomerId > 0) {
-            return $contextCartCustomerId;
-        }
-
-        return $contextCustomerId;
+        return self::CUSTOMER_ID_NONE;
     }
 
     /**
@@ -335,6 +323,20 @@ class OnePageCheckoutGuestInitHandler
         }
 
         return (int) $customerId;
+    }
+
+    protected function hasFreshPersistedCartRow(): bool
+    {
+        if (!\Validate::isLoadedObject($this->context->cart)) {
+            return false;
+        }
+
+        $cartId = (int) $this->context->cart->id;
+        if ($cartId <= 0) {
+            return false;
+        }
+
+        return \Validate::isLoadedObject($this->loadCartById($cartId));
     }
 
     /**
@@ -444,6 +446,10 @@ class OnePageCheckoutGuestInitHandler
             return null;
         }
 
+        if (!$existingCustomerState->hasCustomer()) {
+            return null;
+        }
+
         if (!$existingCustomerState->isGuestCustomer()) {
             return $this->resolveEmailForNonGuest($submittedEmail, $existingCustomerId);
         }
@@ -466,11 +472,7 @@ class OnePageCheckoutGuestInitHandler
         if (!$this->customerPersister->save($existingCustomer, '', '', false)) {
             return $this->errorResponse(
                 self::ERROR_FIELD_EMAIL,
-                $this->translator->trans(
-                    self::ERROR_GUEST_EMAIL_UPDATE_FAILED,
-                    [],
-                    'Shop.Notifications.Error'
-                )
+                $this->translator->trans(self::ERROR_GUEST_EMAIL_UPDATE_FAILED, [], 'Modules.Onepagecheckout.Shop')
             );
         }
 
@@ -501,7 +503,7 @@ class OnePageCheckoutGuestInitHandler
         }
 
         if ($existingCustomerId === self::CUSTOMER_ID_NONE) {
-            return $this->successResponse();
+            return null;
         }
 
         // Keep current owner if email points to another account.
@@ -683,11 +685,7 @@ class OnePageCheckoutGuestInitHandler
     {
         return $this->errorResponse(
             self::ERROR_FIELD_GLOBAL,
-            $this->translator->trans(
-                self::ERROR_CART_CUSTOMER_SYNC_FAILED,
-                [],
-                'Shop.Notifications.Error'
-            )
+            $this->translator->trans(self::ERROR_CART_CUSTOMER_SYNC_FAILED, [], 'Modules.Onepagecheckout.Shop')
         );
     }
 

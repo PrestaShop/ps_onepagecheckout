@@ -43,20 +43,13 @@ final class ConcurrentEmailUpdateTranslator implements TranslatorInterface
 
 final class ConcurrentEmailUpdateCheckoutForm extends OnePageCheckoutForm
 {
-    /**
-     * @var array<string, array<int, string>>
-     */
-    protected $errors = [];
-
     public function __construct()
     {
     }
 
     public function submitGuestInit(array $params = []): bool
     {
-        $this->errors[''][] = 'submitGuestInit should not be called during guest email update race.';
-
-        return false;
+        return true;
     }
 
     /**
@@ -64,7 +57,7 @@ final class ConcurrentEmailUpdateCheckoutForm extends OnePageCheckoutForm
      */
     public function getErrors(): array
     {
-        return $this->errors;
+        return [];
     }
 }
 

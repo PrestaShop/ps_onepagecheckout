@@ -18,18 +18,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Tests\Fixtures\CheckoutTestFixtures;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
 class OnePageCheckoutFormatterTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        $this->defineGlobalStubs();
-    }
-
     public function testItBuildsExpectedFormatWhenOptinHooksAndInvoiceCountryAreConfigured(): void
     {
+        \Context::getContext()->customer = CheckoutTestFixtures::customer([], true);
+
         \Address::$definition = [
             'fields' => [
                 'firstname' => ['validate' => 'isName', 'size' => 64],
@@ -69,24 +67,26 @@ class OnePageCheckoutFormatterTest extends TestCase
             'broken' => 123,
         ];
 
-        $deliveryCountry = new \Country();
-        $deliveryCountry->id = 33;
-        $deliveryCountry->need_zip_code = true;
-        $deliveryCountry->zip_code_format = 'NNNNN';
-        $deliveryCountry->need_identification_number = true;
-        $deliveryCountry->contains_states = true;
+        $deliveryCountry = $this->createCountry([
+            'id' => 33,
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNNN',
+            'need_identification_number' => true,
+            'contains_states' => true,
+        ]);
 
-        $invoiceCountry = new \Country();
-        $invoiceCountry->id = 44;
-        $invoiceCountry->need_zip_code = true;
-        $invoiceCountry->zip_code_format = 'NNNN';
-        $invoiceCountry->need_identification_number = true;
-        $invoiceCountry->contains_states = true;
+        $invoiceCountry = $this->createCountry([
+            'id' => 44,
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNN',
+            'need_identification_number' => true,
+            'contains_states' => true,
+        ]);
 
         $translator = $this->createMock(TranslatorInterface::class);
         $translator->method('trans')->willReturnArgument(0);
 
-        $formatter = new OnePageCheckoutFormatter(
+        $formatter = $this->createFormatter(
             $deliveryCountry,
             $translator,
             [
@@ -106,11 +106,13 @@ class OnePageCheckoutFormatterTest extends TestCase
         self::assertTrue($format['optin']->isRequired());
         self::assertArrayHasKey('use_same_address', $format);
         self::assertTrue($format['use_same_address']->getValue());
+        self::assertArrayHasKey('id_address_delivery', $format);
         self::assertArrayHasKey('id_address_invoice', $format);
+        self::assertArrayNotHasKey('id_address', $format);
         self::assertArrayHasKey('alias', $format);
         self::assertArrayHasKey('invoice_alias', $format);
-        self::assertTrue($format['alias']->isRequired());
-        self::assertTrue($format['invoice_alias']->isRequired());
+        self::assertFalse($format['alias']->isRequired());
+        self::assertFalse($format['invoice_alias']->isRequired());
         self::assertSame(33, $format['id_country']->getValue());
         self::assertSame(44, $format['invoice_id_country']->getValue());
         self::assertSame([33 => 'France', 44 => 'Belgium'], $format['id_country']->getAvailableValues());
@@ -136,6 +138,8 @@ class OnePageCheckoutFormatterTest extends TestCase
 
     public function testItBuildsFormatWithoutOptinAndUsesDeliveryCountryForInvoiceWhenInvoiceCountryIsNotSet(): void
     {
+        \Context::getContext()->customer = CheckoutTestFixtures::customer([], false);
+
         \Address::$definition = [
             'fields' => [
                 'firstname' => ['validate' => 'isName', 'size' => 64],
@@ -150,14 +154,15 @@ class OnePageCheckoutFormatterTest extends TestCase
         \Hook::$responses['additionalCustomerFormFields'] = [];
         \Hook::$responses['additionalCustomerAddressFields'] = [];
 
-        $deliveryCountry = new \Country();
-        $deliveryCountry->id = 99;
-        $deliveryCountry->contains_states = false;
+        $deliveryCountry = $this->createCountry([
+            'id' => 99,
+            'contains_states' => false,
+        ]);
 
         $translator = $this->createMock(TranslatorInterface::class);
         $translator->method('trans')->willReturnArgument(0);
 
-        $formatter = new OnePageCheckoutFormatter(
+        $formatter = $this->createFormatter(
             $deliveryCountry,
             $translator,
             [['id_country' => 99, 'name' => 'Portugal']]
@@ -166,6 +171,8 @@ class OnePageCheckoutFormatterTest extends TestCase
         $format = $formatter->getFormat();
 
         self::assertArrayNotHasKey('optin', $format);
+        self::assertFalse($format['alias']->isRequired());
+        self::assertFalse($format['invoice_alias']->isRequired());
         self::assertSame(99, $format['id_country']->getValue());
         self::assertSame(99, $format['invoice_id_country']->getValue());
 
@@ -174,161 +181,22 @@ class OnePageCheckoutFormatterTest extends TestCase
         self::assertSame('firstname', $getDefinitionKey->invoke($formatter, 'firstname'));
     }
 
-    private function defineGlobalStubs(): void
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    private function createCountry(array $overrides): \Country
     {
-        if (!interface_exists('FormFormatterInterface', false)) {
-            eval(<<<'PHP'
-interface FormFormatterInterface
-{
-    public function getFormat();
-}
-PHP
-            );
-        }
-
-        if (!class_exists('FormField', false)) {
-            eval(<<<'PHP'
-class FormField
-{
-    public ?string $moduleName = null;
-    private string $name = '';
-    private string $type = 'text';
-    private bool $required = false;
-    private $value = null;
-    private string $label = '';
-    private array $availableValues = [];
-    private ?int $minLength = null;
-    private ?int $maxLength = null;
-    private array $constraints = [];
-
-    public function setName($name) { $this->name = (string) $name; return $this; }
-    public function getName() { return $this->name; }
-    public function setType($type) { $this->type = (string) $type; return $this; }
-    public function getType() { return $this->type; }
-    public function setRequired($required) { $this->required = (bool) $required; return $this; }
-    public function isRequired() { return $this->required; }
-    public function setValue($value) { $this->value = $value; return $this; }
-    public function getValue() { return $this->value; }
-    public function setLabel($label) { $this->label = (string) $label; return $this; }
-    public function getLabel() { return $this->label; }
-    public function addAvailableValue($value, $label = null) { $this->availableValues[$value] = $label ?? $value; return $this; }
-    public function getAvailableValues() { return $this->availableValues; }
-    public function setMinLength($minLength) { $this->minLength = (int) $minLength; return $this; }
-    public function getMinLength() { return $this->minLength; }
-    public function setMaxLength($maxLength) { $this->maxLength = (int) $maxLength; return $this; }
-    public function getMaxLength() { return $this->maxLength; }
-    public function addConstraint($constraint) { $this->constraints[] = $constraint; return $this; }
-    public function getConstraints() { return $this->constraints; }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Country', false)) {
-            eval(<<<'PHP'
-class Country
-{
-    public int $id = 0;
-    public bool $need_zip_code = false;
-    public string $zip_code_format = '';
-    public bool $need_identification_number = false;
-    public bool $contains_states = false;
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Address', false)) {
-            eval(<<<'PHP'
-class Address
-{
-    public static array $definition = ['fields' => []];
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Customer', false)) {
-            eval(<<<'PHP'
-class Customer
-{
-    public static array $requiredFields = [];
-
-    public function isFieldRequired($fieldName)
-    {
-        return in_array($fieldName, self::$requiredFields, true);
-    }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Configuration', false)) {
-            eval(<<<'PHP'
-class Configuration
-{
-    public static array $values = [];
-
-    public static function get($key)
-    {
-        return self::$values[$key] ?? false;
-    }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('AddressFormat', false)) {
-            eval(<<<'PHP'
-class AddressFormat
-{
-    public static array $orderedFields = [];
-    public static array $requiredFields = [];
-
-    public static function getOrderedAddressFields($idCountry = 0, $splitAll = false, $cleaned = false)
-    {
-        return self::$orderedFields;
+        return CheckoutTestFixtures::country($overrides);
     }
 
-    public static function getFieldsRequired()
-    {
-        return self::$requiredFields;
-    }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('State', false)) {
-            eval(<<<'PHP'
-class State
-{
-    public static array $statesByCountry = [];
-
-    public static function getStatesByIdCountry($idCountry, $active = false, $orderBy = null, $sort = 'ASC')
-    {
-        return self::$statesByCountry[(int) $idCountry] ?? [];
-    }
-}
-PHP
-            );
-        }
-
-        if (!class_exists('Hook', false)) {
-            eval(<<<'PHP'
-class Hook
-{
-    public static array $responses = [];
-
-    public static function exec($hookName, $hookArgs = [], $idModule = null, $arrayReturn = false)
-    {
-        $response = self::$responses[$hookName] ?? ($arrayReturn ? [] : null);
-
-        return $response;
-    }
-}
-PHP
-            );
-        }
+    /**
+     * @param array<int, array<string, mixed>> $availableCountries
+     */
+    private function createFormatter(
+        \Country $country,
+        TranslatorInterface $translator,
+        array $availableCountries,
+    ): OnePageCheckoutFormatter {
+        return new OnePageCheckoutFormatter($country, $translator, $availableCountries);
     }
 }

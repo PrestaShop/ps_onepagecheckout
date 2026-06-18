@@ -1,0 +1,31 @@
+export const CORE_EVENTS = {
+  updatedCart: 'updatedCart',
+};
+
+export const OPC_EVENTS = {
+  opcCarrierSelected: 'opcCarrierSelected',
+  opcCarriersUpdated: 'opcCarriersUpdated',
+  opcCarriersFailed: 'opcCarriersFailed',
+  opcCarriersLoading: 'opcCarriersLoading',
+  opcPaymentMethodsLoading: 'opcPaymentMethodsLoading',
+  opcPaymentMethodsUpdated: 'opcPaymentMethodsUpdated',
+  opcPaymentMethodsRefreshed: 'opcPaymentMethodsRefreshed',
+  opcPaymentMethodsFailed: 'opcPaymentMethodsFailed',
+  opcPaymentMethodSelected: 'opcPaymentMethodSelected',
+  opcGuestInitSuccess: 'opcGuestInitSuccess',
+  opcGuestInitFailed: 'opcGuestInitFailed',
+  opcFinalSubmitStarted: 'opcFinalSubmitStarted',
+  opcFormValidated: 'opcFormValidated',
+  opcBillingSectionToggled: 'opcBillingSectionToggled',
+  opcSubmitFailed: 'opcSubmitFailed',
+  opcDeliveryAddressUpdated: 'opcDeliveryAddressUpdated',
+  opcBillingAddressUpdated: 'opcBillingAddressUpdated',
+  opcDeliveryAddressSelected: 'opcDeliveryAddressSelected',
+  opcBillingAddressSelected: 'opcBillingAddressSelected',
+  opcCartSummaryBeforeUpdate: 'opcCartSummaryBeforeUpdate',
+  opcCartSummaryUpdated: 'opcCartSummaryUpdated',
+  updatedOpcAddressForm: 'updatedOpcAddressForm',
+  opcCarriersRetry: 'opcCarriersRetry',
+  opcPaymentMethodsRetry: 'opcPaymentMethodsRetry',
+  opcGiftWrapping: 'opcGiftWrapping',
+};

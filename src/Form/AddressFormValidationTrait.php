@@ -46,26 +46,22 @@ trait AddressFormValidationTrait
         }
 
         if ($invoicePostcode && $invoicePostcode->isRequired()) {
-            $invoiceCountry = $country;
+            $invoiceValidationCountry = $country;
             if ($invoiceCountryField && $invoiceCountryField->getValue()) {
-                $invoiceCountry = new \Country(
+                $invoiceValidationCountry = new \Country(
                     (int) $invoiceCountryField->getValue(),
                     $this->language->id
                 );
             }
-            if ($invoiceCountry) {
-                if ($invoiceCountry->need_zip_code && !$invoiceCountry->checkZipCode($invoicePostcode->getValue())) {
-                    $invoicePostcode->addError($this->translator->trans(
-                        'Invalid postcode - should look like "%zipcode%"',
-                        ['%zipcode%' => $invoiceCountry->zip_code_format],
-                        'Shop.Forms.Errors'
-                    ));
-                    $is_valid = false;
-                }
-            } elseif ($country && $country->checkZipCode($invoicePostcode->getValue()) === false) {
+
+            if (
+                $invoiceValidationCountry
+                && $invoiceValidationCountry->need_zip_code
+                && !$invoiceValidationCountry->checkZipCode($invoicePostcode->getValue())
+            ) {
                 $invoicePostcode->addError($this->translator->trans(
                     'Invalid postcode - should look like "%zipcode%"',
-                    ['%zipcode%' => $country->zip_code_format],
+                    ['%zipcode%' => $invoiceValidationCountry->zip_code_format],
                     'Shop.Forms.Errors'
                 ));
                 $is_valid = false;
