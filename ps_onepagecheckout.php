@@ -28,7 +28,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '0.5.0';
+        $this->version = '0.6.0';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -311,6 +311,7 @@ class Ps_Onepagecheckout extends Module
                 'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], 'Modules.Onepagecheckout.Shop'),
                 'statesLoadFailed' => $this->trans('Unable to load states.', [], 'Modules.Onepagecheckout.Shop'),
                 'addressFieldsLoadFailed' => $this->trans('Unable to load address fields.', [], 'Modules.Onepagecheckout.Shop'),
+                'addressFieldsInvalid' => $this->trans('Please correct the highlighted address fields.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'saveAddressFailed' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], 'Modules.Onepagecheckout.Shop'),
