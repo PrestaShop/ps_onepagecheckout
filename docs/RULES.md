@@ -11,7 +11,7 @@ The migration reference document is [`docs/CORE_PORTING_PLAYBOOK.md`](./CORE_POR
 2. The module must not use custom autoloaders.
 3. Runtime class loading must rely on namespaced classes and Composer autoload.
 4. No module-side legacy fallback logic (`fallback_url`, `error_code`, redirect to legacy checkout).
-5. Release metadata must stay aligned across `ps_onepagecheckout.php`, `config.xml`, and `config_fr.xml`.
+5. Release metadata must stay aligned across `ps_onepagecheckout.php` and `config.xml`.
 6. The public Composer package for native baseline inclusion is `prestashop/ps_onepagecheckout`.
 7. Initial baseline inclusion in the Core happens through Composer/Packagist; later module upgrades are exposed through `distribution-api`.
 8. Add module-owned `upgrade/` scripts when a released-to-released version transition requires a migration; do not add speculative upgrade files before they are needed.
