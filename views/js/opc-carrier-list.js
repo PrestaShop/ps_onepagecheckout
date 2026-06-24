@@ -1,6 +1,19 @@
 import {CORE_EVENTS, OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {getAjaxErrorResponse, getConfiguredOpcMessage, getConfiguredOpcUrl, normalizeErrorResponse, updateCartSummary} from './runtime/opc-runtime';
+import {
+  AJAX_READY_STATE_DONE,
+  AJAX_STATUS_ABORT,
+  getAjaxErrorResponse,
+  getConfiguredOpcMessage,
+  getConfiguredOpcUrl,
+  normalizeErrorResponse,
+  updateCartSummary,
+} from './runtime/opc-runtime';
+import {
+  collectVisibleAddressContext,
+  getUseSameAddressValue,
+  INVOICE_ADDRESS_CONTEXT_FIELDS,
+} from './runtime/address/opc-address-context';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -20,6 +33,7 @@ const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const FAILED_EVENT_NAME = OPC_EVENTS.opcCarriersFailed;
 let selectedDeliveryAddressId = null;
 let fetchCarriersGeneration = 0;
+let activeFetchCarriersRequest = null;
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -58,24 +72,26 @@ function buildCarriersUrl(baseUrl) {
     return '';
   }
 
-  if (selectedDeliveryAddressId) {
-    const url = new URL(baseUrl, window.location.origin);
-
-    url.searchParams.set('id_address_delivery', selectedDeliveryAddressId);
-
-    return url.toString();
-  }
-
-  const deliveryMethodsContainer = document.querySelector(CONTAINER_SELECTOR);
+  const useSameAddress = getUseSameAddressValue();
   const idCountry = getFormValue(form, 'id_country');
-  if (!idCountry) {
+  const selectedSavedDeliveryAddressId = selectedDeliveryAddressId || getSelectedSavedDeliveryAddressId();
+  if (!selectedSavedDeliveryAddressId && !idCountry) {
     return '';
   }
 
   const url = new URL(baseUrl, window.location.origin);
-  const selectedSavedDeliveryAddressId = getSelectedSavedDeliveryAddressId();
 
-  url.searchParams.set('id_country', idCountry);
+  if (idCountry) {
+    url.searchParams.set('id_country', idCountry);
+  }
+
+  if (useSameAddress === '0') {
+    Object.entries(
+      collectVisibleAddressContext(form, OPC_SELECTORS.opc.billingFields, INVOICE_ADDRESS_CONTEXT_FIELDS)
+    ).forEach(([field, value]) => {
+      url.searchParams.set(field, value);
+    });
+  }
 
   if (selectedSavedDeliveryAddressId) {
     url.searchParams.set('id_address_delivery', selectedSavedDeliveryAddressId);
@@ -94,6 +110,9 @@ function buildCarriersUrl(baseUrl) {
   if (city) {
     url.searchParams.set('city', city);
   }
+
+  // Let the server honour the "use same address" choice when syncing the invoice address.
+  url.searchParams.set('use_same_address', useSameAddress);
 
   return url.toString();
 }
@@ -126,11 +145,18 @@ function fetchCarriers() {
     return;
   }
 
+  const generation = ++fetchCarriersGeneration;
+  if (activeFetchCarriersRequest && activeFetchCarriersRequest.readyState !== AJAX_READY_STATE_DONE) {
+    activeFetchCarriersRequest.abort();
+  }
+
   $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierLoader.replace('#', '')));
   prestashop.emit(OPC_EVENTS.opcCarriersLoading, {});
-  const generation = ++fetchCarriersGeneration;
 
-  $.get(carriersUrl)
+  const request = $.get(carriersUrl);
+  activeFetchCarriersRequest = request;
+
+  request
     .done((response) => {
       if (generation !== fetchCarriersGeneration) {
         return;
@@ -170,8 +196,12 @@ function fetchCarriers() {
         $container.removeAttr('data-confirmed-delivery-option');
       }
     })
-    .fail((jqXHR) => {
+    .fail((jqXHR, textStatus) => {
       if (generation !== fetchCarriersGeneration) {
+        return;
+      }
+
+      if (textStatus === AJAX_STATUS_ABORT) {
         return;
       }
 
@@ -179,6 +209,11 @@ function fetchCarriers() {
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierError.replace('#', '')));
       prestashop.emit(FAILED_EVENT_NAME, {resp});
       prestashop.emit('handleError', {eventType: 'opcCarriers', resp});
+    })
+    .always(() => {
+      if (activeFetchCarriersRequest === request) {
+        activeFetchCarriersRequest = null;
+      }
     });
 }
 

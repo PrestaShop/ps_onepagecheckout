@@ -103,9 +103,7 @@ class OnePageCheckoutGiftWrappingHandler
                 'totals' => $cart['totals'],
             ];
         } finally {
-            if ($tempAddressId > 0) {
-                $tempAddress->cleanup($tempAddressId, $originalAddressId);
-            }
+            $tempAddress->cleanup($tempAddressId, $originalAddressId);
         }
     }
 }

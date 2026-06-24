@@ -41,11 +41,20 @@ class TempAddressStorage
             return;
         }
 
+        $fields = [
+            'id_country' => (string) ($requestParameters['id_country'] ?? $requestParameters['delivery_id_country'] ?? ''),
+            'id_state' => (string) ($requestParameters['id_state'] ?? $requestParameters['delivery_id_state'] ?? ''),
+            'postcode' => (string) ($requestParameters['postcode'] ?? $requestParameters['delivery_postcode'] ?? ''),
+            'city' => (string) ($requestParameters['city'] ?? $requestParameters['delivery_city'] ?? ''),
+            'use_same_address' => (string) ($requestParameters['use_same_address'] ?? ''),
+            'invoice_id_country' => (string) ($requestParameters['invoice_id_country'] ?? ''),
+            'invoice_id_state' => (string) ($requestParameters['invoice_id_state'] ?? ''),
+            'invoice_postcode' => (string) ($requestParameters['invoice_postcode'] ?? ''),
+            'invoice_city' => (string) ($requestParameters['invoice_city'] ?? ''),
+        ];
+
         $params = [];
-        foreach (['id_country', 'id_state', 'postcode', 'city'] as $field) {
-            $value = (string) ($requestParameters[$field]
-                ?? $requestParameters["delivery_{$field}"]
-                ?? '');
+        foreach ($fields as $field => $value) {
             if ($value !== '') {
                 $params[$field] = $value;
             }

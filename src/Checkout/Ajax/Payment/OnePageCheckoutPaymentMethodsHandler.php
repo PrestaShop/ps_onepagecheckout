@@ -97,13 +97,17 @@ class OnePageCheckoutPaymentMethodsHandler
             : 'id_address_delivery';
         $requestAddressId = (int) ($requestParameters[$requestAddressKey] ?? 0);
         $cartAddressId = (int) ($this->context->cart->{$taxAddressType} ?? 0);
+        // Inline billing has no address id yet, its visible country must win over stale cart data.
+        $hasInlineInvoiceCountry = $taxAddressType === 'id_address_invoice'
+            && $requestAddressId <= 0
+            && (int) ($requestParameters['invoice_id_country'] ?? 0) > 0;
 
         $addressIds = [];
         if ($requestAddressId > 0) {
             $addressIds[] = $requestAddressId;
         }
 
-        if ($cartAddressId > 0 && $cartAddressId !== $requestAddressId) {
+        if (!$hasInlineInvoiceCountry && $cartAddressId > 0 && $cartAddressId !== $requestAddressId) {
             $addressIds[] = $cartAddressId;
         }
 

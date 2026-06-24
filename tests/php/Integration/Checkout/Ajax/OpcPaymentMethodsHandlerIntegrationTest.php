@@ -200,6 +200,73 @@ class OpcPaymentMethodsHandlerIntegrationTest extends TestCase
         self::assertSame((int) \Country::getByIso('FR'), (int) $context->country->id);
     }
 
+    public function testItPrefersInlineInvoiceCountryOverStaleCartInvoiceAddress(): void
+    {
+        \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_invoice');
+
+        $customer = $this->createCustomer('opc-payment-inline-invoice');
+        $frInvoiceAddress = $this->createAddressForCustomer((int) $customer->id, 'FR');
+
+        $context = self::getContext();
+        $context->cart = new class((int) $frInvoiceAddress->id) extends \Cart {
+            public function __construct(int $invoiceAddressId)
+            {
+                $this->id = 1;
+                $this->id_address_invoice = $invoiceAddressId;
+            }
+
+            public function getOrderTotal($withTaxes = true, $type = \Cart::BOTH, $products = null, $id_carrier = null, $use_cache = false, bool $keepOrderPrices = false)
+            {
+                return 42.0;
+            }
+        };
+        $context->country = new \Country((int) \Country::getByIso('FR'));
+
+        $finder = new class extends \PaymentOptionsFinder {
+            public function __construct()
+            {
+            }
+
+            public function present($free = false)
+            {
+                return [
+                    'ps_wirepayment' => [[
+                        'module_name' => 'ps_wirepayment',
+                        'call_to_action_text' => 'Wire payment',
+                        'action' => '/module/ps_wirepayment/validation',
+                    ]],
+                    'ps_checkpayment' => [[
+                        'module_name' => 'ps_checkpayment',
+                        'call_to_action_text' => 'Check payment',
+                        'action' => '/module/ps_checkpayment/validation',
+                    ]],
+                ];
+            }
+        };
+
+        $this->configureModuleCountryRestriction('ps_wirepayment', ['FR']);
+        $this->configureModuleCountryRestriction('ps_checkpayment', ['US']);
+
+        $handler = new OnePageCheckoutPaymentMethodsHandler($context, $finder);
+        $inlineInvoiceResponse = $handler->handle([
+            'id_country' => (string) \Country::getByIso('FR'),
+            'invoice_id_country' => (string) \Country::getByIso('US'),
+        ]);
+
+        self::assertArrayNotHasKey('ps_wirepayment', $inlineInvoiceResponse['payment_options']);
+        self::assertArrayHasKey('ps_checkpayment', $inlineInvoiceResponse['payment_options']);
+        self::assertSame((int) \Country::getByIso('FR'), (int) $context->country->id);
+
+        $savedInvoiceResponse = $handler->handle([
+            'id_country' => (string) \Country::getByIso('FR'),
+            'id_address_invoice' => (string) $frInvoiceAddress->id,
+            'invoice_id_country' => (string) \Country::getByIso('US'),
+        ]);
+
+        self::assertArrayHasKey('ps_wirepayment', $savedInvoiceResponse['payment_options']);
+        self::assertArrayNotHasKey('ps_checkpayment', $savedInvoiceResponse['payment_options']);
+    }
+
     public function testItFiltersPaymentOptionsByPersistedDeliveryAddressCountry(): void
     {
         $customer = $this->createCustomer('opc-payment-country');

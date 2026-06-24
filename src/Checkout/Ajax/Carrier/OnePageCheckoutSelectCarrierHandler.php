@@ -56,7 +56,10 @@ class OnePageCheckoutSelectCarrierHandler
         $tempAddressId = 0;
 
         try {
-            $tempAddressId = $tempAddress->createFromRequest($requestParameters);
+            $tempAddressId = $tempAddress->createFromRequest(
+                $requestParameters,
+                true
+            );
             $deliveryAddressId = $tempAddressId ?: $originalAddressId;
 
             if ($deliveryAddressId <= 0) {
@@ -78,9 +81,7 @@ class OnePageCheckoutSelectCarrierHandler
                 'totals' => $cartPreview['totals'],
             ];
         } finally {
-            if ($tempAddressId > 0) {
-                $tempAddress->cleanup($tempAddressId, $originalAddressId);
-            }
+            $tempAddress->cleanup($tempAddressId, $originalAddressId);
         }
     }
 

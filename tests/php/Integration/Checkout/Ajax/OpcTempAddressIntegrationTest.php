@@ -113,6 +113,7 @@ class OpcTempAddressIntegrationTest extends TestCase
             'id_country' => (string) \Country::getByIso('US'),
             'postcode' => '33133',
             'city' => 'Miami',
+            'invoice_id_country' => (string) \Country::getByIso('FR'),
             'use_same_address' => '1',
         ]);
 
@@ -122,6 +123,90 @@ class OpcTempAddressIntegrationTest extends TestCase
         self::assertSame((int) \Country::getByIso('US'), (int) (new \Address($tempInvoiceId))->id_country);
 
         $tempAddress->cleanup($tempDeliveryId, (int) $originalDelivery->id);
+    }
+
+    public function testItCreatesAndCleansUpTempInvoiceAddressWithoutTempDeliveryAddress(): void
+    {
+        \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_invoice');
+
+        $context = self::getContext();
+        $customer = $this->createCustomer();
+        $context->customer = $customer;
+
+        $originalDelivery = $this->createAddress($customer, 'Original delivery', 'FR', '75001', 'Paris');
+        $originalInvoice = $this->createAddress($customer, 'Original invoice', 'FR', '69001', 'Lyon');
+
+        $cart = new \Cart();
+        $cart->id_currency = (int) \Configuration::get('PS_CURRENCY_DEFAULT');
+        $cart->id_lang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        $cart->id_shop_group = 1;
+        $cart->id_shop = 1;
+        $cart->id_customer = (int) $customer->id;
+        $cart->id_address_delivery = (int) $originalDelivery->id;
+        $cart->id_address_invoice = (int) $originalInvoice->id;
+        self::assertTrue($cart->add());
+        $context->cart = $cart;
+
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'use_same_address' => '0',
+            'invoice_id_country' => (string) \Country::getByIso('US'),
+            'invoice_postcode' => '10001',
+            'invoice_city' => 'New York',
+        ], true);
+        $tempInvoiceId = (int) $context->cart->id_address_invoice;
+
+        self::assertSame(0, $tempDeliveryId);
+        self::assertGreaterThan(0, $tempInvoiceId);
+        self::assertSame((int) $originalDelivery->id, (int) $context->cart->id_address_delivery);
+        self::assertSame($tempInvoiceId, (int) $context->cart->id_address_invoice);
+        self::assertSame((int) \Country::getByIso('US'), (int) (new \Address($tempInvoiceId))->id_country);
+
+        $tempAddress->cleanup(0, (int) $originalDelivery->id);
+
+        $freshCart = new \Cart((int) $cart->id);
+        self::assertSame((int) $originalDelivery->id, (int) $freshCart->id_address_delivery);
+        self::assertSame((int) $originalInvoice->id, (int) $freshCart->id_address_invoice);
+        self::assertSame(
+            '0',
+            (string) \Db::getInstance()->getValue('SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'address` WHERE id_address = ' . (int) $tempInvoiceId)
+        );
+    }
+
+    public function testItDoesNotCreateInvoiceOnlyAddressByDefault(): void
+    {
+        \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_invoice');
+
+        $context = self::getContext();
+        $customer = $this->createCustomer();
+        $context->customer = $customer;
+
+        $originalDelivery = $this->createAddress($customer, 'Original delivery', 'FR', '75001', 'Paris');
+        $originalInvoice = $this->createAddress($customer, 'Original invoice', 'FR', '69001', 'Lyon');
+
+        $cart = new \Cart();
+        $cart->id_currency = (int) \Configuration::get('PS_CURRENCY_DEFAULT');
+        $cart->id_lang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        $cart->id_shop_group = 1;
+        $cart->id_shop = 1;
+        $cart->id_customer = (int) $customer->id;
+        $cart->id_address_delivery = (int) $originalDelivery->id;
+        $cart->id_address_invoice = (int) $originalInvoice->id;
+        self::assertTrue($cart->add());
+        $context->cart = $cart;
+
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'use_same_address' => '0',
+            'invoice_id_country' => (string) \Country::getByIso('US'),
+            'invoice_postcode' => '10001',
+            'invoice_city' => 'New York',
+        ]);
+
+        self::assertSame(0, $tempDeliveryId);
+        $freshCart = new \Cart((int) $cart->id);
+        self::assertSame((int) $originalDelivery->id, (int) $freshCart->id_address_delivery);
+        self::assertSame((int) $originalInvoice->id, (int) $freshCart->id_address_invoice);
     }
 
     private function createCustomer(): \Customer

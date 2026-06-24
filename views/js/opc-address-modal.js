@@ -1151,10 +1151,15 @@ function refreshAddressLists(options = {}) {
   };
 
   if (!addressesListUrl) {
-    return refreshAddressesSection(options);
+    prestashop.emit(OPC_EVENTS.opcAddressesLoading, {listTypes});
+
+    return refreshAddressesSection(options)
+      .done((response) => prestashop.emit(OPC_EVENTS.opcAddressesUpdated, response))
+      .fail((jqXHR) => prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON));
   }
 
   renderAddressListsLoadingState(listTypes);
+  prestashop.emit(OPC_EVENTS.opcAddressesLoading, {listTypes});
 
   return $.post(addressesListUrl)
     .then((response) => {
@@ -1165,6 +1170,7 @@ function refreshAddressLists(options = {}) {
       if (!response || response.success === false || typeof response.address_count === 'undefined') {
         renderAddressListsErrorState(listTypes);
         emitHandleError('opcAddressesList', response, fallbackMessage);
+        prestashop.emit(OPC_EVENTS.opcAddressesFailed, response);
 
         return response;
       }
@@ -1176,11 +1182,14 @@ function refreshAddressLists(options = {}) {
       setOpcRuntimePersistAddressDraft(addressCount <= 0);
 
       if (addressCount <= 0) {
-        return refreshAddressesSection(options);
+        return refreshAddressesSection(options)
+          .done((sectionResponse) => prestashop.emit(OPC_EVENTS.opcAddressesUpdated, sectionResponse || response))
+          .fail((jqXHR) => prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON));
       }
 
       pendingAddressListRefreshOptions = null;
       applyAddressListsResponse(response, options);
+      prestashop.emit(OPC_EVENTS.opcAddressesUpdated, response);
 
       return response;
     })
@@ -1191,6 +1200,7 @@ function refreshAddressLists(options = {}) {
 
       renderAddressListsErrorState(listTypes);
       emitHandleError('opcAddressesList', jqXHR && jqXHR.responseJSON, fallbackMessage);
+      prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON);
     });
 }
 

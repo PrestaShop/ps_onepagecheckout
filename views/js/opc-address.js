@@ -5,6 +5,10 @@ import {getConfiguredOpcMessage} from './runtime/opc-runtime';
 import {getConfiguredOpcUrl} from './runtime/opc-runtime';
 import {getOpcRuntimeConfiguration} from './runtime/opc-runtime';
 import {normalizeErrorEventResponse} from './runtime/opc-runtime';
+import {
+  refreshAfterBillingAddressChange,
+  refreshAfterVirtualDeliveryAddressChange,
+} from './runtime/address/opc-address-request';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -354,12 +358,15 @@ function bindBillingToggleListener(selectors) {
     // so invoice-based payment filtering is recalculated from delivery.
     if (useSameAddress) {
       seedBillingFromDelivery(addressContainer);
+      prestashop.emit(OPC_EVENTS.opcBillingSectionToggled, {visible: false});
       return;
     }
 
     if (!useSameAddress && !hasSeparateBillingDraft(addressContainer)) {
       seedBillingFromDelivery(addressContainer);
     }
+
+    prestashop.emit(OPC_EVENTS.opcBillingSectionToggled, {visible: true});
   });
 }
 
@@ -632,4 +639,10 @@ $(() => {
   initializeBillingSectionConstraints(selectors);
   bindAddressDraftAutosave(selectors);
 });
+
+prestashop.on(OPC_EVENTS.opcBillingAddressSelected, refreshAfterBillingAddressChange);
+prestashop.on(OPC_EVENTS.opcBillingAddressUpdated, refreshAfterBillingAddressChange);
+prestashop.on(OPC_EVENTS.opcBillingSectionToggled, refreshAfterBillingAddressChange);
+prestashop.on(OPC_EVENTS.opcDeliveryAddressSelected, refreshAfterVirtualDeliveryAddressChange);
+prestashop.on(OPC_EVENTS.opcDeliveryAddressUpdated, refreshAfterVirtualDeliveryAddressChange);
 })();

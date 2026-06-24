@@ -4,6 +4,8 @@ export const CORE_EVENTS = {
 
 export const OPC_EVENTS = {
   opcCarrierSelected: 'opcCarrierSelected',
+  opcCarrierSelectionLoading: 'opcCarrierSelectionLoading',
+  opcCarrierSelectionFailed: 'opcCarrierSelectionFailed',
   opcCarriersUpdated: 'opcCarriersUpdated',
   opcCarriersFailed: 'opcCarriersFailed',
   opcCarriersLoading: 'opcCarriersLoading',
@@ -22,6 +24,9 @@ export const OPC_EVENTS = {
   opcBillingAddressUpdated: 'opcBillingAddressUpdated',
   opcDeliveryAddressSelected: 'opcDeliveryAddressSelected',
   opcBillingAddressSelected: 'opcBillingAddressSelected',
+  opcAddressesLoading: 'opcAddressesLoading',
+  opcAddressesUpdated: 'opcAddressesUpdated',
+  opcAddressesFailed: 'opcAddressesFailed',
   opcCartSummaryBeforeUpdate: 'opcCartSummaryBeforeUpdate',
   opcCartSummaryUpdated: 'opcCartSummaryUpdated',
   updatedOpcAddressForm: 'updatedOpcAddressForm',

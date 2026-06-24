@@ -1,6 +1,7 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
 import {getConfiguredOpcUrl, normalizeErrorEventResponse, getConfiguredOpcMessage, updatePayAmount} from './runtime/opc-runtime';
+import {buildSelectAddressPayload} from './runtime/address/opc-address-context';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -49,6 +50,9 @@ const PAYMENT_CONDITIONS_SELECTOR = OPC_SELECTORS.inputs.conditions;
 const OPC_SUBMIT_URL_KEY = 'opcSubmit';
 
 let billingToggleHandler = null;
+let addressState = 'idle';
+let carriersState = 'idle';
+let carrierSelectionState = 'idle';
 let paymentMethodsState = 'idle';
 let isFinalSubmitInFlight = false;
 let hasAttemptedSubmit = false;
@@ -161,6 +165,21 @@ function arePaymentMethodsReady() {
   return paymentMethodsState !== 'loading' && paymentMethodsState !== 'failed';
 }
 
+function isCheckoutRefreshing() {
+  return addressState === 'loading'
+    || carriersState === 'loading'
+    || carrierSelectionState === 'loading'
+    || paymentMethodsState === 'loading';
+}
+
+function updatePayButtonLoadingState(payButton) {
+  const spinner = payButton.querySelector('[data-opc-pay-spinner]');
+
+  if (spinner instanceof HTMLElement) {
+    spinner.classList.toggle('d-none', !isCheckoutRefreshing());
+  }
+}
+
 function hasSelectedCarrier() {
   const deliveryMethods = document.querySelector(DELIVERY_METHODS_SELECTOR);
   const deliveryOptions = document.querySelectorAll(DELIVERY_OPTION_SELECTOR);
@@ -216,10 +235,12 @@ function validateForm() {
   const isValid = formFieldsAreValid
     && conditionsAreValid
     && hasSelectedCarrier()
+    && !isCheckoutRefreshing()
     && arePaymentMethodsReady()
     && hasSelectedPayment();
 
   payButton.disabled = !isValid;
+  updatePayButtonLoadingState(payButton);
 
   // Once the customer has tried to submit, keep the invalid-field highlights in sync even
   // while Pay stays disabled (e.g. empty required fields never reach validateNativeForm).
@@ -246,7 +267,6 @@ function initBillingToggle() {
     const isBillingVisible = !useSameAddressField.checked;
 
     billingSection.style.display = isBillingVisible ? '' : 'none';
-    prestashop.emit(OPC_EVENTS.opcBillingSectionToggled, {visible: isBillingVisible});
     validateForm();
   };
 
@@ -347,7 +367,24 @@ function submitPaymentModuleForm(paymentRadio) {
 }
 
 function buildSubmitPayload(form, paymentRadio) {
-  const payload = new FormData(form);
+  const payload = new FormData();
+  const addressPayload = buildSelectAddressPayload(form);
+
+  // Address ids can exist as hidden technical fields while the visible flow is inline.
+  // Rebuild only those ids from the same visible selection logic used by address refreshes.
+  Array.from(new FormData(form).entries()).forEach(([fieldName, value]) => {
+    if (fieldName === 'id_address_delivery' || fieldName === 'id_address_invoice') {
+      return;
+    }
+
+    payload.append(fieldName, value);
+  });
+
+  ['id_address_delivery', 'id_address_invoice'].forEach((fieldName) => {
+    if (addressPayload[fieldName]) {
+      payload.set(fieldName, addressPayload[fieldName]);
+    }
+  });
 
   appendConditionsToApproveToFormData(payload);
 
@@ -738,6 +775,18 @@ $(document).ready(() => {
     bindScopedValidationListeners(form);
     validateForm();
   });
+  prestashop.on(OPC_EVENTS.opcAddressesLoading, () => {
+    addressState = 'loading';
+    validateForm();
+  });
+  prestashop.on(OPC_EVENTS.opcAddressesUpdated, () => {
+    addressState = 'ready';
+    validateForm();
+  });
+  prestashop.on(OPC_EVENTS.opcAddressesFailed, () => {
+    addressState = 'failed';
+    validateForm();
+  });
   prestashop.on(OPC_EVENTS.opcDeliveryAddressUpdated, () => {
     initBillingToggle();
     bindScopedValidationListeners(form);
@@ -748,12 +797,31 @@ $(document).ready(() => {
     bindScopedValidationListeners(form);
     validateForm();
   });
+  prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
+    carrierSelectionState = 'ready';
+    carriersState = 'loading';
+    validateForm();
+  });
   prestashop.on(OPC_EVENTS.opcCarriersUpdated, () => {
+    carriersState = 'ready';
     bindScopedValidationListeners(form);
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
+    carriersState = 'failed';
     bindScopedValidationListeners(form);
+    validateForm();
+  });
+  prestashop.on(OPC_EVENTS.opcCarrierSelectionLoading, () => {
+    carrierSelectionState = 'loading';
+    validateForm();
+  });
+  prestashop.on(OPC_EVENTS.opcCarrierSelected, () => {
+    carrierSelectionState = 'ready';
+    validateForm();
+  });
+  prestashop.on(OPC_EVENTS.opcCarrierSelectionFailed, () => {
+    carrierSelectionState = 'failed';
     validateForm();
   });
   prestashop.on('updatedCart', () => {

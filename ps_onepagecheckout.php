@@ -63,6 +63,7 @@ class Ps_Onepagecheckout extends Module
             'addresseslist',
             'states',
             'saveaddress',
+            'selectaddress',
             'deleteaddress',
             'carriers',
             'selectcarrier',
@@ -159,6 +160,7 @@ class Ps_Onepagecheckout extends Module
 
         $opcRuntimeConfiguration = [
             'enabled' => true,
+            'taxAddressType' => (string) Configuration::get('PS_TAX_ADDRESS_TYPE'),
             // Customers with no saved address yet (guests, and accounts created mid-checkout)
             // have no address persistence until final submit, so their typed address draft is
             // autosaved to a cookie. Once an address is saved, the saved-address flow takes over.
@@ -294,6 +296,15 @@ class Ps_Onepagecheckout extends Module
                     $this->name,
                     'carttotals',
                     ['ajax' => 1, 'action' => 'opcCartTotals'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
+                'selectAddress' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'selectaddress',
+                    ['ajax' => 1, 'action' => 'opcSelectAddress'],
                     null,
                     null,
                     null,

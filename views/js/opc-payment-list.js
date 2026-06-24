@@ -1,6 +1,12 @@
 import {CORE_EVENTS, OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
 import {getAjaxErrorResponse, getConfiguredOpcMessage, getConfiguredOpcUrl, normalizeErrorResponse} from './runtime/opc-runtime';
+import {
+  collectVisibleAddressContext,
+  getUseSameAddressValue,
+  getSelectedOrInlineAddressId,
+  INVOICE_ADDRESS_CONTEXT_FIELDS,
+} from './runtime/address/opc-address-context';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -46,19 +52,6 @@ function hasSelectedCarrier() {
   );
 }
 
-function getSelectedSavedAddressId(listSelector, radioName) {
-  const selectedRadio = document.querySelector(
-    `${listSelector} ${OPC_SELECTORS.opc.addressRadio}[name="${radioName}"]:checked`
-  );
-  const selectedAddressId = selectedRadio ? String(selectedRadio.getAttribute('value') || '') : '';
-
-  if (!selectedAddressId || selectedAddressId === 'new_address') {
-    return '';
-  }
-
-  return selectedAddressId;
-}
-
 function getLoaderOverlay() {
   return document.getElementById('opc-payment-methods-loader');
 }
@@ -68,9 +61,14 @@ function showLoader() {
   if (!overlay) {
     return;
   }
+
+  const wasHidden = overlay.classList.contains('d-none');
   overlay.classList.remove('d-none');
   overlay.setAttribute('aria-hidden', 'false');
-  prestashop.emit(OPC_EVENTS.opcPaymentMethodsLoading, {});
+
+  if (wasHidden) {
+    prestashop.emit(OPC_EVENTS.opcPaymentMethodsLoading, {});
+  }
 }
 
 function hideLoader() {
@@ -93,13 +91,26 @@ function buildPaymentMethodsUrl(baseUrl) {
   const idCountry = form.querySelector('[name="id_country"]')?.value
     || form.querySelector('[name="delivery_id_country"]')?.value
     || '';
-  const invoiceIdCountry = form.querySelector('[name="invoice_id_country"]')?.value || '';
-  const deliveryAddressId = getSelectedSavedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
-    || form.querySelector('[name="id_address_delivery"]')?.value
-    || '';
-  const invoiceAddressId = getSelectedSavedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
-    || form.querySelector('[name="id_address_invoice"]')?.value
-    || '';
+  const useSameAddress = getUseSameAddressValue();
+  const invoiceContext = useSameAddress === '0'
+    ? collectVisibleAddressContext(form, OPC_SELECTORS.opc.billingFields, INVOICE_ADDRESS_CONTEXT_FIELDS)
+    : {};
+  const invoiceIdCountry = invoiceContext.invoice_id_country || '';
+  const deliveryAddressId = getSelectedOrInlineAddressId(
+    OPC_SELECTORS.opc.deliveryList,
+    OPC_SELECTORS.opc.deliveryFields,
+    'id_address_delivery'
+  );
+  // When billing mirrors delivery ("use same address"), the billing radio/hidden field is not
+  // re-rendered on a delivery change and would carry a stale invoice address. Mirror delivery
+  // explicitly so country-restricted payment methods are evaluated against the right address.
+  const invoiceAddressId = useSameAddress === '1'
+    ? deliveryAddressId
+    : getSelectedOrInlineAddressId(
+      OPC_SELECTORS.opc.billingList,
+      OPC_SELECTORS.opc.billingFields,
+      'id_address_invoice'
+    );
 
   if (idCountry) {
     url.searchParams.set('id_country', idCountry);
@@ -126,6 +137,7 @@ function fetchPaymentMethods() {
   const fallbackMessage = getConfiguredOpcMessage('loadPaymentMethodsFailed', 'Unable to load payment methods.');
 
   if (!$container.length || !paymentMethodsUrl) {
+    hideLoader();
     return;
   }
 
@@ -188,8 +200,6 @@ prestashop.on(OPC_EVENTS.opcCarriersUpdated, () => {
     fetchPaymentMethods();
   }
 });
-prestashop.on(OPC_EVENTS.opcBillingAddressSelected, fetchPaymentMethods);
-prestashop.on(OPC_EVENTS.opcBillingAddressUpdated, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcGuestInitSuccess, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcPaymentMethodsRetry, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
