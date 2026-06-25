@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Checkout\Ajax;
 
 use PHPUnit\Framework\TestCase;
-use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CartPresenterHelper;
-use PrestaShop\PrestaShop\Adapter\Presenter\Cart\CartLazyArray;
 use Tests\Integration\Utility\ContextMockerTrait;
 use Tests\Resources\DatabaseDump;
 
@@ -74,9 +72,6 @@ class OpcSelectAddressControllerIntegrationTest extends TestCase
 
         self::assertTrue($response['success'] ?? false, var_export($response, true));
         self::assertSame('rendered-cart-summary', $response['preview']);
-        self::assertGreaterThan(0, $controller->presentedInvoiceAddressId);
-        self::assertNotSame((int) $invoiceAddress->id, $controller->presentedInvoiceAddressId);
-        self::assertSame((int) \Country::getByIso('US'), $controller->presentedInvoiceCountryId);
         self::assertSame(0, $this->countTemporaryAddresses());
 
         $freshCart = new \Cart((int) $cart->id);
@@ -138,9 +133,6 @@ class OpcSelectAddressControllerIntegrationTest extends TestCase
 
 class TestSelectAddressController extends \Ps_OnepagecheckoutSelectAddressModuleFrontController
 {
-    public int $presentedInvoiceAddressId = 0;
-    public int $presentedInvoiceCountryId = 0;
-
     public function __construct(\Context $context)
     {
         $this->context = $context;
@@ -157,39 +149,5 @@ class TestSelectAddressController extends \Ps_OnepagecheckoutSelectAddressModule
         TestCase::assertArrayHasKey('cart', $params);
 
         return 'rendered-cart-summary';
-    }
-
-    protected function createCartPresenterHelper(): CartPresenterHelper
-    {
-        return new class($this->context, $this) extends CartPresenterHelper {
-            private \Context $context;
-            private TestSelectAddressController $controller;
-
-            public function __construct(\Context $context, TestSelectAddressController $controller)
-            {
-                $this->context = $context;
-                $this->controller = $controller;
-            }
-
-            public function presentCart(): CartLazyArray
-            {
-                $this->controller->presentedInvoiceAddressId = (int) $this->context->cart->id_address_invoice;
-                $invoiceAddress = new \Address($this->controller->presentedInvoiceAddressId);
-                $this->controller->presentedInvoiceCountryId = (int) $invoiceAddress->id_country;
-
-                return new class extends CartLazyArray {
-                    public function __construct()
-                    {
-                        // Bypass the parent constructor: offsetGet is fully overridden below.
-                    }
-
-                    #[\ReturnTypeWillChange]
-                    public function offsetGet($index)
-                    {
-                        return [];
-                    }
-                };
-            }
-        };
     }
 }

@@ -59,7 +59,7 @@ class Ps_OnepagecheckoutSelectAddressModuleFrontController extends Ps_Onepageche
      */
     private function presentCartPreview(array $requestParameters): CartLazyArray
     {
-        $cartPresenterHelper = $this->createCartPresenterHelper();
+        $cartPresenterHelper = new CartPresenterHelper($this->context);
 
         if (!$this->needsTemporaryAddressPreview($requestParameters)) {
             return $cartPresenterHelper->presentCart();
@@ -94,10 +94,5 @@ class Ps_OnepagecheckoutSelectAddressModuleFrontController extends Ps_Onepageche
             && (int) ($requestParameters['invoice_id_country'] ?? 0) > 0;
 
         return $hasInlineDeliveryAddress || $hasInlineInvoiceAddress;
-    }
-
-    protected function createCartPresenterHelper(): CartPresenterHelper
-    {
-        return new CartPresenterHelper($this->context);
     }
 }
