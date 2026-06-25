@@ -128,13 +128,20 @@ class OpcCarriersHandlerAddressSyncIntegrationTest extends TestCase
         self::assertSame((int) $addressC->id, (int) $freshCart->id_address_invoice, 'omitted use_same_address must preserve invoice');
     }
 
-    public function testSavedDeliveryUsesTemporaryInlineInvoiceAddressForPreview(): void
+    /**
+     * First-party UI path: with one saved customer address, delivery is selected from the
+     * saved-address list while separate billing is rendered as inline fields. Carrier refreshes
+     * send the saved delivery id plus invoice_* fields, but no saved invoice address id yet.
+     */
+    public function testSavedDeliveryWithInlineBillingUsesTemporaryInvoiceAddressForPreview(): void
     {
         \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_invoice');
 
         $customer = $this->createCustomer();
         $deliveryAddress = $this->createAddress($customer, 'Delivery');
-        $cart = $this->createCart($customer, (int) $deliveryAddress->id, (int) $deliveryAddress->id);
+        $deliveryAddressId = (int) $deliveryAddress->id;
+        $inlineBillingCountryId = (int) \Country::getByIso('US');
+        $cart = $this->createCart($customer, $deliveryAddressId, $deliveryAddressId);
         $context = $this->createCheckoutContext($customer, $cart);
         $previewProbe = (object) [
             'invoiceAddressId' => 0,
@@ -172,22 +179,28 @@ class OpcCarriersHandlerAddressSyncIntegrationTest extends TestCase
             }
         };
 
-        $response = $this->createHandler($context, $cartPresenter)->handle([
-            'id_address_delivery' => (string) $deliveryAddress->id,
+        $requestParameters = [
+            'id_address_delivery' => (string) $deliveryAddressId,
             'use_same_address' => '0',
-            'invoice_id_country' => (string) \Country::getByIso('US'),
+            'invoice_id_country' => (string) $inlineBillingCountryId,
             'invoice_postcode' => '10001',
             'invoice_city' => 'New York',
-        ]);
+        ];
+
+        self::assertArrayNotHasKey('id_address_invoice', $requestParameters);
+
+        $response = $this->createHandler($context, $cartPresenter)->handle($requestParameters);
 
         self::assertTrue($response['success'] ?? false, var_export($response, true));
-        self::assertNotSame((int) $deliveryAddress->id, $previewProbe->invoiceAddressId);
-        self::assertSame((int) \Country::getByIso('US'), $previewProbe->invoiceCountryId);
+        self::assertGreaterThan(0, $previewProbe->invoiceAddressId);
+        self::assertNotSame($deliveryAddressId, $previewProbe->invoiceAddressId);
+        self::assertSame($inlineBillingCountryId, $previewProbe->invoiceCountryId);
         self::assertSame(0, $this->countTemporaryAddresses());
+        self::assertSame($deliveryAddressId, (int) $context->cart->id_address_invoice);
 
         $freshCart = new \Cart((int) $cart->id);
-        self::assertSame((int) $deliveryAddress->id, (int) $freshCart->id_address_delivery);
-        self::assertSame((int) $deliveryAddress->id, (int) $freshCart->id_address_invoice);
+        self::assertSame($deliveryAddressId, (int) $freshCart->id_address_delivery);
+        self::assertSame($deliveryAddressId, (int) $freshCart->id_address_invoice);
     }
 
     private function createHandler(\Context $context, ?CartPresenterHelper $cartPresenter = null): OnePageCheckoutCarriersHandler

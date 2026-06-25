@@ -5,17 +5,20 @@ declare(strict_types=1);
 namespace Tests\Integration\Checkout\Ajax;
 
 use PHPUnit\Framework\TestCase;
-use Tests\Integration\Utility\ContextMockerTrait;
 use Tests\Resources\DatabaseDump;
+use Tests\TestCase\SymfonyIntegrationTestCase;
 
-class OpcSelectAddressControllerIntegrationTest extends TestCase
+class OpcSelectAddressControllerIntegrationTest extends SymfonyIntegrationTestCase
 {
-    use ContextMockerTrait;
-
     /** @var array<string,mixed> */
     private array $previousPost = [];
     /** @var array<string,mixed> */
     private array $previousGet = [];
+
+    protected static function getKernelClass(): string
+    {
+        return \AdminKernel::class;
+    }
 
     protected function setUp(): void
     {
