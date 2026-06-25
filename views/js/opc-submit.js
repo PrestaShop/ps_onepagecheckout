@@ -2,6 +2,10 @@ import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
 import {getConfiguredOpcUrl, normalizeErrorEventResponse, getConfiguredOpcMessage, updatePayAmount} from './runtime/opc-runtime';
 import {buildSelectAddressPayload} from './runtime/address/opc-address-context';
+import {updateButtonSpinner} from './runtime/form/opc-button-loader';
+import {clearFieldError, getFieldErrorMessages, getFieldErrors, renderFieldErrors} from './runtime/form/opc-field-errors';
+import {reportFirstInvalidNativeField} from './runtime/form/opc-native-validation';
+import {clearValidationAlert, renderValidationAlert} from './runtime/form/opc-validation-alert';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -41,12 +45,10 @@ const CHECKOUT_SELECTOR = OPC_SELECTORS.opc.checkout;
 const PAY_BUTTON_SELECTOR = OPC_SELECTORS.opc.payButton;
 const BILLING_SECTION_SELECTOR = OPC_SELECTORS.opc.billingSection;
 const PAYMENT_METHODS_SELECTOR = OPC_SELECTORS.opc.paymentMethods;
-const DELIVERY_METHODS_SELECTOR = OPC_SELECTORS.opc.deliveryMethods;
 const CHECKOUT_FOOTER_SELECTOR = OPC_SELECTORS.opc.checkoutFooter;
 const USE_SAME_ADDRESS_SELECTOR = OPC_SELECTORS.opc.useSameAddress;
 const DELIVERY_OPTION_SELECTOR = OPC_SELECTORS.inputs.deliveryOption;
 const PAYMENT_OPTION_SELECTOR = OPC_SELECTORS.inputs.paymentOption;
-const PAYMENT_CONDITIONS_SELECTOR = OPC_SELECTORS.inputs.conditions;
 const OPC_SUBMIT_URL_KEY = 'opcSubmit';
 
 let billingToggleHandler = null;
@@ -115,34 +117,6 @@ function isElementVisible(element) {
     && element.getClientRects().length > 0;
 }
 
-function isRequiredFieldValid(field) {
-  if (!(field instanceof HTMLElement) || !isElementVisible(field)) {
-    return true;
-  }
-
-  if (field instanceof HTMLInputElement) {
-    if (field.type === 'checkbox') {
-      return field.checked;
-    }
-
-    if (field.type === 'radio') {
-      if (!field.name) {
-        return field.checked;
-      }
-
-      return Boolean(document.querySelector(`input[type="radio"][name="${field.name}"]:checked`));
-    }
-
-    return Boolean(field.value.trim());
-  }
-
-  if (field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) {
-    return Boolean(String(field.value || '').trim());
-  }
-
-  return true;
-}
-
 function findCheckedPaymentOption(form) {
   return form.querySelector(`${PAYMENT_OPTION_SELECTOR}:checked`)
     || document.querySelector(`${PAYMENT_METHODS_SELECTOR} ${PAYMENT_OPTION_SELECTOR}:checked`)
@@ -173,41 +147,7 @@ function isCheckoutRefreshing() {
 }
 
 function updatePayButtonLoadingState(payButton) {
-  const spinner = payButton.querySelector('[data-opc-pay-spinner]');
-
-  if (spinner instanceof HTMLElement) {
-    spinner.classList.toggle('d-none', !isCheckoutRefreshing());
-  }
-}
-
-function hasSelectedCarrier() {
-  const deliveryMethods = document.querySelector(DELIVERY_METHODS_SELECTOR);
-  const deliveryOptions = document.querySelectorAll(DELIVERY_OPTION_SELECTOR);
-
-  if (!(deliveryMethods instanceof HTMLElement) || !isElementVisible(deliveryMethods)) {
-    return true;
-  }
-
-  if (deliveryOptions.length === 0) {
-    return false;
-  }
-
-  return Boolean(deliveryMethods.querySelector(`${DELIVERY_OPTION_SELECTOR}:checked`));
-}
-
-function hasSelectedPayment() {
-  const paymentContainer = getPaymentContainer();
-
-  if (!(paymentContainer instanceof HTMLElement) || !isElementVisible(paymentContainer)) {
-    return true;
-  }
-
-  const paymentRadios = paymentContainer.querySelectorAll(PAYMENT_OPTION_SELECTOR);
-  if (paymentRadios.length === 0) {
-    return false;
-  }
-
-  return Boolean(paymentContainer.querySelector(`${PAYMENT_OPTION_SELECTOR}:checked`));
+  updateButtonSpinner(payButton, '[data-opc-pay-spinner]', isCheckoutRefreshing());
 }
 
 function validateForm() {
@@ -218,32 +158,14 @@ function validateForm() {
     return;
   }
 
-  const formFieldsAreValid = Array.from(form.querySelectorAll('[required]'))
-    .filter((field) => !(field instanceof HTMLInputElement && field.matches(PAYMENT_CONDITIONS_SELECTOR)))
-    .every((field) => isRequiredFieldValid(field));
-  const conditionsAreValid = getConditionsToApproveInputs().every((input) => {
-    if (!(input instanceof HTMLInputElement) || !input.required) {
-      return true;
-    }
-
-    if (input.type === 'checkbox') {
-      return input.checked;
-    }
-
-    return Boolean(String(input.value || '').trim());
-  });
-  const isValid = formFieldsAreValid
-    && conditionsAreValid
-    && hasSelectedCarrier()
+  const isValid = !isFinalSubmitInFlight
     && !isCheckoutRefreshing()
-    && arePaymentMethodsReady()
-    && hasSelectedPayment();
+    && arePaymentMethodsReady();
 
   payButton.disabled = !isValid;
   updatePayButtonLoadingState(payButton);
 
-  // Once the customer has tried to submit, keep the invalid-field highlights in sync even
-  // while Pay stays disabled (e.g. empty required fields never reach validateNativeForm).
+  // Once the customer has tried to submit, keep native invalid-field highlights in sync.
   if (hasAttemptedSubmit) {
     markFieldsValidity(form);
   }
@@ -416,11 +338,17 @@ function markFieldsValidity(form) {
       return;
     }
 
+    if (element.dataset.opcFieldError === '1') {
+      element.classList.add('is-invalid');
+
+      return;
+    }
+
     element.classList.toggle('is-invalid', !element.checkValidity());
   });
 }
 
-function clearFieldValidityOnFix(event) {
+function clearStaleFieldError(event) {
   const element = event.target;
 
   if (!(element instanceof HTMLInputElement
@@ -429,17 +357,15 @@ function clearFieldValidityOnFix(event) {
     return;
   }
 
-  // Only clear the highlight as the user fixes a field; marking happens at submit time.
-  if (element.classList.contains('is-invalid') && element.checkValidity()) {
-    element.classList.remove('is-invalid');
-  }
+  clearFieldError(element);
+  clearValidationAlert();
 }
 
 function validateNativeForm(form) {
   markFieldsValidity(form);
 
   if (!form.checkValidity()) {
-    form.reportValidity();
+    reportFirstInvalidNativeField(form, isElementVisible);
 
     return false;
   }
@@ -503,6 +429,16 @@ function handleOpcSubmitFailure(response) {
   if (response && response.reload) {
     window.location.href = response.checkout_url || window.location.href;
 
+    return true;
+  }
+
+  const form = getCheckoutForm();
+  const fieldErrors = getFieldErrors(response);
+  if (form instanceof HTMLFormElement && renderFieldErrors(form, fieldErrors)) {
+    return true;
+  }
+
+  if (renderValidationAlert(getFieldErrorMessages(fieldErrors), form)) {
     return true;
   }
 
@@ -629,12 +565,13 @@ async function submitOpcPay(form) {
 
 function bindValidationListeners(form, payButton) {
   if (!form.dataset.opcSubmitInputBound) {
+    form.addEventListener('input', clearStaleFieldError);
     form.addEventListener('input', validateForm);
-    form.addEventListener('input', clearFieldValidityOnFix);
     form.dataset.opcSubmitInputBound = '1';
   }
 
   if (!form.dataset.opcSubmitChangeBound) {
+    form.addEventListener('change', clearStaleFieldError);
     form.addEventListener('change', validateForm);
     form.dataset.opcSubmitChangeBound = '1';
   }
@@ -658,6 +595,7 @@ function bindValidationListeners(form, payButton) {
       }
 
       hasAttemptedSubmit = true;
+
       submitOpcPay(form);
     });
     payButton.dataset.opcSubmitHandlerBound = '1';
