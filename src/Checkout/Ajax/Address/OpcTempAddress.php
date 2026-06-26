@@ -4,6 +4,8 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
 class OpcTempAddress
 {
+    public const TEMPORARY_ADDRESS_ALIAS_PREFIX = 'temp_opc_';
+
     private \Context $context;
     private int $tempInvoiceAddressId = 0;
     private int $originalInvoiceAddressId = 0;
@@ -111,7 +113,7 @@ class OpcTempAddress
             'id_country' => $idCountry,
             'id_state' => $idState,
             'id_customer' => (int) $this->context->customer->id,
-            'alias' => 'temp_opc_' . bin2hex(random_bytes(8)),
+            'alias' => self::TEMPORARY_ADDRESS_ALIAS_PREFIX . bin2hex(random_bytes(8)),
             'firstname' => '-',
             'lastname' => '-',
             'address1' => '-',

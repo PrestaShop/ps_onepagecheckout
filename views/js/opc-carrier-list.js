@@ -1,5 +1,6 @@
 import {CORE_EVENTS, OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
+import OPC_OPTION_LIST_STATE from './runtime/opc-option-list-state';
 import {
   AJAX_READY_STATE_DONE,
   AJAX_STATUS_ABORT,
@@ -34,6 +35,26 @@ const FAILED_EVENT_NAME = OPC_EVENTS.opcCarriersFailed;
 let selectedDeliveryAddressId = null;
 let fetchCarriersGeneration = 0;
 let activeFetchCarriersRequest = null;
+
+function setCarrierOptionsState(state) {
+  const container = document.querySelector(CONTAINER_SELECTOR);
+
+  if (container instanceof HTMLElement) {
+    container.dataset.opcCarriersState = state;
+  }
+}
+
+function refreshCarrierOptionsState() {
+  const container = document.querySelector(CONTAINER_SELECTOR);
+
+  if (!(container instanceof HTMLElement)) {
+    return;
+  }
+
+  container.dataset.opcCarriersState = container.querySelector(OPC_SELECTORS.inputs.deliveryOption)
+    ? OPC_OPTION_LIST_STATE.AVAILABLE
+    : OPC_OPTION_LIST_STATE.EMPTY;
+}
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -151,6 +172,7 @@ function fetchCarriers() {
   }
 
   $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierLoader.replace('#', '')));
+  setCarrierOptionsState(OPC_OPTION_LIST_STATE.LOADING);
   prestashop.emit(OPC_EVENTS.opcCarriersLoading, {});
 
   const request = $.get(carriersUrl);
@@ -165,12 +187,14 @@ function fetchCarriers() {
       if (!response || response.success === false) {
         const resp = normalizeErrorResponse(response, fallbackMessage);
         $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierError.replace('#', '')));
+        setCarrierOptionsState(OPC_OPTION_LIST_STATE.FAILED);
         prestashop.emit(FAILED_EVENT_NAME, {resp});
         prestashop.emit('handleError', {eventType: 'opcCarriers', resp});
         return;
       }
 
       $container.html(response.carriers_html || '');
+      refreshCarrierOptionsState();
       if (typeof response.id_address_delivery !== 'undefined') {
         if (response.id_address_delivery) {
           $container.attr('data-id-address', String(response.id_address_delivery));
@@ -207,6 +231,7 @@ function fetchCarriers() {
 
       const resp = getAjaxErrorResponse(jqXHR, fallbackMessage);
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierError.replace('#', '')));
+      setCarrierOptionsState(OPC_OPTION_LIST_STATE.FAILED);
       prestashop.emit(FAILED_EVENT_NAME, {resp});
       prestashop.emit('handleError', {eventType: 'opcCarriers', resp});
     })

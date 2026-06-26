@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CartPresenterHelper;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OnePageCheckoutCarriersHandler;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OpcTempAddress;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\TempAddressCarrierSelectionStorage;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\TempAddressStorage;
 use PrestaShop\PrestaShop\Adapter\Presenter\Cart\CartLazyArray;
@@ -307,7 +308,7 @@ class OpcCarriersHandlerAddressSyncIntegrationTest extends TestCase
     private function countTemporaryAddresses(): int
     {
         return (int) \Db::getInstance()->getValue(
-            'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'address` WHERE alias LIKE "temp_opc_%"'
+            'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'address` WHERE alias LIKE "' . OpcTempAddress::TEMPORARY_ADDRESS_ALIAS_PREFIX . '%"'
         );
     }
 

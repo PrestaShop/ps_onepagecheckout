@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Checkout\Ajax;
 
 use PHPUnit\Framework\TestCase;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OpcTempAddress;
 use Tests\Resources\DatabaseDump;
 use Tests\TestCase\SymfonyIntegrationTestCase;
 
@@ -129,7 +130,7 @@ class OpcSelectAddressControllerIntegrationTest extends SymfonyIntegrationTestCa
     private function countTemporaryAddresses(): int
     {
         return (int) \Db::getInstance()->getValue(
-            'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'address` WHERE alias LIKE "temp_opc_%"'
+            'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'address` WHERE alias LIKE "' . OpcTempAddress::TEMPORARY_ADDRESS_ALIAS_PREFIX . '%"'
         );
     }
 }

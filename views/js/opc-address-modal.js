@@ -83,6 +83,7 @@ const DELETE_CONFIRM_MODAL_ID = 'opc-delete-address-confirm-modal';
 const RESTORE_SELECTION_ID_ATTRIBUTE = 'data-opc-restore-address-id';
 const RESTORE_SELECTION_RADIO_NAME_ATTRIBUTE = 'data-opc-restore-radio-name';
 const SKIP_RESTORE_SELECTION_ATTRIBUTE = 'data-opc-skip-restore-selection';
+const MODAL_ACTIVE_DATA_KEY = 'opcModalActive';
 const ADDRESS_LIST_CONFIG = {
   delivery: {
     listSelector: OPC_SELECTORS.opc.deliveryList,
@@ -718,9 +719,9 @@ function refreshModalFields($modal, countryId, addressValues) {
       return;
     }
 
-    // Do not resurrect a modal the customer has already closed: its controls live inside the
-    // checkout form and re-enabling them would let a later checkout submit include them.
-    if (!$modal.hasClass('show')) {
+    // show.bs.modal fires before Bootstrap adds `.show`; keep applying responses while the
+    // modal is opening, but ignore late responses after it has been closed.
+    if (!$modal.hasClass('show') && !$modal.data(MODAL_ACTIVE_DATA_KEY)) {
       updateModalSaveState($modal);
 
       return;
@@ -1268,6 +1269,7 @@ $(document).on('show.bs.modal', MODAL_SELECTOR, (event) => {
   clearValidationErrors($modal);
   resetModalFields($modal);
   setModalFieldsDisabled($modal, false);
+  $modal.data(MODAL_ACTIVE_DATA_KEY, true);
   $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   $modal.data('opcRefreshPending', false);
   $modal.data('opcRefreshFailed', false);
@@ -1299,6 +1301,7 @@ $(document).on('hidden.bs.modal', MODAL_SELECTOR, (event) => {
   // resolves after close is already guarded by the generation + visibility checks).
   $modal.data('opcRefreshPending', false);
   $modal.data('opcRefreshFailed', false);
+  $modal.data(MODAL_ACTIVE_DATA_KEY, false);
   $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   setModalFieldsDisabled($modal, true);
   updateModalSaveState($modal);

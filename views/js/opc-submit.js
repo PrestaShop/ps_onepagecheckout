@@ -1,11 +1,12 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
+import OPC_OPTION_LIST_STATE from './runtime/opc-option-list-state';
 import {getConfiguredOpcUrl, normalizeErrorEventResponse, getConfiguredOpcMessage, updatePayAmount} from './runtime/opc-runtime';
 import {buildSelectAddressPayload} from './runtime/address/opc-address-context';
 import {updateButtonSpinner} from './runtime/form/opc-button-loader';
 import {clearFieldError, getFieldErrorMessages, getFieldErrors, renderFieldErrors} from './runtime/form/opc-field-errors';
 import {reportFirstInvalidNativeField} from './runtime/form/opc-native-validation';
-import {clearValidationAlert, renderValidationAlert} from './runtime/form/opc-validation-alert';
+import {clearSectionValidationAlert, clearValidationAlert, renderSectionValidationAlert, renderValidationAlert} from './runtime/form/opc-validation-alert';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -49,7 +50,13 @@ const CHECKOUT_FOOTER_SELECTOR = OPC_SELECTORS.opc.checkoutFooter;
 const USE_SAME_ADDRESS_SELECTOR = OPC_SELECTORS.opc.useSameAddress;
 const DELIVERY_OPTION_SELECTOR = OPC_SELECTORS.inputs.deliveryOption;
 const PAYMENT_OPTION_SELECTOR = OPC_SELECTORS.inputs.paymentOption;
+const DELIVERY_VALIDATION_ALERT_ID = 'opc-delivery-validation-alert';
+const PAYMENT_VALIDATION_ALERT_ID = 'opc-payment-validation-alert';
 const OPC_SUBMIT_URL_KEY = 'opcSubmit';
+const PAY_BUTTON_DISABLED_OPTION_LIST_STATES = [
+  OPC_OPTION_LIST_STATE.EMPTY,
+  OPC_OPTION_LIST_STATE.FAILED,
+];
 
 let billingToggleHandler = null;
 let addressState = 'idle';
@@ -136,14 +143,15 @@ function arePaymentMethodsReady() {
     return true;
   }
 
-  return paymentMethodsState !== 'loading' && paymentMethodsState !== 'failed';
+  return paymentMethodsState !== OPC_OPTION_LIST_STATE.LOADING
+    && paymentMethodsState !== OPC_OPTION_LIST_STATE.FAILED;
 }
 
 function isCheckoutRefreshing() {
-  return addressState === 'loading'
-    || carriersState === 'loading'
-    || carrierSelectionState === 'loading'
-    || paymentMethodsState === 'loading';
+  return addressState === OPC_OPTION_LIST_STATE.LOADING
+    || carriersState === OPC_OPTION_LIST_STATE.LOADING
+    || carrierSelectionState === OPC_OPTION_LIST_STATE.LOADING
+    || paymentMethodsState === OPC_OPTION_LIST_STATE.LOADING;
 }
 
 function updatePayButtonLoadingState(payButton) {
@@ -158,11 +166,24 @@ function validateForm() {
     return;
   }
 
+  const requiredTermsUnchecked = getConditionsToApproveInputs()
+    .some((input) => input instanceof HTMLInputElement
+      && input.required
+      && isElementVisible(input)
+      && !input.checked);
+  const carrierOptionsState = document.querySelector(OPC_SELECTORS.opc.deliveryMethods)?.dataset.opcCarriersState || '';
+  const paymentOptionsState = document.querySelector(PAYMENT_METHODS_SELECTOR)?.dataset.opcPaymentMethodsState || '';
+
   const isValid = !isFinalSubmitInFlight
     && !isCheckoutRefreshing()
-    && arePaymentMethodsReady();
+    && !PAY_BUTTON_DISABLED_OPTION_LIST_STATES.includes(carrierOptionsState)
+    && !PAY_BUTTON_DISABLED_OPTION_LIST_STATES.includes(paymentOptionsState)
+    && arePaymentMethodsReady()
+    && !requiredTermsUnchecked;
 
   payButton.disabled = !isValid;
+  payButton.classList.toggle('disabled', !isValid);
+
   updatePayButtonLoadingState(payButton);
 
   // Once the customer has tried to submit, keep native invalid-field highlights in sync.
@@ -197,7 +218,7 @@ function initBillingToggle() {
 
 function reportRequiredConditionsValidity() {
   for (const input of getConditionsToApproveInputs()) {
-    if (!(input instanceof HTMLInputElement) || !input.required) {
+    if (!(input instanceof HTMLInputElement) || !input.required || !isElementVisible(input)) {
       continue;
     }
 
@@ -211,6 +232,32 @@ function reportRequiredConditionsValidity() {
   }
 
   return true;
+}
+
+function resolveDeliverySelection() {
+  const deliveryContainer = document.querySelector(OPC_SELECTORS.opc.deliveryMethods);
+
+  if (!(deliveryContainer instanceof HTMLElement) || !isElementVisible(deliveryContainer)) {
+    return true;
+  }
+
+  const deliveryOptions = deliveryContainer.querySelectorAll(DELIVERY_OPTION_SELECTOR);
+  if (deliveryOptions.length === 0 || deliveryContainer.querySelector(`${DELIVERY_OPTION_SELECTOR}:checked`)) {
+    return true;
+  }
+
+  renderSectionValidationAlert(
+    [getConfiguredOpcMessage('missingCarrierSelection') || 'Please select a delivery method.'],
+    OPC_SELECTORS.opc.deliveryMethodTitle,
+    DELIVERY_VALIDATION_ALERT_ID
+  );
+
+  const firstDeliveryOption = deliveryOptions[0];
+  if (firstDeliveryOption instanceof HTMLInputElement) {
+    firstDeliveryOption.focus();
+  }
+
+  return false;
 }
 
 function resolvePaymentSelection(form) {
@@ -239,7 +286,12 @@ function resolvePaymentSelection(form) {
     };
   }
 
-  paymentContainer.scrollIntoView({block: 'center', behavior: 'smooth'});
+  renderSectionValidationAlert(
+    [getConfiguredOpcMessage('missingPaymentSelection') || 'Please select a payment method.'],
+    OPC_SELECTORS.opc.paymentMethodTitle,
+    PAYMENT_VALIDATION_ALERT_ID
+  );
+
   const firstPayment = paymentRadios[0];
   if (firstPayment instanceof HTMLInputElement) {
     firstPayment.focus();
@@ -391,6 +443,27 @@ function ensureSubmitPreconditions(form) {
   if (!arePaymentMethodsReady()) {
     validateForm();
 
+    return {
+      isValid: false,
+      paymentRadio: null,
+    };
+  }
+
+  const carrierOptionsState = document.querySelector(OPC_SELECTORS.opc.deliveryMethods)?.dataset.opcCarriersState || '';
+  const paymentOptionsState = document.querySelector(PAYMENT_METHODS_SELECTOR)?.dataset.opcPaymentMethodsState || '';
+  if (
+    PAY_BUTTON_DISABLED_OPTION_LIST_STATES.includes(carrierOptionsState)
+    || PAY_BUTTON_DISABLED_OPTION_LIST_STATES.includes(paymentOptionsState)
+  ) {
+    validateForm();
+
+    return {
+      isValid: false,
+      paymentRadio: null,
+    };
+  }
+
+  if (!resolveDeliverySelection()) {
     return {
       isValid: false,
       paymentRadio: null,
@@ -601,22 +674,6 @@ function bindValidationListeners(form, payButton) {
     payButton.dataset.opcSubmitHandlerBound = '1';
   }
 
-  // A disabled button fires no click, so the disabled Pay button is set to pointer-events:none
-  // and the click falls through to this wrapper. Run the same precondition feedback as a real
-  // submit so blockers outside #opc-form (unchecked terms, missing payment) are surfaced too,
-  // not just the empty required fields inside the form.
-  const payButtonWrapper = payButton.closest('.js-payment-confirmation') || payButton.parentElement;
-  if (payButtonWrapper instanceof HTMLElement && !payButtonWrapper.dataset.opcSubmitAttemptBound) {
-    payButtonWrapper.addEventListener('click', () => {
-      if (!payButton.disabled) {
-        return;
-      }
-
-      hasAttemptedSubmit = true;
-      ensureSubmitPreconditions(form);
-    });
-    payButtonWrapper.dataset.opcSubmitAttemptBound = '1';
-  }
 }
 
 function bindChangeValidationListeners(root, selector, datasetKey) {
@@ -633,7 +690,13 @@ function bindChangeValidationListeners(root, selector, datasetKey) {
       return;
     }
 
-    element.addEventListener('change', validateForm);
+    element.addEventListener('change', () => {
+      if (selector === PAYMENT_OPTION_SELECTOR) {
+        clearSectionValidationAlert(PAYMENT_VALIDATION_ALERT_ID);
+      }
+
+      validateForm();
+    });
     element.dataset[datasetKey] = '1';
   });
 }
@@ -695,11 +758,11 @@ $(document).ready(() => {
   };
 
   prestashop.on(OPC_EVENTS.opcPaymentMethodsLoading, () => {
-    paymentMethodsState = 'loading';
+    paymentMethodsState = OPC_OPTION_LIST_STATE.LOADING;
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcPaymentMethodsFailed, () => {
-    paymentMethodsState = 'failed';
+    paymentMethodsState = OPC_OPTION_LIST_STATE.FAILED;
     bindScopedValidationListeners(form);
     validateForm();
   });
@@ -714,7 +777,7 @@ $(document).ready(() => {
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcAddressesLoading, () => {
-    addressState = 'loading';
+    addressState = OPC_OPTION_LIST_STATE.LOADING;
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcAddressesUpdated, () => {
@@ -737,7 +800,7 @@ $(document).ready(() => {
   });
   prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
     carrierSelectionState = 'ready';
-    carriersState = 'loading';
+    carriersState = OPC_OPTION_LIST_STATE.LOADING;
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcCarriersUpdated, () => {
@@ -746,16 +809,17 @@ $(document).ready(() => {
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
-    carriersState = 'failed';
+    carriersState = OPC_OPTION_LIST_STATE.FAILED;
     bindScopedValidationListeners(form);
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcCarrierSelectionLoading, () => {
-    carrierSelectionState = 'loading';
+    carrierSelectionState = OPC_OPTION_LIST_STATE.LOADING;
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcCarrierSelected, () => {
     carrierSelectionState = 'ready';
+    clearSectionValidationAlert(DELIVERY_VALIDATION_ALERT_ID);
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcCarrierSelectionFailed, () => {

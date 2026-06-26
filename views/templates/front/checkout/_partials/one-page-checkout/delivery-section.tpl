@@ -17,7 +17,7 @@
  *}
 
 <section class="one-page-checkout__section js-opc-delivery-section">
-  <h2 class="one-page-checkout__title">{l s='Delivery method' d='Modules.Onepagecheckout.Shop'}</h2>
+  <h2 class="one-page-checkout__title" id="opc-delivery-section-title">{l s='Delivery method' d='Modules.Onepagecheckout.Shop'}</h2>
 
   <div id="delivery-options__hook">
     {if isset($hookDisplayBeforeCarrier)}
