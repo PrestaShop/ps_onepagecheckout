@@ -28,7 +28,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '0.6.0';
+        $this->version = '0.6.1';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -63,6 +63,7 @@ class Ps_Onepagecheckout extends Module
             'addresseslist',
             'states',
             'saveaddress',
+            'selectaddress',
             'deleteaddress',
             'carriers',
             'selectcarrier',
@@ -159,6 +160,7 @@ class Ps_Onepagecheckout extends Module
 
         $opcRuntimeConfiguration = [
             'enabled' => true,
+            'taxAddressType' => (string) Configuration::get('PS_TAX_ADDRESS_TYPE'),
             // Customers with no saved address yet (guests, and accounts created mid-checkout)
             // have no address persistence until final submit, so their typed address draft is
             // autosaved to a cookie. Once an address is saved, the saved-address flow takes over.
@@ -299,15 +301,26 @@ class Ps_Onepagecheckout extends Module
                     null,
                     true
                 ),
+                'selectAddress' => $this->context->link->getModuleLink(
+                    $this->name,
+                    'selectaddress',
+                    ['ajax' => 1, 'action' => 'opcSelectAddress'],
+                    null,
+                    null,
+                    null,
+                    true
+                ),
             ],
             'messages' => [
                 'missingGuestInitUrl' => $this->trans('Unable to initialize checkout customer.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingAddressFormUrl' => $this->trans('Unable to refresh addresses.', [], 'Modules.Onepagecheckout.Shop'),
                 'loadCarriersFailed' => $this->trans('Unable to load delivery methods.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingCarrierSelectionPayload' => $this->trans('Missing delivery option.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingCarrierSelection' => $this->trans('Please select a delivery method.', [], 'Modules.Onepagecheckout.Shop'),
                 'selectCarrierFailed' => $this->trans('Unable to select the delivery method.', [], 'Modules.Onepagecheckout.Shop'),
                 'loadPaymentMethodsFailed' => $this->trans('Unable to load payment methods.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingPaymentSelectionPayload' => $this->trans('Missing payment selection payload.', [], 'Modules.Onepagecheckout.Shop'),
+                'missingPaymentSelection' => $this->trans('Please select a payment method.', [], 'Modules.Onepagecheckout.Shop'),
                 'selectPaymentFailed' => $this->trans('Unable to select the payment method.', [], 'Modules.Onepagecheckout.Shop'),
                 'statesLoadFailed' => $this->trans('Unable to load states.', [], 'Modules.Onepagecheckout.Shop'),
                 'addressFieldsLoadFailed' => $this->trans('Unable to load address fields.', [], 'Modules.Onepagecheckout.Shop'),

@@ -93,10 +93,19 @@ class OnePageCheckoutForm extends \AbstractForm
             $params['email'] = $this->IDNConverter->emailToUtf8($params['email']);
         }
 
+        $selectedCountryField = $this->getField('id_country');
+        $selectedCountryId = $selectedCountryField ? (int) $selectedCountryField->getValue() : 0;
+
         // Rebuild delivery field rules from selected country (state/postcode requirements).
         if (isset($params['id_country'])) {
             $country = (int) $params['id_country'] !== (int) $this->formatter->getCountry()->id
                 ? new \Country((int) $params['id_country'], $this->language->id)
+                : $this->formatter->getCountry()
+            ;
+        } elseif ($selectedCountryId > 0) {
+            // Saved-address submits send address IDs only; keep the hydrated address country for validation.
+            $country = $selectedCountryId !== (int) $this->formatter->getCountry()->id
+                ? new \Country($selectedCountryId, $this->language->id)
                 : $this->formatter->getCountry()
             ;
         } elseif ($this->address) { // @phpstan-ignore elseif.alwaysTrue (defensive fallback when formatter country differs)

@@ -1,5 +1,6 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
+import {AJAX_STATUS_ABORT} from './runtime/opc-runtime';
 import {getConfiguredOpcMessage} from './runtime/opc-runtime';
 import {getConfiguredOpcUrl} from './runtime/opc-runtime';
 import {normalizeErrorEventResponse} from './runtime/opc-runtime';
@@ -383,8 +384,8 @@ function tryGuestInit() {
         });
       }
     })
-    .fail((resp) => {
-      if (resp && resp.statusText === 'abort') {
+    .fail((resp, textStatus) => {
+      if (textStatus === AJAX_STATUS_ABORT) {
         return;
       }
 

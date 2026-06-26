@@ -7,6 +7,7 @@ import {
   normalizeErrorEventResponse,
   setOpcRuntimePersistAddressDraft,
 } from './runtime/opc-runtime';
+import {updateButtonSpinner} from './runtime/form/opc-button-loader';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -36,8 +37,9 @@ const MODAL_COUNTRY_SELECTOR = MODAL_SCOPES.flatMap((modalSelector) => {
 const MODAL_FIELD_SELECTOR = MODAL_SCOPES.flatMap((modalSelector) => {
   return ['input', 'select', 'textarea'].map((fieldSelector) => `${modalSelector} ${fieldSelector}`);
 }).join(', ');
-const MODAL_FOOTER_SELECTOR = MODAL_SCOPES.map((modalSelector) => `${modalSelector} .modal-footer`).join(', ');
 const SAVE_ATTEMPTED_ATTRIBUTE = 'data-opc-save-attempted';
+const SAVE_SPINNER_SELECTOR = '[data-opc-address-save-spinner]';
+const FIELD_ERROR_ATTRIBUTE = 'data-opc-field-error';
 const URL_KEYS = {
   addressesList: 'addressesList',
   addressModal: 'addressModal',
@@ -81,6 +83,7 @@ const DELETE_CONFIRM_MODAL_ID = 'opc-delete-address-confirm-modal';
 const RESTORE_SELECTION_ID_ATTRIBUTE = 'data-opc-restore-address-id';
 const RESTORE_SELECTION_RADIO_NAME_ATTRIBUTE = 'data-opc-restore-radio-name';
 const SKIP_RESTORE_SELECTION_ATTRIBUTE = 'data-opc-skip-restore-selection';
+const MODAL_ACTIVE_DATA_KEY = 'opcModalActive';
 const ADDRESS_LIST_CONFIG = {
   delivery: {
     listSelector: OPC_SELECTORS.opc.deliveryList,
@@ -376,6 +379,7 @@ function resetModalFields($modal) {
 function clearValidationErrors($modal) {
   $modal.find(`.${FIELD_ERROR_CLASS}`).remove();
   $modal.find(`.${GLOBAL_ERROR_CLASS}`).remove();
+  $modal.find(`[${FIELD_ERROR_ATTRIBUTE}="1"]`).removeAttr(FIELD_ERROR_ATTRIBUTE);
   $modal.find('.is-invalid').removeClass('is-invalid');
 }
 
@@ -411,7 +415,7 @@ function isModalFieldValid(field) {
   // checkValidity() ignores minLength/maxLength for values set programmatically (e.g. restored
   // after a country re-render), because the HTML "dirty value" flag is only set by user typing.
   // Enforce them manually so a value that is too short/long for the newly selected country
-  // disables Save immediately, instead of only after a failed save round-trip.
+  // reports the same error before any failed save round-trip.
   const value = String(field.value || '');
   if (value !== '') {
     const minLength = parseInt(field.getAttribute('minlength') || '', 10);
@@ -445,9 +449,17 @@ function isModalRefreshFailed($modal) {
   return Boolean($modal.data('opcRefreshFailed'));
 }
 
-// Mirrors the guest "Pay" form (markFieldsValidity): flag invalid fields with `is-invalid` so
-// the customer sees which fields block Save. Uses the same validity rule as the Save gate
-// (including the manual minLength/maxLength check), so highlights match why Save is disabled.
+function isModalSavePending($modal) {
+  return Boolean($modal.data('opcSavePending'));
+}
+
+function setModalSaveButtonsState($buttons, disabled, loading) {
+  $buttons.prop('disabled', disabled);
+  $buttons.each((_, button) => updateButtonSpinner(button, SAVE_SPINNER_SELECTOR, loading));
+}
+
+// Mirrors the guest "Pay" form: flag invalid fields with `is-invalid` so
+// the customer sees which fields block Save before the backend request.
 function markModalFieldsValidity($modal) {
   $modal.find('input, select, textarea').each((_, field) => {
     if (
@@ -461,6 +473,13 @@ function markModalFieldsValidity($modal) {
     const $field = $(field);
     if (field.disabled || !isVisibleModalField(field)) {
       $field.removeClass('is-invalid');
+      $field.removeAttr(FIELD_ERROR_ATTRIBUTE);
+
+      return;
+    }
+
+    if ($field.attr(FIELD_ERROR_ATTRIBUTE) === '1') {
+      $field.addClass('is-invalid');
 
       return;
     }
@@ -502,17 +521,16 @@ function updateModalSaveState($modal) {
   const modalElement = $modal.get(0);
   const isOpen = modalElement instanceof HTMLElement && $modal.hasClass('show');
   if (!isOpen) {
-    $saveButtons.prop('disabled', true);
+    setModalSaveButtonsState($saveButtons, true, false);
 
     return;
   }
 
-  // Keep Save unavailable while a country re-render is in flight or has failed, so the customer
-  // cannot submit against a field set that does not match the selected country.
-  const isValid = !isModalRefreshPending($modal)
-    && !isModalRefreshFailed($modal)
-    && isModalFormValid($modal);
-  $saveButtons.prop('disabled', !isValid);
+  // Keep Save unavailable only while the modal cannot safely submit.
+  // Field errors are shown on click, before the backend request.
+  const isLoading = isModalSavePending($modal);
+  const isBlocked = isLoading || isModalRefreshPending($modal) || isModalRefreshFailed($modal);
+  setModalSaveButtonsState($saveButtons, isBlocked, isLoading);
 
   // After a save attempt, keep the invalid-field highlights in sync as the customer edits.
   if ($modal.attr(SAVE_ATTEMPTED_ATTRIBUTE) === '1') {
@@ -701,9 +719,9 @@ function refreshModalFields($modal, countryId, addressValues) {
       return;
     }
 
-    // Do not resurrect a modal the customer has already closed: its controls live inside the
-    // checkout form and re-enabling them would let a later checkout submit include them.
-    if (!$modal.hasClass('show')) {
+    // show.bs.modal fires before Bootstrap adds `.show`; keep applying responses while the
+    // modal is opening, but ignore late responses after it has been closed.
+    if (!$modal.hasClass('show') && !$modal.data(MODAL_ACTIVE_DATA_KEY)) {
       updateModalSaveState($modal);
 
       return;
@@ -763,6 +781,7 @@ function appendFieldError($field, message) {
   }
 
   $field.addClass('is-invalid');
+  $field.attr(FIELD_ERROR_ATTRIBUTE, '1');
 
   const $target = $field.closest('.form-group').length ? $field.closest('.form-group') : $field.parent();
   $target.append($('<div>', {
@@ -1151,10 +1170,15 @@ function refreshAddressLists(options = {}) {
   };
 
   if (!addressesListUrl) {
-    return refreshAddressesSection(options);
+    prestashop.emit(OPC_EVENTS.opcAddressesLoading, {listTypes});
+
+    return refreshAddressesSection(options)
+      .done((response) => prestashop.emit(OPC_EVENTS.opcAddressesUpdated, response))
+      .fail((jqXHR) => prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON));
   }
 
   renderAddressListsLoadingState(listTypes);
+  prestashop.emit(OPC_EVENTS.opcAddressesLoading, {listTypes});
 
   return $.post(addressesListUrl)
     .then((response) => {
@@ -1165,6 +1189,7 @@ function refreshAddressLists(options = {}) {
       if (!response || response.success === false || typeof response.address_count === 'undefined') {
         renderAddressListsErrorState(listTypes);
         emitHandleError('opcAddressesList', response, fallbackMessage);
+        prestashop.emit(OPC_EVENTS.opcAddressesFailed, response);
 
         return response;
       }
@@ -1176,11 +1201,14 @@ function refreshAddressLists(options = {}) {
       setOpcRuntimePersistAddressDraft(addressCount <= 0);
 
       if (addressCount <= 0) {
-        return refreshAddressesSection(options);
+        return refreshAddressesSection(options)
+          .done((sectionResponse) => prestashop.emit(OPC_EVENTS.opcAddressesUpdated, sectionResponse || response))
+          .fail((jqXHR) => prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON));
       }
 
       pendingAddressListRefreshOptions = null;
       applyAddressListsResponse(response, options);
+      prestashop.emit(OPC_EVENTS.opcAddressesUpdated, response);
 
       return response;
     })
@@ -1191,6 +1219,7 @@ function refreshAddressLists(options = {}) {
 
       renderAddressListsErrorState(listTypes);
       emitHandleError('opcAddressesList', jqXHR && jqXHR.responseJSON, fallbackMessage);
+      prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON);
     });
 }
 
@@ -1240,6 +1269,7 @@ $(document).on('show.bs.modal', MODAL_SELECTOR, (event) => {
   clearValidationErrors($modal);
   resetModalFields($modal);
   setModalFieldsDisabled($modal, false);
+  $modal.data(MODAL_ACTIVE_DATA_KEY, true);
   $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   $modal.data('opcRefreshPending', false);
   $modal.data('opcRefreshFailed', false);
@@ -1271,6 +1301,7 @@ $(document).on('hidden.bs.modal', MODAL_SELECTOR, (event) => {
   // resolves after close is already guarded by the generation + visibility checks).
   $modal.data('opcRefreshPending', false);
   $modal.data('opcRefreshFailed', false);
+  $modal.data(MODAL_ACTIVE_DATA_KEY, false);
   $modal.removeAttr(SAVE_ATTEMPTED_ATTRIBUTE);
   setModalFieldsDisabled($modal, true);
   updateModalSaveState($modal);
@@ -1348,27 +1379,8 @@ $(document).on('click', '[data-opc-action="retry-addresses"]', (event) => {
   refreshAddressLists(pendingAddressListRefreshOptions || {});
 });
 
-// The disabled Save button has pointer-events:none (see SCSS), so a click on it falls through
-// to the footer. Mirror the guest "Pay" form: surface which fields are invalid instead of doing
-// nothing, so the customer learns why Save is unavailable.
-$(document).on('click', MODAL_FOOTER_SELECTOR, (event) => {
-  const $modal = $(event.currentTarget).closest(MODAL_SELECTOR);
-  const $button = $modal.find(SAVE_SELECTOR).first();
-
-  if (!$button.length || !$button.prop('disabled')) {
-    return;
-  }
-
-  $modal.attr(SAVE_ATTEMPTED_ATTRIBUTE, '1');
-  markModalFieldsValidity($modal);
-  reportModalFirstInvalidField($modal);
-});
-
 $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
   event.preventDefault();
-  // Stop the click from also reaching the footer pass-through handler (only meant for the
-  // disabled button, which has pointer-events:none).
-  event.stopPropagation();
 
   const saveAddressUrl = getConfiguredOpcUrl(URL_KEYS.saveAddress);
   const $button = $(event.currentTarget);
@@ -1401,13 +1413,12 @@ $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
     return;
   }
 
-  const initialText = String($button.attr('data-text') || $button.text());
-  const loadingText = String($button.attr('data-loading-text') || initialText);
   const payload = serializeModalFields($modal);
   const payloadParams = new URLSearchParams(payload);
   const addressType = String(payloadParams.get('address_type') || ($modal.is('#modal-invoice') ? 'invoice' : 'delivery'));
 
-  $button.prop('disabled', true).text(loadingText);
+  $modal.data('opcSavePending', true);
+  updateModalSaveState($modal);
 
   $.post(saveAddressUrl, payload)
     .done((response) => {
@@ -1442,7 +1453,8 @@ $(document).on('click', MODAL_SAVE_SELECTOR, (event) => {
       );
     })
     .always(() => {
-      $button.prop('disabled', false).text(initialText);
+      $modal.data('opcSavePending', false);
+      updateModalSaveState($modal);
     });
 });
 

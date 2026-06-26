@@ -16,7 +16,7 @@
  *}
 
 <section class="one-page-checkout__section js-opc-payment-section">
-  <h2 class="one-page-checkout__title">{l s='Payment method' d='Modules.Onepagecheckout.Shop'}</h2>
+  <h2 class="one-page-checkout__title" id="opc-payment-section-title">{l s='Payment method' d='Modules.Onepagecheckout.Shop'}</h2>
 
   {hook h='displayPaymentTop'}
 

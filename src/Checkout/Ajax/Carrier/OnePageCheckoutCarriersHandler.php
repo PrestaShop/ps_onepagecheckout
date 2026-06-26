@@ -59,9 +59,16 @@ class OnePageCheckoutCarriersHandler
                 }
 
                 $this->context->cart->id_address_delivery = $requestedAddressId;
+                if (
+                    array_key_exists('use_same_address', $requestParameters)
+                    && (string) $requestParameters['use_same_address'] === '1'
+                ) {
+                    $this->context->cart->id_address_invoice = $requestedAddressId;
+                }
                 $this->context->cart->save();
                 $this->tempCarrierSelectionStorage->clear();
                 $this->tempAddressStorage->clear();
+                $this->applyTemporaryInlineInvoiceAddress($tempAddress, $requestParameters);
             } else {
                 $tempAddressId = $tempAddress->createFromRequest($requestParameters);
                 if ($tempAddressId > 0 && $originalAddressId <= 0) {
@@ -127,9 +134,7 @@ class OnePageCheckoutCarriersHandler
                 'totals' => $cartPreview['totals'],
             ];
         } finally {
-            if ($tempAddressId > 0) {
-                $tempAddress->cleanup($tempAddressId, $originalAddressId);
-            }
+            $tempAddress->cleanup($tempAddressId, $originalAddressId);
         }
     }
 
@@ -145,5 +150,38 @@ class OnePageCheckoutCarriersHandler
         }
 
         return \Customer::customerHasAddress($customerId, $addressId);
+    }
+
+    /**
+     * Edge case: with exactly one saved address, delivery is selected from the saved list while
+     * separate billing is rendered as inline fields. There is no saved invoice address id yet, but
+     * invoice-based carrier totals must still be computed from the inline billing country.
+     *
+     * @param array<string,mixed> $requestParameters
+     */
+    private function applyTemporaryInlineInvoiceAddress(OpcTempAddress $tempAddress, array $requestParameters): void
+    {
+        if ((string) ($requestParameters['use_same_address'] ?? '1') !== '0') {
+            return;
+        }
+
+        if (!empty($requestParameters['id_address_invoice'])) {
+            return;
+        }
+
+        if ((int) ($requestParameters['invoice_id_country'] ?? 0) <= 0) {
+            return;
+        }
+
+        $tempAddress->createFromRequest(
+            [
+                'use_same_address' => '0',
+                'invoice_id_country' => $requestParameters['invoice_id_country'],
+                'invoice_id_state' => $requestParameters['invoice_id_state'] ?? 0,
+                'invoice_postcode' => $requestParameters['invoice_postcode'] ?? '',
+                'invoice_city' => $requestParameters['invoice_city'] ?? '',
+            ],
+            true
+        );
     }
 }

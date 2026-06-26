@@ -90,9 +90,11 @@ class OpcAddressModalSpe54ContractTest extends TestCase
     {
         $script = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/js/opc-address-modal.js');
 
-        // Mirror the guest Pay form: clicking the disabled Save button (which has pointer-events:none)
-        // falls through to the footer and surfaces field validation feedback.
-        self::assertStringContainsString("$(document).on('click', MODAL_FOOTER_SELECTOR", $script);
+        // Mirror the guest Pay form: Save remains clickable for field validation, and is disabled
+        // only while the modal cannot safely submit.
+        self::assertStringNotContainsString("$(document).on('click', MODAL_FOOTER_SELECTOR", $script);
+        self::assertStringContainsString('setModalSaveButtonsState($saveButtons, isBlocked, isLoading);', $script);
+        self::assertStringContainsString('const isBlocked = isLoading || isModalRefreshPending($modal) || isModalRefreshFailed($modal);', $script);
         self::assertStringContainsString('function markModalFieldsValidity(', $script);
         self::assertStringContainsString('function reportModalFirstInvalidField(', $script);
         self::assertStringContainsString("toggleClass('is-invalid'", $script);
@@ -101,9 +103,7 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         // notification instead of posting.
         self::assertStringContainsString('if (!isModalFormValid($modal)) {', $script);
         self::assertStringContainsString('addressFieldsInvalid', $script);
-
-        $scss = (string) file_get_contents(_PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/views/scss/one-page-checkout.scss');
-        self::assertStringContainsString('#submit-address-modal:disabled', $scss);
-        self::assertStringContainsString('pointer-events: none;', $scss);
+        self::assertStringContainsString("\$modal.data('opcSavePending', true);", $script);
+        self::assertStringContainsString("\$modal.data('opcSavePending', false);", $script);
     }
 }

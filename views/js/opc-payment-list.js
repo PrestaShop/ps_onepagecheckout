@@ -1,6 +1,13 @@
 import {CORE_EVENTS, OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
+import OPC_OPTION_LIST_STATE from './runtime/opc-option-list-state';
 import {getAjaxErrorResponse, getConfiguredOpcMessage, getConfiguredOpcUrl, normalizeErrorResponse} from './runtime/opc-runtime';
+import {
+  collectVisibleAddressContext,
+  getUseSameAddressValue,
+  getSelectedOrInlineAddressId,
+  INVOICE_ADDRESS_CONTEXT_FIELDS,
+} from './runtime/address/opc-address-context';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -19,6 +26,26 @@ const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const URL_KEY = 'paymentMethods';
 let fetchGeneration = 0;
 let lastFetchedPaymentListDom = null;
+
+function setPaymentOptionsState(state) {
+  const container = document.querySelector(CONTAINER_SELECTOR);
+
+  if (container instanceof HTMLElement) {
+    container.dataset.opcPaymentMethodsState = state;
+  }
+}
+
+function refreshPaymentOptionsState() {
+  const container = document.querySelector(CONTAINER_SELECTOR);
+
+  if (!(container instanceof HTMLElement)) {
+    return;
+  }
+
+  container.dataset.opcPaymentMethodsState = container.querySelector(OPC_SELECTORS.inputs.paymentOption)
+    ? OPC_OPTION_LIST_STATE.AVAILABLE
+    : OPC_OPTION_LIST_STATE.EMPTY;
+}
 
 function getTemplateHtml(templateId) {
   const template = document.querySelector(`#${templateId}`);
@@ -46,19 +73,6 @@ function hasSelectedCarrier() {
   );
 }
 
-function getSelectedSavedAddressId(listSelector, radioName) {
-  const selectedRadio = document.querySelector(
-    `${listSelector} ${OPC_SELECTORS.opc.addressRadio}[name="${radioName}"]:checked`
-  );
-  const selectedAddressId = selectedRadio ? String(selectedRadio.getAttribute('value') || '') : '';
-
-  if (!selectedAddressId || selectedAddressId === 'new_address') {
-    return '';
-  }
-
-  return selectedAddressId;
-}
-
 function getLoaderOverlay() {
   return document.getElementById('opc-payment-methods-loader');
 }
@@ -68,9 +82,15 @@ function showLoader() {
   if (!overlay) {
     return;
   }
+
+  const wasHidden = overlay.classList.contains('d-none');
   overlay.classList.remove('d-none');
   overlay.setAttribute('aria-hidden', 'false');
-  prestashop.emit(OPC_EVENTS.opcPaymentMethodsLoading, {});
+
+  if (wasHidden) {
+    setPaymentOptionsState(OPC_OPTION_LIST_STATE.LOADING);
+    prestashop.emit(OPC_EVENTS.opcPaymentMethodsLoading, {});
+  }
 }
 
 function hideLoader() {
@@ -93,13 +113,26 @@ function buildPaymentMethodsUrl(baseUrl) {
   const idCountry = form.querySelector('[name="id_country"]')?.value
     || form.querySelector('[name="delivery_id_country"]')?.value
     || '';
-  const invoiceIdCountry = form.querySelector('[name="invoice_id_country"]')?.value || '';
-  const deliveryAddressId = getSelectedSavedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
-    || form.querySelector('[name="id_address_delivery"]')?.value
-    || '';
-  const invoiceAddressId = getSelectedSavedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
-    || form.querySelector('[name="id_address_invoice"]')?.value
-    || '';
+  const useSameAddress = getUseSameAddressValue();
+  const invoiceContext = useSameAddress === '0'
+    ? collectVisibleAddressContext(form, OPC_SELECTORS.opc.billingFields, INVOICE_ADDRESS_CONTEXT_FIELDS)
+    : {};
+  const invoiceIdCountry = invoiceContext.invoice_id_country || '';
+  const deliveryAddressId = getSelectedOrInlineAddressId(
+    OPC_SELECTORS.opc.deliveryList,
+    OPC_SELECTORS.opc.deliveryFields,
+    'id_address_delivery'
+  );
+  // When billing mirrors delivery ("use same address"), the billing radio/hidden field is not
+  // re-rendered on a delivery change and would carry a stale invoice address. Mirror delivery
+  // explicitly so country-restricted payment methods are evaluated against the right address.
+  const invoiceAddressId = useSameAddress === '1'
+    ? deliveryAddressId
+    : getSelectedOrInlineAddressId(
+      OPC_SELECTORS.opc.billingList,
+      OPC_SELECTORS.opc.billingFields,
+      'id_address_invoice'
+    );
 
   if (idCountry) {
     url.searchParams.set('id_country', idCountry);
@@ -126,6 +159,7 @@ function fetchPaymentMethods() {
   const fallbackMessage = getConfiguredOpcMessage('loadPaymentMethodsFailed', 'Unable to load payment methods.');
 
   if (!$container.length || !paymentMethodsUrl) {
+    hideLoader();
     return;
   }
 
@@ -143,6 +177,7 @@ function fetchPaymentMethods() {
         $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
         lastFetchedPaymentListDom = null;
         hideLoader();
+        setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
         prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
 
@@ -154,8 +189,10 @@ function fetchPaymentMethods() {
       if (lastFetchedPaymentListDom !== responsePaymentHtml) {
         $container.html(responsePaymentHtml);
         lastFetchedPaymentListDom = responsePaymentHtml;
+        refreshPaymentOptionsState();
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsUpdated, response);
       } else {
+        refreshPaymentOptionsState();
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsRefreshed, response);
       }
 
@@ -170,6 +207,7 @@ function fetchPaymentMethods() {
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
       lastFetchedPaymentListDom = null;
       hideLoader();
+      setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
     });
@@ -188,8 +226,6 @@ prestashop.on(OPC_EVENTS.opcCarriersUpdated, () => {
     fetchPaymentMethods();
   }
 });
-prestashop.on(OPC_EVENTS.opcBillingAddressSelected, fetchPaymentMethods);
-prestashop.on(OPC_EVENTS.opcBillingAddressUpdated, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcGuestInitSuccess, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcPaymentMethodsRetry, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
@@ -204,6 +240,7 @@ prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
   if ($container.length) {
     $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
     lastFetchedPaymentListDom = null;
+    setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
   }
   hideLoader();
 

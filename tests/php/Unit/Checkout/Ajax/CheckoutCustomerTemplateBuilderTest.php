@@ -7,6 +7,7 @@ namespace Tests\Unit\Checkout\Ajax;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerContextResolver;
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\CheckoutCustomerTemplateBuilder;
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\OpcTempAddress;
 use Tests\Fixtures\CheckoutTestFixtures;
 
 class CheckoutCustomerTemplateBuilderTest extends TestCase
@@ -159,6 +160,43 @@ class CheckoutCustomerTemplateBuilderTest extends TestCase
                     'id_address' => 15,
                     'alias' => 'Legacy address',
                     'id' => 15,
+                ],
+            ],
+            $result['addresses']
+        );
+    }
+
+    public function testItFiltersTemporaryAddressesFromTheTemplatePayload(): void
+    {
+        $customer = CheckoutTestFixtures::customer(
+            [
+                [
+                    'id' => 10,
+                    'alias' => 'Home',
+                ],
+                [
+                    'id' => 11,
+                    'alias' => OpcTempAddress::TEMPORARY_ADDRESS_ALIAS_PREFIX . 'deadbeef',
+                ],
+            ],
+            true,
+            false
+        );
+        $context = CheckoutTestFixtures::context([
+            'language' => CheckoutTestFixtures::language(1),
+            'customer' => $customer,
+        ]);
+
+        $resolver = $this->createMock(CheckoutCustomerContextResolver::class);
+        $resolver->method('resolve')->willReturn($customer);
+
+        $result = $this->createBuilder($context, $resolver)->build();
+
+        self::assertSame(
+            [
+                [
+                    'id' => 10,
+                    'alias' => 'Home',
                 ],
             ],
             $result['addresses']

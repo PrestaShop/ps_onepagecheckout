@@ -1,6 +1,9 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
+import {collectBillingAddressContext} from './runtime/address/opc-address-context';
 import {
+  AJAX_READY_STATE_DONE,
+  AJAX_STATUS_ABORT,
   getAjaxErrorEventResponse,
   getConfiguredOpcMessage,
   getConfiguredOpcUrl,
@@ -28,6 +31,7 @@ const DELIVERY_ADDRESS_SECTION_SELECTOR = OPC_SELECTORS.opc.deliverySection;
 const DELIVERY_OPTION_SELECTOR = '.js-delivery-option';
 const CONFIRMED_DELIVERY_OPTION_ATTRIBUTE = 'data-confirmed-delivery-option';
 let selectCarrierGeneration = 0;
+let activeSelectCarrierRequest = null;
 
 function getDeliveryAddressSection() {
   return document.querySelector(DELIVERY_ADDRESS_SECTION_SELECTOR);
@@ -41,7 +45,7 @@ function collectAddressFields() {
 
   const scope = getDeliveryAddressSection() || form;
 
-  return ['id_country', 'postcode', 'id_state', 'city'].reduce((payload, field) => {
+  const payload = ['id_country', 'postcode', 'id_state', 'city'].reduce((payload, field) => {
     const direct = scope.querySelector(`[name="${field}"]`);
     const prefixed = scope.querySelector(`[name="delivery_${field}"]`);
     const value = ((direct && direct.value) || (prefixed && prefixed.value) || '').trim();
@@ -55,6 +59,8 @@ function collectAddressFields() {
       [field]: value,
     };
   }, {});
+
+  return payload;
 }
 
 function findDeliveryOptionRadio($container, deliveryOption) {
@@ -105,13 +111,23 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
     return;
   }
 
+  const form = document.querySelector(CHECKOUT_FORM_SELECTOR);
   const payload = {
     delivery_option: deliveryOption,
+    ...collectBillingAddressContext(form),
     ...($container.attr('data-id-address') ? {} : collectAddressFields()),
   };
   const generation = ++selectCarrierGeneration;
+  if (activeSelectCarrierRequest && activeSelectCarrierRequest.readyState !== AJAX_READY_STATE_DONE) {
+    activeSelectCarrierRequest.abort();
+  }
 
-  $.post(selectCarrierUrl, payload)
+  prestashop.emit(OPC_EVENTS.opcCarrierSelectionLoading, {});
+
+  const request = $.post(selectCarrierUrl, payload);
+  activeSelectCarrierRequest = request;
+
+  request
     .done((response) => {
       if (generation !== selectCarrierGeneration) {
         return;
@@ -119,6 +135,7 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
 
       if (!response || response.success === false) {
         restoreConfirmedDeliveryOption($container);
+        prestashop.emit(OPC_EVENTS.opcCarrierSelectionFailed, {});
         prestashop.emit('handleError', {
           eventType: 'opcSelectCarrier',
           resp: normalizeErrorEventResponse(response, selectionFailedMessage),
@@ -141,16 +158,30 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
         response,
       });
     })
-    .fail((jqXHR) => {
+    .fail((jqXHR, textStatus) => {
       if (generation !== selectCarrierGeneration) {
         return;
       }
 
+      if (textStatus === AJAX_STATUS_ABORT) {
+        return;
+      }
+
       restoreConfirmedDeliveryOption($container);
+      prestashop.emit(OPC_EVENTS.opcCarrierSelectionFailed, {});
       prestashop.emit('handleError', {
         eventType: 'opcSelectCarrier',
         resp: getAjaxErrorEventResponse(jqXHR, selectionFailedMessage),
       });
+    })
+    .always(() => {
+      if (activeSelectCarrierRequest === request) {
+        activeSelectCarrierRequest = null;
+      }
     });
+});
+
+prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
+  selectCarrierGeneration += 1;
 });
 }());

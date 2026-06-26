@@ -206,6 +206,14 @@
         <source>Please accept the terms of service.</source>
         <target>Veuillez accepter les conditions générales de vente.</target>
       </trans-unit>
+      <trans-unit id="301600ed849201b73f53f828fcc6fdfd">
+        <source>Please correct the highlighted address fields.</source>
+        <target>Veuillez corriger les champs d’adresse en surbrillance.</target>
+      </trans-unit>
+      <trans-unit id="898e86c98d478a49b76c60b2d65266c0">
+        <source>Please select a delivery method.</source>
+        <target>Veuillez sélectionner un mode de livraison.</target>
+      </trans-unit>
       <trans-unit id="7c35f5beee619d9244ee3f3d7acfed6b">
         <source>Please select a payment method.</source>
         <target>Veuillez sélectionner un moyen de paiement.</target>
@@ -249,6 +257,10 @@
       <trans-unit id="39a762ed88fa8f4b4cc0d3edfd5e865b">
         <source>Unable to initialize the selected payment method.</source>
         <target>Impossible d'initialiser le moyen de paiement sélectionné.</target>
+      </trans-unit>
+      <trans-unit id="7b62f44e0c590071478b90b31e22e456">
+        <source>Unable to load address fields.</source>
+        <target>Impossible de charger les champs d’adresse.</target>
       </trans-unit>
       <trans-unit id="423c3d9a7feb297656d8abdbe59cb7d1">
         <source>Unable to load delivery methods.</source>
