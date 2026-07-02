@@ -984,12 +984,19 @@ prestashop.on(OPC_EVENTS.opcAddressPersisted, (response) => {
   // keep the flag armed so the eventual valid persist is the one that refreshes.
   const persisted = Boolean(response && response.address_persisted);
 
-  if (virtualCountryChangePendingPersist && persisted) {
+  // Disarm each defer only when the persist covers ITS address type (the response carries the
+  // persisted ids). An INTERMEDIATE autosave can legitimately persist only the OTHER type — e.g.
+  // during a billing FR -> US change, a debounced save fires before the US state is picked: the
+  // invoice is incomplete (skipped) but the delivery persists, so address_persisted is true.
+  // Disarming on that save would consume the single deferred refresh against the STALE invoice
+  // country, and the eventual valid persist would never trigger one (the module keeps reading the
+  // old country until an unrelated refresh).
+  if (virtualCountryChangePendingPersist && persisted && Number(response && response.id_address_delivery) > 0) {
     virtualCountryChangePendingPersist = false;
     refreshAfterVirtualDeliveryAddressChange();
   }
 
-  if (billingCountryChangePendingPersist && persisted) {
+  if (billingCountryChangePendingPersist && persisted && Number(response && response.id_address_invoice) > 0) {
     billingCountryChangePendingPersist = false;
     refreshAfterBillingAddressChange();
   }
