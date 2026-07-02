@@ -76,7 +76,15 @@ class OnePageCheckoutAddressFormHandler
             }
         }
 
-        if (!isset($requestParameters['invoice_id_country']) && !isset($requestParameters['id_address_invoice'])) {
+        // Invoice anchor: only meaningful when a SEPARATE billing form is rendered (use_same off)
+        // and the request carries no invoice context. With use_same on the invoice mirrors the
+        // delivery, and anchoring it would both waste an address load on hot re-renders (inline
+        // country changes) and pin the formatter's invoice country to a stale cart pointer.
+        if (
+            (string) ($requestParameters['use_same_address'] ?? '1') === '0'
+            && !isset($requestParameters['invoice_id_country'])
+            && !isset($requestParameters['id_address_invoice'])
+        ) {
             $cartInvoiceAddress = $this->loadOwnedAddress((int) ($this->context->cart->id_address_invoice ?? 0));
             if ($cartInvoiceAddress instanceof \Address && (int) $cartInvoiceAddress->id_country > 0) {
                 $this->opcForm->fillWith(['invoice_id_country' => (int) $cartInvoiceAddress->id_country]);
