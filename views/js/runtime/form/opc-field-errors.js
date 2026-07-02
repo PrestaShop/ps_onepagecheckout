@@ -87,8 +87,30 @@ export function clearFieldError(field) {
 
   if (field.dataset.opcFieldError === '1') {
     field.classList.remove('is-invalid');
+    field.removeAttribute('aria-invalid');
     delete field.dataset.opcFieldError;
+    delete field.dataset.opcFieldErrorValue;
   }
+}
+
+// The buyer edited a field after its error rendered (its value moved from the snapshot taken at
+// render time): that fix is unverifiable on an inconclusive response, so give it the benefit of
+// the doubt — the next conclusive verdict re-renders the truth if the fix was wrong. Untouched
+// fields keep their (still accurate) errors.
+export function clearEditedFieldErrors(root) {
+  if (!(root instanceof HTMLElement)) {
+    return;
+  }
+
+  root.querySelectorAll('[data-opc-field-error="1"]').forEach((field) => {
+    // No snapshot = the error was flagged by another renderer (address modal, guest email), whose
+    // own lifecycle manages it: without a render-time value there is no "edited since" to detect.
+    if (isFormControl(field)
+      && field.dataset.opcFieldErrorValue !== undefined
+      && field.value !== field.dataset.opcFieldErrorValue) {
+      clearFieldError(field);
+    }
+  });
 }
 
 function clearFieldErrors(root) {
@@ -99,7 +121,7 @@ function clearFieldErrors(root) {
   root.querySelectorAll('[data-opc-field-error="1"]').forEach((field) => clearFieldError(field));
 }
 
-export function renderFieldErrors(root, errors) {
+export function renderFieldErrors(root, errors, {focusFirstInvalid = true} = {}) {
   if (!(root instanceof HTMLElement) || !errors || typeof errors !== 'object' || Array.isArray(errors)) {
     return false;
   }
@@ -120,10 +142,15 @@ export function renderFieldErrors(root, errors) {
 
     clearFieldError(field);
     field.classList.add('is-invalid');
+    field.setAttribute('aria-invalid', 'true');
     field.dataset.opcFieldError = '1';
+    // Snapshot the rejected value so clearEditedFieldErrors can tell a real edit from a re-focus.
+    field.dataset.opcFieldErrorValue = field.value;
 
     const error = document.createElement('div');
     error.className = `invalid-feedback d-block ${FIELD_ERROR_CLASS}`;
+    // Announce the inserted message to screen readers — errors can render without a focus move.
+    error.setAttribute('role', 'alert');
     error.textContent = messages[0];
     target.classList.add('has-error');
     target.appendChild(error);
@@ -135,8 +162,12 @@ export function renderFieldErrors(root, errors) {
     return false;
   }
 
-  firstInvalidField.scrollIntoView({block: 'center', behavior: 'smooth'});
-  firstInvalidField.focus();
+  // Bringing the buyer to the first error is only right when they asked for the validation (the
+  // final submit): an autosave render must neither scroll the page nor steal the keyboard focus.
+  if (focusFirstInvalid) {
+    firstInvalidField.scrollIntoView({block: 'center', behavior: 'smooth'});
+    firstInvalidField.focus();
+  }
 
   return true;
 }

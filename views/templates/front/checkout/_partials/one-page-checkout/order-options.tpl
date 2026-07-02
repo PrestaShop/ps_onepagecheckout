@@ -7,10 +7,15 @@
  * OPC — Order options (delivery message, recyclable packaging, gift)
  * Mirrors the order-options block from shipping.tpl for ISO UX.
  *
- * Variables: $delivery_message, $recyclablePackAllowed, $recyclable, $gift
+ * Variables: $delivery_message, $recyclablePackAllowed, $recyclable, $gift, $has_carriers
+ *
+ * Gated like the carrier/payment options: this block (order comment / recyclable / gift wrapping)
+ * stays hidden until a valid delivery address reveals the carriers. Initial render is hidden unless
+ * carriers are already available server-side (avoids a flash); opc-carrier-list.js then toggles
+ * `d-none` in sync with the carrier readiness state.
  *}
 
-<div class="order-options mt-3">
+<div class="order-options mt-3 js-opc-order-options{if !$has_carriers|default:false} d-none{/if}">
   <div class="mb-3">
     <label for="delivery_message" class="form-label">
       {l s='Write a comment about this order' d='Modules.Onepagecheckout.Shop'}

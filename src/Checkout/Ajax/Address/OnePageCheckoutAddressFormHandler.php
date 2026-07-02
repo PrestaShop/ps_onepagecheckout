@@ -64,6 +64,25 @@ class OnePageCheckoutAddressFormHandler
             }
         }
 
+        // Reload parity for renders that carry no address context (e.g. the post-delete section
+        // refresh): anchor the form on the cart's surviving addresses, exactly like the initial page
+        // render does from the session. Without this the form falls back to the SHOP DEFAULT country,
+        // silently switching the inline forms to another country's format (e.g. a US form requiring a
+        // state on an FR journey) — a re-typed address then never passes the completeness checks.
+        if (!$ownedDeliveryAddress instanceof \Address && !isset($requestParameters['id_country'])) {
+            $cartDeliveryAddress = $this->loadOwnedAddress((int) ($this->context->cart->id_address_delivery ?? 0));
+            if ($cartDeliveryAddress instanceof \Address) {
+                $this->opcForm->fillFromAddress($cartDeliveryAddress);
+            }
+        }
+
+        if (!isset($requestParameters['invoice_id_country']) && !isset($requestParameters['id_address_invoice'])) {
+            $cartInvoiceAddress = $this->loadOwnedAddress((int) ($this->context->cart->id_address_invoice ?? 0));
+            if ($cartInvoiceAddress instanceof \Address && (int) $cartInvoiceAddress->id_country > 0) {
+                $this->opcForm->fillWith(['invoice_id_country' => (int) $cartInvoiceAddress->id_country]);
+            }
+        }
+
         $formParams = [];
 
         foreach (self::ALLOWED_REQUEST_PARAMETERS as $name) {
@@ -148,7 +167,12 @@ class OnePageCheckoutAddressFormHandler
         }
 
         $address = new \Address($addressId, (int) $this->context->language->id);
-        if (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId) {
+        // Exclude SOFT-DELETED addresses (PrestaShop sets `deleted=1` rather than removing the row):
+        // after the customer deletes an address the cart keeps its id, and without this check the
+        // deleted address would still load as "owned" — re-populating the inline form's hidden
+        // id_address_* and keeping the carrier/payment sections wrongly accessible for an address that
+        // no longer exists.
+        if (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId || $address->deleted) {
             return null;
         }
 
@@ -168,11 +192,20 @@ class OnePageCheckoutAddressFormHandler
      */
     private function buildAddressesSectionTemplateVariables(): array
     {
+        $cartDeliveryId = (int) ($this->context->cart->id_address_delivery ?? 0);
+        $cartInvoiceId = (int) ($this->context->cart->id_address_invoice ?? 0);
+
         return $this->opcForm->getTemplateVariables() + [
             'is_virtual_cart' => $this->context->cart->isVirtualCart(),
             'cart' => [
-                'id_address_delivery' => (int) ($this->context->cart->id_address_delivery ?? 0),
-                'id_address_invoice' => (int) ($this->context->cart->id_address_invoice ?? 0),
+                // Only expose a cart address id the inline form treats as a persisted address (its
+                // hidden id_address_* field, read by hasPersistedInlineAddress) when that address STILL
+                // exists and belongs to the customer. The cart keeps a dangling id after the customer
+                // deletes the address; rendering it would keep the carrier/payment sections wrongly
+                // accessible for an address that no longer exists. A full page reload already renders 0
+                // in that case — match it so deleting the last address withholds the sections.
+                'id_address_delivery' => $this->isOwnedAddressId($cartDeliveryId) ? $cartDeliveryId : 0,
+                'id_address_invoice' => $this->isOwnedAddressId($cartInvoiceId) ? $cartInvoiceId : 0,
             ],
         ];
     }

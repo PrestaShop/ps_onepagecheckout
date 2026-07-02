@@ -21,11 +21,14 @@ const OPC_SELECTORS = {
     addressRadio: '.js-opc-address-radio',
     addressItem: '.opc-address-item',
     addressLabel: '.form-check-label',
+    orderOptions: '.js-opc-order-options',
   },
   templates: {
     carrierLoader: '#opc-template-loader',
     carrierError: '#opc-template-carriers-error',
     paymentError: '#opc-template-payment-error',
+    carrierAwaitingAddress: '#opc-template-carriers-awaiting-address',
+    paymentAwaitingAddress: '#opc-template-payment-awaiting-address',
   },
   inputs: {
     deliveryOption: 'input[name="delivery_option"]',

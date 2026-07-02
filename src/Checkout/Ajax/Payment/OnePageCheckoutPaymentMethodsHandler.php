@@ -79,6 +79,11 @@ class OnePageCheckoutPaymentMethodsHandler
                 'is_free' => $isFree,
                 'selected_payment_module' => $selectedPaymentModule,
                 'selected_payment_selection_key' => $selectedPaymentSelectionKey,
+                // Authoritative country for the front re-sync: $resolvedCountry handles the
+                // inline-typed address case (not yet persisted on the cart), unlike the cart-derived
+                // fallback computed centrally in AbstractOpcJsonFrontController::initContent().
+                'context_refresh' => (new \PrestaShop\Module\PsOnePageCheckout\Checkout\Context\OpcContextRefreshBuilder())
+                    ->build($this->context, $resolvedCountry),
             ];
         } finally {
             $this->context->country = $originalCountry;
@@ -101,13 +106,20 @@ class OnePageCheckoutPaymentMethodsHandler
         $hasInlineInvoiceCountry = $taxAddressType === 'id_address_invoice'
             && $requestAddressId <= 0
             && (int) ($requestParameters['invoice_id_country'] ?? 0) > 0;
+        // Same for an inline delivery address: the payment list is gated on a COMPLETE address, not a
+        // persisted one (the client cannot read the hidden persisted id), so it can be fetched from a
+        // complete-but-not-yet-persisted inline address (no id). The typed country must then win over a
+        // stale persisted cart delivery address (e.g. right after the inline country was changed).
+        $hasInlineDeliveryCountry = $taxAddressType !== 'id_address_invoice'
+            && $requestAddressId <= 0
+            && (int) ($requestParameters['id_country'] ?? $requestParameters['delivery_id_country'] ?? 0) > 0;
 
         $addressIds = [];
         if ($requestAddressId > 0) {
             $addressIds[] = $requestAddressId;
         }
 
-        if (!$hasInlineInvoiceCountry && $cartAddressId > 0 && $cartAddressId !== $requestAddressId) {
+        if (!$hasInlineInvoiceCountry && !$hasInlineDeliveryCountry && $cartAddressId > 0 && $cartAddressId !== $requestAddressId) {
             $addressIds[] = $cartAddressId;
         }
 
