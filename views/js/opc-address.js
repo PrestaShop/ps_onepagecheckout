@@ -777,6 +777,7 @@ function bindAddressDraftAutosave(selectors) {
 
   let debounceTimer = null;
   let pendingContainer = null;
+  let inFlightDraftRequest = null;
 
   const buildDraftPayload = (addressContainer) => {
     const payload = collectAddressDraftPayload(addressContainer);
@@ -828,11 +829,20 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
+    // Serialize the saves: two concurrent savedrafts can BOTH insert a new address (neither has
+    // the persisted id yet — it only lands with the response), leaving duplicates on the customer
+    // record on slow shops. Abort the superseded in-flight request — its server-side write (if it
+    // got that far) stays covered by the cart-pointer fallback (reusableCartAddressId), and
+    // handleDraftFailure already ignores aborts by design.
+    if (inFlightDraftRequest && inFlightDraftRequest.readyState !== 4) {
+      inFlightDraftRequest.abort();
+    }
+
     // The savedraft endpoint saves a complete & valid address as a real address attached to the cart
     // (when a customer exists). Keep the inline form intact (no list switch); just remember the saved
     // address id(s) so later edits update the same address and the final submit reuses it instead of
     // creating a duplicate. The saved-address list appears naturally on the next full page load.
-    $.post(draftUrl, payload)
+    inFlightDraftRequest = $.post(draftUrl, payload)
       .done((response) => handleDraftResponse(response, addressContainer))
       .fail(handleDraftFailure);
   };
@@ -890,7 +900,11 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
-    $.post(draftUrl, buildDraftPayload(addressContainer))
+    if (inFlightDraftRequest && inFlightDraftRequest.readyState !== 4) {
+      inFlightDraftRequest.abort();
+    }
+
+    inFlightDraftRequest = $.post(draftUrl, buildDraftPayload(addressContainer))
       .done((response) => handleDraftResponse(response, addressContainer))
       .fail(handleDraftFailure);
   };
