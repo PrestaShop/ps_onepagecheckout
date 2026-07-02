@@ -2,6 +2,7 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Context\OpcContextRefreshBuilder;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutSelectCarrierHandler
@@ -68,8 +69,19 @@ class OnePageCheckoutSelectCarrierHandler
                 );
             }
 
+            // Persist the choice on the address the order-summary preview is computed against:
+            // $deliveryAddressId (the temp preview address when one is created, else the cart address).
+            // It must be the ONLY key — core Cart::getDeliveryOption invalidates the WHOLE delivery_option
+            // map if it holds any address id not in the current package list, and at presentCart() the
+            // package is keyed by the temp address; co-keying the real address would invalidate the map
+            // and core would fall back to the best-price (Free) carrier, so the summary shipping would not
+            // reflect the chosen paid carrier.
             $this->persistCarrierSelection($deliveryAddressId, $deliveryOption);
-            $this->persistTemporaryCarrierSelection($deliveryOption, $tempAddressId > 0 && $originalAddressId <= 0, $requestParameters);
+            // Reload-persistence is handled out-of-band by the cookie: save it whenever the inline/temp
+            // flow is used — INCLUDING when a real address is already persisted — so the carriers handler
+            // restores it onto the real address on the next request (it used to save only when no real
+            // address existed, leaving the guest-with-persisted-address case with no reload persistence).
+            $this->persistTemporaryCarrierSelection($deliveryOption, $tempAddressId > 0, $requestParameters);
 
             $cartPreview = $this->cartPresenterHelper->presentCart();
 
@@ -79,6 +91,11 @@ class OnePageCheckoutSelectCarrierHandler
                 'id_address_delivery' => $tempAddressId > 0 ? 0 : $deliveryAddressId,
                 'cart_preview' => $cartPreview,
                 'totals' => $cartPreview['totals'],
+                // Built INSIDE the try: the finally-cleanup below restores the cart pointer and
+                // deletes the temp address, so the central fallback (AbstractOpcJsonFrontController)
+                // would compute the re-sync against the restored cart — default country, invalidated
+                // delivery-option map — and patch the front with wrong values.
+                'context_refresh' => (new OpcContextRefreshBuilder())->build($this->context),
             ];
         } finally {
             $tempAddress->cleanup($tempAddressId, $originalAddressId);

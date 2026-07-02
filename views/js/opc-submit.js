@@ -166,11 +166,23 @@ function validateForm() {
     return;
   }
 
+  // Core parity (themes/_core/js/checkout-payment.js toggleOrderButton): a payment option flagged
+  // binary (PaymentOption::setBinary(true), rendered as the `binary` class on the radio by
+  // payment-methods.tpl) provides its OWN button (via the displayPaymentByBinaries hook OPC renders),
+  // so the standard OPC pay button must be HIDDEN — not merely disabled. The theme's checkout-payment.js
+  // (which runs on the OPC page) already handles enabling/disabling that module button on terms, so OPC
+  // only needs to hide its own native button here. Module-agnostic: reads the `binary` class only.
+  const selectedPaymentOption = findCheckedPaymentOption(form);
+  const isBinaryPaymentOption = selectedPaymentOption instanceof HTMLElement
+    && selectedPaymentOption.classList.contains('binary');
+  payButton.classList.toggle('d-none', isBinaryPaymentOption);
+
   const requiredTermsUnchecked = getConditionsToApproveInputs()
     .some((input) => input instanceof HTMLInputElement
       && input.required
       && isElementVisible(input)
       && !input.checked);
+
   const carrierOptionsState = document.querySelector(OPC_SELECTORS.opc.deliveryMethods)?.dataset.opcCarriersState || '';
   const paymentOptionsState = document.querySelector(PAYMENT_METHODS_SELECTOR)?.dataset.opcPaymentMethodsState || '';
 
@@ -409,7 +421,13 @@ function clearStaleFieldError(event) {
     return;
   }
 
-  clearFieldError(element);
+  // Server-issued field errors (data-opc-field-error="1") persist while the buyer edits: only the
+  // next conclusive server verdict (autosave or final submit) may clear or replace them. Native
+  // validity feedback and the global alert still clear as soon as the buyer resumes editing.
+  if (element.dataset.opcFieldError !== '1') {
+    clearFieldError(element);
+  }
+
   clearValidationAlert();
 }
 
@@ -811,6 +829,17 @@ $(document).ready(() => {
   prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
     carriersState = OPC_OPTION_LIST_STATE.FAILED;
     bindScopedValidationListeners(form);
+    validateForm();
+  });
+  prestashop.on(OPC_EVENTS.opcCarriersAwaiting, () => {
+    // The carrier section withheld its options (awaiting a usable address) — a SETTLED result, not a
+    // loader. A deferred inline country change emits opcCarriersLoading (which also puts the payment
+    // section into LOADING via opcPaymentMethodsLoading) and then resolves to awaiting WITHOUT an
+    // opcCarriersUpdated / opcPaymentMethodsUpdated. Without clearing both here the LOADING state would
+    // stick and the Pay button would spin forever. The button stays disabled via the missing
+    // carrier/payment selection, not a spinner.
+    carriersState = OPC_OPTION_LIST_STATE.AWAITING_ADDRESS;
+    paymentMethodsState = OPC_OPTION_LIST_STATE.AWAITING_ADDRESS;
     validateForm();
   });
   prestashop.on(OPC_EVENTS.opcCarrierSelectionLoading, () => {
