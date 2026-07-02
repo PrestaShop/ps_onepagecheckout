@@ -115,6 +115,13 @@ final class ContextStub extends \Context
     public function __construct()
     {
     }
+
+    // OpcContextRefreshBuilder formats the cart totals through the context locale; unit fixtures
+    // have none, and the builder already falls back to a plain string amount for a null locale.
+    public function getCurrentLocale()
+    {
+        return null;
+    }
 }
 
 final class LanguageStub extends \Language

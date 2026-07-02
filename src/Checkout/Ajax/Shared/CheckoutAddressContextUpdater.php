@@ -36,16 +36,26 @@ class CheckoutAddressContextUpdater
             return false;
         }
 
-        if (
-            !array_key_exists('use_same_address', $requestParameters)
-            || (empty($requestParameters['id_address_delivery']) && empty($requestParameters['id_address_invoice']))
-        ) {
+        if (!array_key_exists('use_same_address', $requestParameters)) {
+            return false;
+        }
+
+        $useSameAddress = (string) $requestParameters['use_same_address'] !== '0';
+        $hasExplicitAddressIntent = !empty($requestParameters['id_address_delivery'])
+            || !empty($requestParameters['id_address_invoice']);
+
+        // A bare call with no address ids is normally a no-op, so read-only refreshes can never silently
+        // reset a SEPARATE billing address. But use_same_address='1' IS itself an explicit intent
+        // ("invoice = delivery"): honour it even when the ids are absent — in guest inline mode the
+        // persisted ids live in hidden fields the client omits. Without this, re-checking "use same
+        // address" after a separate billing was persisted leaves cart->id_address_invoice stuck on that
+        // billing address (wrong payment/tax country on re-check).
+        if (!$hasExplicitAddressIntent && !$useSameAddress) {
             return false;
         }
 
         $initialDeliveryAddressId = (int) $cart->id_address_delivery;
         $initialInvoiceAddressId = (int) $cart->id_address_invoice;
-        $useSameAddress = (string) $requestParameters['use_same_address'] !== '0';
 
         $deliveryAddressId = (int) ($requestParameters['id_address_delivery'] ?? 0);
         if ($deliveryAddressId > 0) {

@@ -28,7 +28,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '0.6.1';
+        $this->version = '0.6.2';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -158,13 +158,23 @@ class Ps_Onepagecheckout extends Module
             Tools::redirect($this->context->link->getPageLink('authentication', null, null, $backParams));
         }
 
+        $checkoutCustomerContextResolver = new CheckoutCustomerContextResolver($this->context);
+
         $opcRuntimeConfiguration = [
             'enabled' => true,
             'taxAddressType' => (string) Configuration::get('PS_TAX_ADDRESS_TYPE'),
-            // Customers with no saved address yet (guests, and accounts created mid-checkout)
-            // have no address persistence until final submit, so their typed address draft is
-            // autosaved to a cookie. Once an address is saved, the saved-address flow takes over.
-            'persistAddressDraft' => !(new CheckoutCustomerContextResolver($this->context))->hasSavedAddress(),
+            // Customers with no saved address yet have no saved address to start from, so their
+            // typed address is autosaved to a cookie draft. The same autosave saves it as a real
+            // address attached to the cart once it is complete and valid and a customer exists.
+            // Once an address is saved, the saved-address flow takes over on the next page load.
+            'persistAddressDraft' => !$checkoutCustomerContextResolver->hasSavedAddress(),
+            // Server-rendered identity when a checkout customer is already attached to the cart
+            // (a logged-in customer, or a guest whose guest-init created one). The option sections gate
+            // their reveal on an identified buyer; this lets a returning/reloading guest stay identified
+            // even though the re-rendered contact step shows an empty email field and a reset consent
+            // box — their address/carrier are already persisted to the cart, so withholding the options
+            // behind the contact step again would be wrong.
+            'buyerIdentified' => $checkoutCustomerContextResolver->resolveId() > 0,
             'urls' => [
                 'guestInit' => $this->context->link->getModuleLink(
                     $this->name,
@@ -325,6 +335,11 @@ class Ps_Onepagecheckout extends Module
                 'statesLoadFailed' => $this->trans('Unable to load states.', [], 'Modules.Onepagecheckout.Shop'),
                 'addressFieldsLoadFailed' => $this->trans('Unable to load address fields.', [], 'Modules.Onepagecheckout.Shop'),
                 'addressFieldsInvalid' => $this->trans('Please correct the highlighted address fields.', [], 'Modules.Onepagecheckout.Shop'),
+                'awaitingAddressMissingFields' => $this->trans('Still needed:', [], 'Modules.Onepagecheckout.Shop'),
+                'awaitingAddressNeedsContact' => $this->trans('Enter your email address above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
+                'awaitingAddressNeedsConsent' => $this->trans('Please accept the required terms above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
+                'invalidEmail' => $this->trans('Please enter a valid email address.', [], 'Modules.Onepagecheckout.Shop'),
+                'awaitingAddressPersistFailed' => $this->trans("We couldn't save your delivery address. Please check the fields above and try again.", [], 'Modules.Onepagecheckout.Shop'),
                 'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'saveAddressFailed' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'missingDeleteAddressUrl' => $this->trans('Unable to delete address.', [], 'Modules.Onepagecheckout.Shop'),

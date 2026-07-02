@@ -175,10 +175,11 @@ function restoreFieldValue($field, preservedValue) {
   $field.val(preservedValue);
 }
 
-function preserveAddressesSectionFields($addressForm) {
+function preserveAddressesSectionFields($addressForm, $scope) {
   const preservedFields = Object.create(null);
+  const $root = $scope && $scope.length ? $scope : $addressForm;
 
-  $addressForm.find('input, select, textarea').each((_, field) => {
+  $root.find('input, select, textarea').each((_, field) => {
     const $field = $(field);
     const name = String($field.prop('name') || '');
 
@@ -1073,7 +1074,28 @@ function refreshAddressesSection(options = {}) {
   }
 
   const useSameAddress = payload.use_same_address !== '0';
-  const preservedFields = preserveAddressesSectionFields($addressForm);
+  // On a hard reset (the customer deleted a saved address — notably the LAST one): do NOT carry the
+  // DELETED type's inline field values across the re-render. Preserving them would re-fill the inline
+  // form with the just-deleted address (and re-apply its hidden id_address_delivery), so
+  // hasUsableDeliveryAddress() would still return true and the carrier/payment sections would stay
+  // wrongly accessible for an address that no longer exists. The server's fresh (empty, id 0) render
+  // stays for that type — matching a full page reload. But preserve the OTHER address type's inline
+  // values: deleting a saved DELIVERY address must NOT wipe an unsaved separate BILLING address the
+  // customer is still entering (and vice versa). listTypes carries exactly the deleted type
+  // (getListTypesForAddressType -> ['delivery'] | ['billing']).
+  let preservedFields;
+  if (options.preserveInlineFields === false) {
+    // The billing inline was HIDDEN until this delete (2+ addresses): its DOM only holds a stale
+    // mirror (possibly of the just-deleted address), never something the customer typed. Let the
+    // fresh server render stand for BOTH types — matching a full page reload.
+    preservedFields = null;
+  } else if (resetInlineAddressState) {
+    const deletedDelivery = !Array.isArray(options.listTypes) || options.listTypes.includes('delivery');
+    const $preserveScope = $addressForm.find(deletedDelivery ? BILLING_FIELDS_SELECTOR : DELIVERY_FIELDS_SELECTOR);
+    preservedFields = preserveAddressesSectionFields($addressForm, $preserveScope);
+  } else {
+    preservedFields = preserveAddressesSectionFields($addressForm);
+  }
 
   return $.post(addressFormUrl, payload).done((response) => {
     if (!response || typeof response.addresses_section !== 'string') {
@@ -1081,7 +1103,9 @@ function refreshAddressesSection(options = {}) {
     }
 
     $addressForm.html(response.addresses_section);
-    restoreAddressesSectionFields($addressForm, preservedFields);
+    if (preservedFields) {
+      restoreAddressesSectionFields($addressForm, preservedFields);
+    }
     setUseSameAddressState($addressForm, useSameAddress);
     syncBillingSectionConstraints($addressForm, useSameAddress);
     if (!resetInlineAddressState) {
@@ -1112,6 +1136,29 @@ function renderAddressListsErrorState(listTypes) {
   renderAddressListsState(listTypes, 'errorTemplateSelector');
 }
 
+// Clear an inline address form back to a blank state (values + hidden ids + selects), so it no longer
+// reflects a just-deleted saved address.
+function resetInlineAddressFields($fields) {
+  if (!$fields || !$fields.length) {
+    return;
+  }
+
+  $fields.find('input, textarea').each((_, field) => {
+    const $field = $(field);
+    const type = String($field.attr('type') || '').toLowerCase();
+
+    if (type === 'checkbox' || type === 'radio') {
+      return;
+    }
+
+    $field.val('');
+  });
+  // Reset the state select but KEEP the country one: clearing the country would force the buyer to
+  // re-pick it AND leave a re-typed billing incomplete (so it would not persist). The country stays
+  // pre-set to the just-deleted address' country, matching a fresh separate-billing form.
+  $fields.find('select').not('[name$="id_country"]').val('');
+}
+
 function applyAddressListsResponse(response, options = {}) {
   const previousDeliverySelection = getSelectedSavedAddress(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery');
   const previousBillingSelection = getSelectedSavedAddress(OPC_SELECTORS.opc.billingList, 'id_address_invoice');
@@ -1136,6 +1183,17 @@ function applyAddressListsResponse(response, options = {}) {
   $billingList.toggleClass('d-none', addressCount <= 1);
   $billingFields.toggleClass('d-none', addressCount > 1);
   $billingFields.find('input, select, textarea').prop('disabled', addressCount > 1);
+
+  // A delete that drops the billing back to its inline form must clear that inline form — whichever
+  // address TYPE was deleted. The hidden inline billing fields carry a stale prefill (the cart
+  // invoice address, or a mirror of the just-deleted delivery address) AND a stale hidden
+  // id_address_invoice that makes a re-typed billing "update" an existing/deleted address instead of
+  // creating a new one. The billing inline was hidden while 2+ addresses existed, so nothing the
+  // customer typed can be lost by resetting it here; the delivery inline (possibly in-progress) is
+  // never touched.
+  if (options.resetInlineAddressState && addressCount <= 1) {
+    resetInlineAddressFields($billingFields);
+  }
 
   const $addressForm = $(OPC_ADDRESSES_SECTION_SELECTOR).first();
   if ($addressForm.length) {
@@ -1196,9 +1254,26 @@ function refreshAddressLists(options = {}) {
 
       const addressCount = parseInt(response.address_count, 10) || 0;
 
-      // Once the count is known, keep draft autosave aligned with it: enabled while no saved
-      // address remains (e.g. after deleting the last one), disabled once one exists.
-      setOpcRuntimePersistAddressDraft(addressCount <= 0);
+      // Keep draft autosave aligned with whether an inline form remains: enabled while no saved address
+      // is left (delivery inline). Also re-enable it when a DELETE drops a SEPARATE billing back to its
+      // inline form (<= 1 saved address left + "use same address" off): otherwise a billing re-typed
+      // there would never persist — the delivery case already works because it drops to 0 addresses.
+      // Scoped to the delete so it never turns autosave on for the ordinary saved-address flows.
+      const billingReturnedToInlineAfterDelete = Boolean(options.resetInlineAddressState)
+        && addressCount <= 1
+        && getUseSameAddressState($(OPC_ADDRESSES_SECTION_SELECTOR).first()) === false;
+      setOpcRuntimePersistAddressDraft(addressCount <= 0 || billingReturnedToInlineAfterDelete);
+
+      if (billingReturnedToInlineAfterDelete && addressCount > 0) {
+        // The billing falls back to its inline form: re-render the section from the SERVER (the same
+        // path the delivery fallback takes at count 0) so the post-delete state matches a full page
+        // reload by construction — customer identity prefilled, no stale mirror of a deleted address,
+        // and the hidden invoice id reflecting the actual cart invoice address. The previously-hidden
+        // billing DOM holds nothing customer-typed, so nothing is preserved across the swap.
+        return refreshAddressesSection({...options, preserveInlineFields: false})
+          .done((sectionResponse) => prestashop.emit(OPC_EVENTS.opcAddressesUpdated, sectionResponse || response))
+          .fail((jqXHR) => prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON));
+      }
 
       if (addressCount <= 0) {
         return refreshAddressesSection(options)

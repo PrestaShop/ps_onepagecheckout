@@ -32,9 +32,9 @@
           selected_payment_selection_key=$selected_payment_selection_key|default:''
         }
       {else}
-        <div class="card card-body bg-light">
-          {l s='You will see the available payment methods once you\'ve entered your delivery address.' d='Modules.Onepagecheckout.Shop'}
-        </div>
+        {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/awaiting-address.tpl'
+          message={l s='Complete your delivery address above to see your payment options.' d='Modules.Onepagecheckout.Shop'}
+        }
       {/if}
     </div>
 
@@ -50,9 +50,15 @@
 
   <template id="opc-template-payment-error">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-error.tpl'
-      message={l s='An error occurred while loading payment methods. Please try again.' d='Modules.Onepagecheckout.Shop'}
+      message={l s="We couldn't load your payment options. Please try again." d='Modules.Onepagecheckout.Shop'}
       retry_label={l s='Retry' d='Modules.Onepagecheckout.Shop'}
       retry_action='retry-payment'
+    }
+  </template>
+
+  <template id="opc-template-payment-awaiting-address">
+    {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/awaiting-address.tpl'
+      message={l s='Complete your delivery address above to see your payment options.' d='Modules.Onepagecheckout.Shop'}
     }
   </template>
 </section>

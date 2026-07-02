@@ -1,5 +1,7 @@
 <?php
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Context\OpcContextRefreshBuilder;
+
 abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFrontController
 {
     /** @var bool */
@@ -9,7 +11,18 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
     {
         parent::initContent();
 
-        $this->renderJsonResponse($this->handleOpcRequest());
+        $response = $this->handleOpcRequest();
+
+        // OPC never reloads the page, so the page-load window.prestashop snapshot
+        // (country/currency/cart) and the body classes go stale after each AJAX update.
+        // Attach the fresh context so the front helper can re-sync them before emitting
+        // OPC events. A handler that resolves a more precise country (e.g. an inline-typed
+        // address) provides its own 'context_refresh', which we never overwrite.
+        if (!array_key_exists('context_refresh', $response)) {
+            $response['context_refresh'] = (new OpcContextRefreshBuilder())->build($this->context);
+        }
+
+        $this->renderJsonResponse($response);
     }
 
     /**

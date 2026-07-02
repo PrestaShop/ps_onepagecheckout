@@ -2,6 +2,7 @@
 
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax;
 
+use PrestaShop\Module\PsOnePageCheckout\Checkout\Context\OpcContextRefreshBuilder;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutCarriersHandler
@@ -66,6 +67,7 @@ class OnePageCheckoutCarriersHandler
                     $this->context->cart->id_address_invoice = $requestedAddressId;
                 }
                 $this->context->cart->save();
+                $this->restorePendingCarrierSelectionOntoAddress($requestedAddressId);
                 $this->tempCarrierSelectionStorage->clear();
                 $this->tempAddressStorage->clear();
                 $this->applyTemporaryInlineInvoiceAddress($tempAddress, $requestParameters);
@@ -87,7 +89,13 @@ class OnePageCheckoutCarriersHandler
             }
 
             $persistedTempOption = '';
-            if ($tempAddressId > 0 && $originalAddressId <= 0) {
+            // A guest can pick a carrier inline, then leave and reopen checkout after
+            // the inline address has been persisted to the cart.
+            // On that return the request still carries inline fields (no id_address_delivery), so we build a temp
+            // address, but the cart already holds the real address. The cookie only
+            // survives the inline->persisted transition, so reading it here cannot clobber
+            // a deliberately chosen carrier.
+            if ($tempAddressId > 0) {
                 $persistedTempOption = $this->tempCarrierSelectionStorage->get();
                 if ($persistedTempOption !== '') {
                     $this->checkoutSessionFactory->create()->setDeliveryOption([
@@ -117,6 +125,12 @@ class OnePageCheckoutCarriersHandler
             $deliveryAddressId = $tempAddressId ?: (int) $this->context->cart->id_address_delivery;
 
             if ($selectedDeliveryOption && $deliveryAddressId > 0) {
+                // Key ONLY the address the cart's package is on ($deliveryAddressId — the temp address
+                // when one is built). Core Cart::getDeliveryOption invalidates the WHOLE map if it holds
+                // any address id absent from the current package list, so co-keying the real address
+                // would invalidate it and force a best-price/Free fallback in the cart preview. Durable
+                // reload-persistence comes from the temp-carrier cookie (restored here on the next
+                // request), not from pinning the real address into this preview-time map.
                 $this->checkoutSessionFactory->create()->setDeliveryOption([$deliveryAddressId => $selectedDeliveryOption]);
             } elseif ($hadSelectedDeliveryOption && $deliveryAddressId > 0) {
                 $this->context->cart->setDeliveryOption(null);
@@ -132,10 +146,35 @@ class OnePageCheckoutCarriersHandler
                 'id_address_delivery' => $tempAddressId > 0 ? 0 : (int) $this->context->cart->id_address_delivery,
                 'cart_preview' => $cartPreview,
                 'totals' => $cartPreview['totals'],
+                // Built INSIDE the try: the finally-cleanup below restores the cart pointer and
+                // deletes the temp address, so the central fallback (AbstractOpcJsonFrontController)
+                // would compute the re-sync against the restored cart — default country, invalidated
+                // delivery-option map — and patch the front with wrong values.
+                'context_refresh' => (new OpcContextRefreshBuilder())->build($this->context),
             ];
         } finally {
             $tempAddress->cleanup($tempAddressId, $originalAddressId);
         }
+    }
+
+    /**
+     * A carrier chosen while the address was still being typed inline is stored in a cookie keyed to
+     * the throwaway temp address. Once that address is persisted and selected as a saved address, move
+     * the pending choice onto it so the selection is not lost on reload. The cookie only ever exists
+     * during the inline -> persisted transition, so it cannot clobber a deliberately chosen carrier.
+     */
+    private function restorePendingCarrierSelectionOntoAddress(int $addressId): void
+    {
+        if ($addressId <= 0) {
+            return;
+        }
+
+        $pendingOption = $this->tempCarrierSelectionStorage->get();
+        if ($pendingOption === '') {
+            return;
+        }
+
+        $this->checkoutSessionFactory->create()->setDeliveryOption([$addressId => $pendingOption]);
     }
 
     protected function isOwnedCheckoutAddress(int $addressId): bool

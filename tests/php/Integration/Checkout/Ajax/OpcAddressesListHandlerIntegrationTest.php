@@ -55,13 +55,39 @@ class OpcAddressesListHandlerIntegrationTest extends TestCase
         self::assertCount(2, $response['customer']['addresses']);
     }
 
-    private function createCustomer(): \Customer
+    public function testItReturnsNoAddressesForAGuestEvenWithSavedAddresses(): void
+    {
+        // Parity guard: a guest is never shown the saved-address list, so the handler reports
+        // zero addresses even though the guest customer record owns saved addresses (those stay
+        // attached to the cart and are still used at submit, they are just not listed in the UI).
+        $customer = $this->createCustomer(true);
+        $this->createAddressForCustomer((int) $customer->id, 'Home');
+        $this->createAddressForCustomer((int) $customer->id, 'Office');
+
+        $context = self::getContext();
+        $context->customer = $customer;
+        $context->language = new \Language((int) \Configuration::get('PS_LANG_DEFAULT'));
+        $context->cart = new \Cart();
+
+        $handler = new OnePageCheckoutAddressesListHandler(
+            $context,
+            $this->createConfiguredMock(\Symfony\Contracts\Translation\TranslatorInterface::class, ['trans' => 'translated']),
+            new CheckoutCustomerContextResolver($context)
+        );
+        $response = $handler->handle();
+
+        self::assertTrue($response['success']);
+        self::assertSame(0, $response['address_count']);
+        self::assertSame([], $response['customer']['addresses']);
+    }
+
+    private function createCustomer(bool $isGuest = false): \Customer
     {
         $customer = new \Customer();
         $customer->firstname = 'Integration';
         $customer->lastname = 'Customer';
         $customer->email = sprintf('opc-addresses-%s@example.com', uniqid('', true));
-        $customer->is_guest = true;
+        $customer->is_guest = $isGuest;
         $customer->passwd = \Tools::hash('integration-password');
         self::assertTrue($customer->save());
 

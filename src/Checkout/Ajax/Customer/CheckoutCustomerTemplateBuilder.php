@@ -30,10 +30,16 @@ class CheckoutCustomerTemplateBuilder
             ]);
         }
 
-        $addresses = array_filter(
-            (array) $customer->getSimpleAddresses((int) ($this->context->language->id ?? 0)),
-            [$this, 'isCustomerVisibleAddress']
-        );
+        // A guest is a temporary account, not an address-book owner: never show a guest
+        // the saved-address list — keep them on the inline address form. This matches the native
+        // checkout (a guest fills an inline address and is never presented an address picker) and
+        // prevents the guest from accumulating phantom addresses.
+        $addresses = $customer->isGuest()
+            ? []
+            : array_filter(
+                (array) $customer->getSimpleAddresses((int) ($this->context->language->id ?? 0)),
+                [$this, 'isCustomerVisibleAddress']
+            );
 
         return array_merge($templateCustomer, [
             'id' => (int) $customer->id,

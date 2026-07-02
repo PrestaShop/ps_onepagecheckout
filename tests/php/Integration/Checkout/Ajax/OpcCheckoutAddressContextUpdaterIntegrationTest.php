@@ -123,7 +123,15 @@ class OpcCheckoutAddressContextUpdaterIntegrationTest extends TestCase
         self::assertSame((int) $addressC->id, (int) $freshCart->id_address_invoice, 'separate invoice NOT reset by bare call');
     }
 
-    public function testUseSameWithoutAddressIdDoesNotCollapseInvoice(): void
+    /**
+     * Re-checking "use same address" IS an explicit invoice = delivery intent, even when the client
+     * omits the address ids: in guest inline mode the persisted delivery id lives in a HIDDEN field the
+     * client does not resend. The updater must realign a previously-separate invoice back to the
+     * delivery address, otherwise the cart invoice stays stuck on a just-persisted separate billing
+     * (wrong payment/tax country on re-check — the SPE E2E regression). A truly bare call (NO
+     * use_same_address key) still stays a no-op, see testBareCallWithoutIntentDoesNotMutate.
+     */
+    public function testUseSameRealignsInvoiceToDeliveryWithoutAddressId(): void
     {
         $customer = $this->createCustomer();
         $addressA = $this->createAddress($customer, 'A');
@@ -133,10 +141,10 @@ class OpcCheckoutAddressContextUpdaterIntegrationTest extends TestCase
 
         $changed = $this->updater($context)->updateFromRequest(['use_same_address' => '1']);
 
-        self::assertFalse($changed);
+        self::assertTrue($changed);
         $freshCart = new \Cart((int) $cart->id);
         self::assertSame((int) $addressA->id, (int) $freshCart->id_address_delivery);
-        self::assertSame((int) $addressC->id, (int) $freshCart->id_address_invoice, 'use_same alone is not a write intent');
+        self::assertSame((int) $addressA->id, (int) $freshCart->id_address_invoice, 'use_same=1 realigns invoice to delivery even without ids');
     }
 
     private function updater(\Context $context): CheckoutAddressContextUpdater
