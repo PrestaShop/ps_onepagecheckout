@@ -79,12 +79,21 @@ class OnePageCheckoutSubmitHandler
                     : [],
             ];
 
-        $this->persistFailedSubmitState($persistedState);
+        $shouldRenderInline = $this->shouldReturnInlineFieldErrors($persistedState);
+        if (!$shouldRenderInline) {
+            $this->persistFailedSubmitState($persistedState);
+        }
 
         return [
             'success' => false,
-            'reload' => true,
+            'reload' => !$shouldRenderInline,
             'checkout_url' => $checkoutSession->getCheckoutURL(),
+            'form_errors' => isset($persistedState['form_errors']) && is_array($persistedState['form_errors'])
+                ? $persistedState['form_errors']
+                : [],
+            'validation_errors' => isset($persistedState['validation_errors']) && is_array($persistedState['validation_errors'])
+                ? $persistedState['validation_errors']
+                : [],
         ];
     }
 
@@ -140,6 +149,37 @@ class OnePageCheckoutSubmitHandler
         // Drop the older address draft so once that state is consumed a later reload cannot
         // restore stale fields and silently roll the address back.
         $this->addressDraftStorage->clear();
+    }
+
+    /**
+     * @param array<string, mixed> $state
+     */
+    private function shouldReturnInlineFieldErrors(array $state): bool
+    {
+        // Field errors can stay inline; global or non-address errors need the legacy reload fallback.
+        $formErrors = isset($state['form_errors']) && is_array($state['form_errors'])
+            ? $state['form_errors']
+            : [];
+
+        if ($formErrors === [] || !empty($formErrors[''])) {
+            return false;
+        }
+
+        $fieldErrors = array_filter(
+            $formErrors,
+            static fn ($errors, $fieldName): bool => $fieldName !== '' && is_array($errors) && $errors !== [],
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        if ($fieldErrors === []) {
+            return false;
+        }
+
+        $validationErrors = isset($state['validation_errors']) && is_array($state['validation_errors'])
+            ? $state['validation_errors']
+            : [];
+
+        return array_diff(array_keys($validationErrors), ['address']) === [];
     }
 
     private function getRequiredCurrentCartId(): int

@@ -17,7 +17,7 @@
  *}
 
 <section class="one-page-checkout__section js-opc-delivery-section">
-  <h2 class="one-page-checkout__title">{l s='Delivery method' d='Modules.Onepagecheckout.Shop'}</h2>
+  <h2 class="one-page-checkout__title" id="opc-delivery-section-title">{l s='Delivery method' d='Modules.Onepagecheckout.Shop'}</h2>
 
   <div id="delivery-options__hook">
     {if isset($hookDisplayBeforeCarrier)}
@@ -37,9 +37,9 @@
         delivery_option=$delivery_option
       }
     {else}
-      <div class="card card-body bg-light">
-        {l s='You will see the available delivery methods once you\'ve entered your delivery address.' d='Modules.Onepagecheckout.Shop'}
-      </div>
+      {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/awaiting-address.tpl'
+        message={l s='Complete your delivery address above to see your delivery options.' d='Modules.Onepagecheckout.Shop'}
+      }
     {/if}
   </div>
 
@@ -58,6 +58,7 @@
     recyclablePackAllowed=$recyclablePackAllowed|default:false
     recyclable=$recyclable|default:false
     gift=$gift|default:[]
+    has_carriers=$delivery_options|default:[]|count
   }
 
   <template id="opc-template-loader">
@@ -68,8 +69,14 @@
 
   <template id="opc-template-carriers-error">
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/opc-error.tpl'
-      message={l s='An error occurred while loading carriers. Please try again.' d='Modules.Onepagecheckout.Shop'}
+      message={l s="We couldn't load your delivery options. Please try again." d='Modules.Onepagecheckout.Shop'}
       retry_label={l s='Retry' d='Modules.Onepagecheckout.Shop'}
+    }
+  </template>
+
+  <template id="opc-template-carriers-awaiting-address">
+    {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/awaiting-address.tpl'
+      message={l s='Complete your delivery address above to see your delivery options.' d='Modules.Onepagecheckout.Shop'}
     }
   </template>
 </section>

@@ -1,8 +1,12 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
+import {AJAX_STATUS_ABORT} from './runtime/opc-runtime';
 import {getConfiguredOpcMessage} from './runtime/opc-runtime';
 import {getConfiguredOpcUrl} from './runtime/opc-runtime';
 import {normalizeErrorEventResponse} from './runtime/opc-runtime';
+import {markAddressPersistFailed, markBuyerIdentified} from './runtime/address/opc-address-context';
+import {isRequiredConsentMissing} from './runtime/address/opc-contact-consent';
+import {clearFieldError} from './runtime/form/opc-field-errors';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -252,11 +256,6 @@ function getPayloadFingerprint(payload) {
   return sortedKeys.map((key) => `${key}:${payload[key]}`).join('|');
 }
 
-function hasMissingRequiredConsent(requiredCheckboxState) {
-  return Object.keys(requiredCheckboxState).length === 0
-    || Object.values(requiredCheckboxState).includes('0');
-}
-
 function setInitialGuestEmailFingerprint() {
   const guestUpdateMode = isGuestUpdateMode();
 
@@ -319,7 +318,7 @@ function tryGuestInit() {
   const requiredCheckboxState = collectRequiredCheckboxState($container);
   const guestUpdateMode = isGuestUpdateMode();
 
-  if (!guestUpdateMode && hasMissingRequiredConsent(requiredCheckboxState)) {
+  if (!guestUpdateMode && isRequiredConsentMissing($container.get(0))) {
     abortPendingGuestInit();
     return;
   }
@@ -373,22 +372,36 @@ function tryGuestInit() {
         } else {
           lastSubmittedFingerprint = payloadFingerprint;
         }
+        // The buyer now has a checkout customer: a complete inline address can be persisted, so the
+        // option sections may move from the "enter your email" hint to loading/revealing. Mark this
+        // before emitting so every opcGuestInitSuccess handler already sees the buyer as identified.
+        markBuyerIdentified();
         prestashop.emit(OPC_EVENTS.opcGuestInitSuccess, {resp});
       } else if (resp && resp.errors && Array.isArray(resp.errors.token) && resp.errors.token.length > 0) {
         // Token errors need fresh context, avoid retry loops while payload stays unchanged.
         lastSubmittedFingerprint = payloadFingerprint;
       } else if (resp && resp.success === false) {
+        // No checkout customer was created: a complete address can never be persisted, flag it so
+        // the option sections drop their loader for a recoverable error.
+        markAddressPersistFailed();
         prestashop.emit(OPC_EVENTS.opcGuestInitFailed, {
+          resp: normalizeErrorEventResponse(resp),
+        });
+        prestashop.emit(OPC_EVENTS.opcAddressPersistFailed, {
           resp: normalizeErrorEventResponse(resp),
         });
       }
     })
-    .fail((resp) => {
-      if (resp && resp.statusText === 'abort') {
+    .fail((resp, textStatus) => {
+      if (textStatus === AJAX_STATUS_ABORT) {
         return;
       }
 
+      markAddressPersistFailed();
       prestashop.emit(OPC_EVENTS.opcGuestInitFailed, {
+        resp: normalizeErrorEventResponse(resp),
+      });
+      prestashop.emit(OPC_EVENTS.opcAddressPersistFailed, {
         resp: normalizeErrorEventResponse(resp),
       });
     })
@@ -410,6 +423,32 @@ function scheduleGuestInit() {
   debounceTimer = window.setTimeout(tryGuestInit, debounceMs);
 }
 
+// Field-level email feedback to connect the option-section "enter your email" hint to the actual field
+// validated on blur (not while typing), and cleared the moment the buyer edits it again.
+function showContactFieldError($field, message) {
+  const field = $field.get(0);
+
+  if (!field) {
+    return;
+  }
+
+  clearFieldError(field);
+
+  if (!message) {
+    return;
+  }
+
+  const target = field.closest('.form-group, .mb-3') || field.parentElement || field;
+  field.classList.add('is-invalid');
+  field.dataset.opcFieldError = '1';
+
+  const error = document.createElement('div');
+  error.className = 'invalid-feedback d-block js-opc-field-error';
+  error.textContent = message;
+  target.classList.add('has-error');
+  target.appendChild(error);
+}
+
 $(() => {
   if (!isGuestInitApplicable()) {
     return;
@@ -417,8 +456,27 @@ $(() => {
 
   setInitialGuestEmailFingerprint();
 
-  $('body').on('input change', `${OPC_CONTACT_SECTION_SELECTOR} ${EMAIL_FIELD_SELECTOR}`, () => {
+  $('body').on('input change', `${OPC_CONTACT_SECTION_SELECTOR} ${EMAIL_FIELD_SELECTOR}`, (event) => {
+    // Clear a stale invalid-email message as soon as the buyer edits the field again.
+    clearFieldError($(event.currentTarget).get(0));
     scheduleGuestInit();
+  });
+
+  // Validate the email format on blur so the buyer sees, right at the field, why guest-init (and thus
+  // the carriers/payment) is not progressing — without nagging mid-typing or on an untouched-empty field.
+  $('body').on('focusout', `${OPC_CONTACT_SECTION_SELECTOR} ${EMAIL_FIELD_SELECTOR}`, (event) => {
+    const $emailField = $(event.currentTarget);
+
+    if (String($emailField.val() || '').trim() === '') {
+      clearFieldError($emailField.get(0));
+
+      return;
+    }
+
+    showContactFieldError(
+      $emailField,
+      isEmailValid($emailField) ? '' : getConfiguredOpcMessage('invalidEmail', 'Please enter a valid email address.')
+    );
   });
 
   $('body').on('change', `${OPC_CONTACT_SECTION_SELECTOR} ${INPUT_FIELD_SELECTOR}`, (event) => {

@@ -90,7 +90,6 @@ jobs:
           set -euo pipefail
 
           grep -F "<version><![CDATA[${VERSION}]]></version>" config.xml
-          grep -F "<version><![CDATA[${VERSION}]]></version>" config_fr.xml
           grep -F "\$this->version = '${VERSION}';" ps_onepagecheckout.php
           grep -F "\"version\": \"${VERSION}\"" views/package.json
           grep -F "\"version\": \"${VERSION}\"" views/package-lock.json

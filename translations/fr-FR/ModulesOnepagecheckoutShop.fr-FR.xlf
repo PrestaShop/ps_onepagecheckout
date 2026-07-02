@@ -30,13 +30,45 @@
         <source>An error occurred while loading addresses. Please try again.</source>
         <target>Une erreur s'est produite lors du chargement des adresses. Veuillez réessayer.</target>
       </trans-unit>
-      <trans-unit id="06750e5dee5f8f5e6a257ab8e9ad6009">
-        <source>An error occurred while loading carriers. Please try again.</source>
-        <target>Une erreur s'est produite lors du chargement des transporteurs. Veuillez réessayer.</target>
+      <trans-unit id="89babba4d36e2672b08faac369b849eb">
+        <source>Enter your email address above to see the delivery and payment options.</source>
+        <target>Saisissez votre adresse e-mail ci-dessus pour voir les options de livraison et de paiement.</target>
       </trans-unit>
-      <trans-unit id="e6f361baca5de43e91b605e0e4ea9653">
-        <source>An error occurred while loading payment methods. Please try again.</source>
-        <target>Une erreur s'est produite lors du chargement des moyens de paiement. Veuillez réessayer.</target>
+      <trans-unit id="9c8ca7810846ba6ed6a281e4413e8eca">
+        <source>Please accept the required terms above to see the delivery and payment options.</source>
+        <target>Veuillez accepter les conditions requises ci-dessus pour voir les options de livraison et de paiement.</target>
+      </trans-unit>
+      <trans-unit id="b5bccda6d3a04e1d8f79846355290435">
+        <source>Please enter a valid email address.</source>
+        <target>Veuillez saisir une adresse e-mail valide.</target>
+      </trans-unit>
+      <trans-unit id="66fe14c61ce185bcc46dfbdaa355c03b">
+        <source>Unable to resolve checkout cart.</source>
+        <target>Impossible de résoudre le panier de la commande.</target>
+      </trans-unit>
+      <trans-unit id="af77decd40733d4edeb2fddf7b5c1eaa">
+        <source>We couldn't load your delivery options. Please try again.</source>
+        <target>Nous n'avons pas pu charger vos options de livraison. Veuillez réessayer.</target>
+      </trans-unit>
+      <trans-unit id="dc8d1142b28b0d143c963cdb57093cc4">
+        <source>We couldn't load your payment options. Please try again.</source>
+        <target>Nous n'avons pas pu charger vos options de paiement. Veuillez réessayer.</target>
+      </trans-unit>
+      <trans-unit id="a2cd64d8c759e7e23a31025618b4fca8">
+        <source>Complete your delivery address above to see your delivery options.</source>
+        <target>Complétez votre adresse de livraison ci-dessus pour voir vos options de livraison.</target>
+      </trans-unit>
+      <trans-unit id="f4a26c5b3758c271b9f588007d49a12c">
+        <source>Complete your delivery address above to see your payment options.</source>
+        <target>Complétez votre adresse de livraison ci-dessus pour voir vos options de paiement.</target>
+      </trans-unit>
+      <trans-unit id="68fbf1d995b5467bd49e06e3eb4305d0">
+        <source>Still needed:</source>
+        <target>Encore à renseigner :</target>
+      </trans-unit>
+      <trans-unit id="6f29417363e10b59c2e17c79ee2c76b6">
+        <source>We couldn't save your delivery address. Please check the fields above and try again.</source>
+        <target>Nous n'avons pas pu enregistrer votre adresse de livraison. Vérifiez les champs ci-dessus et réessayez.</target>
       </trans-unit>
       <trans-unit id="b028ccd04708b8c3c7722956e149a718">
         <source>An error occurred. Please try again.</source>
@@ -206,6 +238,14 @@
         <source>Please accept the terms of service.</source>
         <target>Veuillez accepter les conditions générales de vente.</target>
       </trans-unit>
+      <trans-unit id="301600ed849201b73f53f828fcc6fdfd">
+        <source>Please correct the highlighted address fields.</source>
+        <target>Veuillez corriger les champs d’adresse en surbrillance.</target>
+      </trans-unit>
+      <trans-unit id="898e86c98d478a49b76c60b2d65266c0">
+        <source>Please select a delivery method.</source>
+        <target>Veuillez sélectionner un mode de livraison.</target>
+      </trans-unit>
       <trans-unit id="7c35f5beee619d9244ee3f3d7acfed6b">
         <source>Please select a payment method.</source>
         <target>Veuillez sélectionner un moyen de paiement.</target>
@@ -249,6 +289,10 @@
       <trans-unit id="39a762ed88fa8f4b4cc0d3edfd5e865b">
         <source>Unable to initialize the selected payment method.</source>
         <target>Impossible d'initialiser le moyen de paiement sélectionné.</target>
+      </trans-unit>
+      <trans-unit id="7b62f44e0c590071478b90b31e22e456">
+        <source>Unable to load address fields.</source>
+        <target>Impossible de charger les champs d’adresse.</target>
       </trans-unit>
       <trans-unit id="423c3d9a7feb297656d8abdbe59cb7d1">
         <source>Unable to load delivery methods.</source>

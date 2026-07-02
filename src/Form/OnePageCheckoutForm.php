@@ -93,10 +93,19 @@ class OnePageCheckoutForm extends \AbstractForm
             $params['email'] = $this->IDNConverter->emailToUtf8($params['email']);
         }
 
+        $selectedCountryField = $this->getField('id_country');
+        $selectedCountryId = $selectedCountryField ? (int) $selectedCountryField->getValue() : 0;
+
         // Rebuild delivery field rules from selected country (state/postcode requirements).
         if (isset($params['id_country'])) {
             $country = (int) $params['id_country'] !== (int) $this->formatter->getCountry()->id
                 ? new \Country((int) $params['id_country'], $this->language->id)
+                : $this->formatter->getCountry()
+            ;
+        } elseif ($selectedCountryId > 0) {
+            // Saved-address submits send address IDs only; keep the hydrated address country for validation.
+            $country = $selectedCountryId !== (int) $this->formatter->getCountry()->id
+                ? new \Country($selectedCountryId, $this->language->id)
                 : $this->formatter->getCountry()
             ;
         } elseif ($this->address) { // @phpstan-ignore elseif.alwaysTrue (defensive fallback when formatter country differs)
@@ -277,6 +286,9 @@ class OnePageCheckoutForm extends \AbstractForm
         }
 
         $fieldsByGroup = $this->mapFieldsByGroup();
+        // Captured BEFORE the customer resolution: Context::updateCustomer (called below) resets
+        // the cart address pointers to the customer's first address and persists that.
+        $persistedCartAddressIds = $this->capturePersistedCartAddressIds();
         $customer = $this->getCheckoutCustomerForSubmit($fieldsByGroup);
 
         if ((int) $customer->id <= 0 || $customer->isGuest()) {
@@ -305,9 +317,14 @@ class OnePageCheckoutForm extends \AbstractForm
         if ($deliveryAddress instanceof \Address) {
             $idAddressDelivery = (int) $deliveryAddress->id;
         } else {
+            // No explicit saved-address selection: the TYPED fields are authoritative (the OPC
+            // client strips the hidden technical ids from the final submit payload). Update the
+            // cart-attached address in place when it is safely reusable so autosave-persisted
+            // addresses are not duplicated — but never silently reuse its stale CONTENT: the buyer
+            // may have edited fields after the last autosave landed.
             $deliveryAddress = $this->buildAddressFromGroup(
                 $fieldsByGroup['deliveryFields'],
-                null
+                $this->reusableCartAddressIdForSubmit('delivery', (int) $customer->id, $persistedCartAddressIds) ?: null
             );
             $deliveryAddress->id_customer = $customer->id;
             if (empty($deliveryAddress->alias)) {
@@ -325,15 +342,17 @@ class OnePageCheckoutForm extends \AbstractForm
 
         // Create/update invoice address if different
         if (!$useSameAddress) {
-            $idAddressInvoice = (int) \Tools::getValue('id_address_invoice');
+            $idAddressInvoice = $this->resolveSelectedInvoiceAddressId();
             $invoiceAddress = $this->resolveSelectedCustomerAddress($idAddressInvoice, (int) $customer->id);
 
             if ($invoiceAddress instanceof \Address) {
                 $idAddressInvoice = (int) $invoiceAddress->id;
             } else {
+                // Same contract as the delivery address above: typed invoice fields win, the
+                // separate persisted billing address is updated in place instead of duplicated.
                 $invoiceAddress = $this->buildAddressFromGroup(
                     $fieldsByGroup['invoiceFields'],
-                    null,
+                    $this->reusableCartAddressIdForSubmit('invoice', (int) $customer->id, $persistedCartAddressIds) ?: null,
                     'invoice_'
                 );
                 $invoiceAddress->id_customer = $customer->id;
@@ -697,6 +716,55 @@ class OnePageCheckoutForm extends \AbstractForm
         return $selectedDeliveryAddressId > 0 ? $selectedDeliveryAddressId : null;
     }
 
+    private function resolveSelectedInvoiceAddressId(): int
+    {
+        return (int) \Tools::getValue('id_address_invoice');
+    }
+
+    /**
+     * The persisted cart address pointers, read BEFORE Context::updateCustomer runs: it resets
+     * both cart pointers to the customer's first address, destroying the separate-billing pointer
+     * the autosave maintained.
+     *
+     * @return array{delivery:int,invoice:int}
+     */
+    private function capturePersistedCartAddressIds(): array
+    {
+        if (!isset($this->context->cart) || (int) $this->context->cart->id <= 0) {
+            return ['delivery' => 0, 'invoice' => 0];
+        }
+
+        $cart = new \Cart((int) $this->context->cart->id);
+        if (!\Validate::isLoadedObject($cart)) {
+            return ['delivery' => 0, 'invoice' => 0];
+        }
+
+        return [
+            'delivery' => (int) $cart->id_address_delivery,
+            'invoice' => (int) $cart->id_address_invoice,
+        ];
+    }
+
+    /**
+     * The address already attached to the cart for this type, when an inline submit can safely
+     * update it in place: it must still exist, belong to the customer and not be soft-deleted.
+     * A billing id that still mirrors the delivery address is not reused (no separate billing was
+     * persisted, so submit builds it from the typed invoice fields).
+     *
+     * @param array{delivery:int,invoice:int} $persistedCartAddressIds
+     */
+    private function reusableCartAddressIdForSubmit(string $addressType, int $customerId, array $persistedCartAddressIds): int
+    {
+        $deliveryAddressId = $persistedCartAddressIds['delivery'];
+        $candidateId = $addressType === 'invoice' ? $persistedCartAddressIds['invoice'] : $deliveryAddressId;
+
+        if ($candidateId <= 0 || ($addressType === 'invoice' && $candidateId === $deliveryAddressId)) {
+            return 0;
+        }
+
+        return $this->resolveSelectedCustomerAddress($candidateId, $customerId) ? $candidateId : 0;
+    }
+
     private function resolveSelectedCustomerAddress(?int $addressId, int $customerId): ?\Address
     {
         if ($addressId === null || $addressId <= 0 || $customerId <= 0) {
@@ -705,7 +773,10 @@ class OnePageCheckoutForm extends \AbstractForm
 
         $address = new \Address($addressId, (int) $this->language->id);
 
-        if (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId) {
+        // Exclude SOFT-DELETED addresses (PrestaShop sets `deleted=1` rather than removing the
+        // row): the cart can keep a dangling id after the customer deletes the address, and an
+        // order must never be carried by an address the customer no longer owns.
+        if (!\Validate::isLoadedObject($address) || (int) $address->id_customer !== $customerId || $address->deleted) {
             return null;
         }
 

@@ -132,6 +132,48 @@ class OpcSubmitHandlerTest extends TestCase
         self::assertFalse($response['success']);
         self::assertTrue($response['reload']);
         self::assertSame('/commande', $response['checkout_url']);
+        self::assertSame([
+            'firstname' => ['Required'],
+        ], $response['form_errors']);
+        self::assertSame([
+            'payment' => ['paymentMethod' => 'Please select a payment method.'],
+        ], $response['validation_errors']);
+    }
+
+    public function testHandleReturnsInlineFieldErrorsWithoutPersistingReloadState(): void
+    {
+        $this->submitProcessor->expects($this->once())
+            ->method('process')
+            ->willReturn([
+                'success' => false,
+                'validation_errors' => [
+                    'address' => [
+                        'postcode' => ['Invalid postcode - should look like "NNNNN"'],
+                    ],
+                ],
+                'form_errors' => [
+                    'postcode' => ['Invalid postcode - should look like "NNNNN"'],
+                ],
+                'submitted_values' => [
+                    'postcode' => '1234',
+                ],
+            ]);
+        $this->submitValidationStateStorage->expects($this->never())->method('save');
+        $this->addressDraftStorage->expects($this->never())->method('clear');
+
+        $response = $this->handler->handle([]);
+
+        self::assertFalse($response['success']);
+        self::assertFalse($response['reload']);
+        self::assertSame('/commande', $response['checkout_url']);
+        self::assertSame([
+            'postcode' => ['Invalid postcode - should look like "NNNNN"'],
+        ], $response['form_errors']);
+        self::assertSame([
+            'address' => [
+                'postcode' => ['Invalid postcode - should look like "NNNNN"'],
+            ],
+        ], $response['validation_errors']);
     }
 
     public function testHandlePersistsReloadErrorsAndRethrowsWhenSubmitFails(): void
@@ -178,7 +220,7 @@ class OpcSubmitHandlerTest extends TestCase
                 'success' => false,
                 'validation_errors' => [],
                 'form_errors' => [
-                    'firstname' => ['Required'],
+                    '' => ['Unable to submit checkout.'],
                 ],
                 'submitted_values' => [],
             ]);

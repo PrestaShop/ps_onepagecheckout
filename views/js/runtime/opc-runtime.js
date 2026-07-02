@@ -1,6 +1,9 @@
 import {OPC_EVENTS} from '../events';
 import OPC_SELECTORS from '../selectors';
 
+export const AJAX_READY_STATE_DONE = 4;
+export const AJAX_STATUS_ABORT = 'abort';
+
 export function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

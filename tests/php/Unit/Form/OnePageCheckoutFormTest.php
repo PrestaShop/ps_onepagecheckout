@@ -889,6 +889,79 @@ class OnePageCheckoutFormTest extends TestCase
         self::assertSame('21', (string) $form->getValue('invoice_id_country'));
     }
 
+    public function testFillWithKeepsHydratedCountryWhenSavedAddressSubmitOmitsCountry(): void
+    {
+        $previousCountries = \Country::$registry;
+        \Country::$registry[21] = [
+            'name' => 'Belgium',
+            'need_zip_code' => true,
+            'zip_code_format' => 'NNNN',
+            'validZipCodes' => ['9513'],
+        ];
+
+        $language = CheckoutTestFixtures::language(1);
+        $currentCountry = CheckoutTestFixtures::country();
+        $currentCountry->id = self::DEFAULT_COUNTRY_ID;
+
+        $formatter = $this->getMockBuilder(OnePageCheckoutFormatter::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getFormat', 'getCountry', 'setCountry', 'setInvoiceCountry', 'getFieldGroup'])
+            ->getMock()
+        ;
+        $formatter
+            ->method('getFormat')
+            ->willReturn($this->getSubmitFields())
+        ;
+        $formatter
+            ->method('getCountry')
+            ->willReturnCallback(static function () use (&$currentCountry): \Country {
+                return $currentCountry;
+            })
+        ;
+        $formatter
+            ->method('setCountry')
+            ->willReturnCallback(static function (\Country $country) use (&$currentCountry, $formatter): OnePageCheckoutFormatter {
+                $currentCountry = $country;
+
+                return $formatter;
+            })
+        ;
+        $formatter
+            ->method('setInvoiceCountry')
+            ->willReturnSelf()
+        ;
+        $formatter
+            ->method('getFieldGroup')
+            ->willReturnCallback([$this, 'getFieldGroupForTest'])
+        ;
+
+        $form = new TestableOnePageCheckoutForm(
+            $this->createMock(\Smarty::class),
+            $this->context,
+            $language,
+            $this->translator,
+            $formatter,
+            $this->customerPersister,
+            $this->addressPersister
+        );
+
+        try {
+            $form->fillWith([
+                'id_country' => '21',
+                'postcode' => '9513',
+            ]);
+            $form->fillWith([
+                'id_address_delivery' => '123',
+                'id_address_invoice' => '123',
+                'use_same_address' => '1',
+            ]);
+
+            self::assertSame(21, (int) $currentCountry->id);
+        } finally {
+            \Country::$registry = $previousCountries;
+        }
+    }
+
     /**
      * @return \FormField[]
      */

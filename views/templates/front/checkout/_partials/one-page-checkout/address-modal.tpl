@@ -37,9 +37,8 @@
           id="submit-address-modal"
           type="button"
           class="btn btn-primary"
-          data-loading-text="{l s='Saving...' d='Modules.Onepagecheckout.Shop'}"
-          data-text="{l s='Save' d='Modules.Onepagecheckout.Shop'}"
         >
+          <span class="spinner-border spinner-border-sm me-2 d-none" aria-hidden="true" data-opc-address-save-spinner></span>
           {l s='Save' d='Modules.Onepagecheckout.Shop'}
         </button>
       </div>

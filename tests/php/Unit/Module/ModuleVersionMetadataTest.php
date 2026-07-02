@@ -17,10 +17,8 @@ class ModuleVersionMetadataTest extends TestCase
     {
         $moduleVersion = $this->extractMainModuleVersion();
         $configVersion = $this->extractXmlVersion($this->getModulePath() . '/config.xml');
-        $configFrVersion = $this->extractXmlVersion($this->getModulePath() . '/config_fr.xml');
 
         self::assertSame($moduleVersion, $configVersion);
-        self::assertSame($moduleVersion, $configFrVersion);
     }
 
     private function getModulePath(): string
