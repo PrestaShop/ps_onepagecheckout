@@ -23,28 +23,10 @@ const QUEUE_WATCHDOG_MS = 20000;
 
 function getQueueState() {
   if (!window.__opcRequestQueueState) {
-    window.__opcRequestQueueState = {pending: [], inFlight: false, flushScheduled: false};
+    window.__opcRequestQueueState = {pending: [], inFlight: false};
   }
 
   return window.__opcRequestQueueState;
-}
-
-// First flush is deferred by one tick: several calls fired by the SAME event cascade
-// (e.g. two listeners of a use_same toggle both requesting an address refresh) coalesce
-// into the single latest task BEFORE anything is sent. An immediate flush would send the
-// first call and demote the burst's fresher calls to a later, different server state —
-// and their generation guards would then discard the first response (a surfaced error
-// could be silently swallowed as stale).
-function scheduleFlush() {
-  const state = getQueueState();
-  if (state.flushScheduled) {
-    return;
-  }
-  state.flushScheduled = true;
-  setTimeout(() => {
-    state.flushScheduled = false;
-    flushQueue();
-  }, 0);
 }
 
 function flushQueue() {
@@ -104,5 +86,5 @@ export function enqueueOpcRequest(key, send, onDiscard) {
   }
 
   state.pending.push({key, send, onDiscard});
-  scheduleFlush();
+  flushQueue();
 }
