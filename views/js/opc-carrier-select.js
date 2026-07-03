@@ -130,22 +130,20 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
       return null;
     }
 
-    // Resolve the real address ids the cart is on (saved-address selection, else the
-    // autosave-persisted inline address) so the server skips the temp mount and the selection is
-    // persisted — and actionCarrierProcess fired — against the real row. Raw fields below stay as
-    // the fallback for the pre-persist window.
-    const resolvedDeliveryAddressId = String($container.attr('data-id-address') || '')
-      || getSelectedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
-      || getPersistedInlineAddressId(OPC_SELECTORS.opc.deliveryFields, 'id_address_delivery');
-    const resolvedInvoiceAddressId = getUseSameAddressValue() === '0'
-      ? (getSelectedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
-        || getPersistedInlineAddressId(OPC_SELECTORS.opc.billingFields, 'id_address_invoice'))
-      : '';
+    // Pointer-backed contexts send NEITHER ids NOR raw fields: the cart pointers (set by the
+    // carriers fetch / the autosave) are authoritative, so the server skips the temp mounts and
+    // the selection is persisted — and actionCarrierProcess fired — against the real rows. The
+    // delivery side already had this contract through data-id-address; the invoice side gets the
+    // same treatment when a saved billing selection or an autosave-persisted inline billing id
+    // backs it. Raw fields stay as the fallback for the pre-persist windows.
+    const invoicePointerBacked = getUseSameAddressValue() === '0'
+      && Boolean(
+        getSelectedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
+        || getPersistedInlineAddressId(OPC_SELECTORS.opc.billingFields, 'id_address_invoice')
+      );
     const payload = {
       delivery_option: deliveryOption,
-      ...collectBillingAddressContext(form),
-      ...(resolvedDeliveryAddressId ? {id_address_delivery: resolvedDeliveryAddressId} : {}),
-      ...(resolvedInvoiceAddressId ? {id_address_invoice: resolvedInvoiceAddressId} : {}),
+      ...(invoicePointerBacked ? {use_same_address: getUseSameAddressValue()} : collectBillingAddressContext(form)),
       ...($container.attr('data-id-address') ? {} : collectAddressFields()),
     };
 
