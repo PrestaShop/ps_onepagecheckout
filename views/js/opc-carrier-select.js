@@ -1,6 +1,7 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
 import {collectBillingAddressContext} from './runtime/address/opc-address-context';
+import {enqueueOpcRequest} from './runtime/opc-request-queue';
 import {
   AJAX_READY_STATE_DONE,
   AJAX_STATUS_ABORT,
@@ -112,22 +113,24 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
   }
 
   const form = document.querySelector(CHECKOUT_FORM_SELECTOR);
-  const payload = {
-    delivery_option: deliveryOption,
-    ...collectBillingAddressContext(form),
-    ...($container.attr('data-id-address') ? {} : collectAddressFields()),
-  };
   const generation = ++selectCarrierGeneration;
-  if (activeSelectCarrierRequest && activeSelectCarrierRequest.readyState !== AJAX_READY_STATE_DONE) {
-    activeSelectCarrierRequest.abort();
-  }
 
   prestashop.emit(OPC_EVENTS.opcCarrierSelectionLoading, {});
 
-  const request = $.post(selectCarrierUrl, payload);
-  activeSelectCarrierRequest = request;
+  // Global OPC queue: the selected option (the user intent) is captured now; the address
+  // context is collected at SEND time. Only the latest selection of a burst is sent.
+  enqueueOpcRequest('selectcarrier', () => {
+    if (generation !== selectCarrierGeneration) {
+      return null;
+    }
 
-  request
+    const payload = {
+      delivery_option: deliveryOption,
+      ...collectBillingAddressContext(form),
+      ...($container.attr('data-id-address') ? {} : collectAddressFields()),
+    };
+
+    return $.post(selectCarrierUrl, payload)
     .done((response) => {
       if (generation !== selectCarrierGeneration) {
         return;
@@ -173,12 +176,8 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
         eventType: 'opcSelectCarrier',
         resp: getAjaxErrorEventResponse(jqXHR, selectionFailedMessage),
       });
-    })
-    .always(() => {
-      if (activeSelectCarrierRequest === request) {
-        activeSelectCarrierRequest = null;
-      }
     });
+  });
 });
 
 prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {

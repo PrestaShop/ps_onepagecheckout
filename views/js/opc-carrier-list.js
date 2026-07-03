@@ -2,6 +2,7 @@ import {CORE_EVENTS, OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
 import OPC_OPTION_LIST_STATE from './runtime/opc-option-list-state';
 import {emitWithContext} from './runtime/opc-context-sync';
+import {enqueueOpcRequest} from './runtime/opc-request-queue';
 import {
   AJAX_READY_STATE_DONE,
   AJAX_STATUS_ABORT,
@@ -304,18 +305,29 @@ function fetchCarriers() {
   }
 
   const generation = ++fetchCarriersGeneration;
-  if (activeFetchCarriersRequest && activeFetchCarriersRequest.readyState !== AJAX_READY_STATE_DONE) {
-    activeFetchCarriersRequest.abort();
-  }
 
   $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierLoader.replace('#', '')));
   setCarrierOptionsState(OPC_OPTION_LIST_STATE.LOADING);
   prestashop.emit(OPC_EVENTS.opcCarriersLoading, {});
 
-  const request = $.get(carriersUrl);
-  activeFetchCarriersRequest = request;
+  // Global OPC queue: one request in flight at a time, URL rebuilt at SEND time so a
+  // queued fetch reflects the address state at send (not at schedule), bursts coalesced
+  // to the latest call. Superseded fetches are never aborted anymore — they are simply
+  // replaced while still pending.
+  enqueueOpcRequest('carriers', () => {
+    if (generation !== fetchCarriersGeneration) {
+      return null;
+    }
 
-  request
+    const sendUrl = buildCarriersUrl(getConfiguredOpcUrl(URL_KEY));
+    if (!sendUrl) {
+      renderCarrierAwaitingAddress();
+      prestashop.emit(OPC_EVENTS.opcCarriersAwaiting, {});
+
+      return null;
+    }
+
+    return $.get(sendUrl)
     .done((response) => {
       if (generation !== fetchCarriersGeneration) {
         return;
@@ -371,12 +383,8 @@ function fetchCarriers() {
       setCarrierOptionsState(OPC_OPTION_LIST_STATE.FAILED);
       prestashop.emit(FAILED_EVENT_NAME, {resp});
       prestashop.emit('handleError', {eventType: 'opcCarriers', resp});
-    })
-    .always(() => {
-      if (activeFetchCarriersRequest === request) {
-        activeFetchCarriersRequest = null;
-      }
     });
+  });
 }
 
 $(function () {

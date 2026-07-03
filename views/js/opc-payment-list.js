@@ -3,6 +3,7 @@ import OPC_SELECTORS from './selectors';
 import OPC_OPTION_LIST_STATE from './runtime/opc-option-list-state';
 import {getAjaxErrorResponse, getConfiguredOpcMessage, getConfiguredOpcUrl, normalizeErrorResponse} from './runtime/opc-runtime';
 import {emitWithContext} from './runtime/opc-context-sync';
+import {enqueueOpcRequest} from './runtime/opc-request-queue';
 import {
   collectVisibleAddressContext,
   getUseSameAddressValue,
@@ -211,7 +212,21 @@ function fetchPaymentMethods() {
   const generation = ++fetchGeneration;
   showLoader();
 
-  $.get(paymentMethodsUrl)
+  // Global OPC queue: serialized with every other OPC call, URL rebuilt at SEND time,
+  // bursts coalesced to the latest call.
+  enqueueOpcRequest('paymentmethods', () => {
+    if (generation !== fetchGeneration) {
+      return null;
+    }
+
+    const sendUrl = buildPaymentMethodsUrl(getConfiguredOpcUrl(URL_KEY));
+    if (!sendUrl) {
+      hideLoader();
+
+      return null;
+    }
+
+    return $.get(sendUrl)
     .done((response) => {
       if (generation !== fetchGeneration) {
         return;
@@ -256,6 +271,7 @@ function fetchPaymentMethods() {
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
     });
+  });
 }
 
 $(fetchPaymentMethods);

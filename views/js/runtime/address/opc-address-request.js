@@ -13,6 +13,7 @@ import {
   carrierPricesDependOnBillingAddress,
   hasDeliveryMethodsSection,
 } from './opc-address-context';
+import {enqueueOpcRequest} from '../opc-request-queue';
 
 let selectAddressGeneration = 0;
 let activeSelectAddressRequest = null;
@@ -28,16 +29,26 @@ export function selectCurrentAddress() {
   }
 
   const generation = ++selectAddressGeneration;
-  if (activeSelectAddressRequest && activeSelectAddressRequest.readyState !== AJAX_READY_STATE_DONE) {
-    activeSelectAddressRequest.abort();
-  }
 
   prestashop.emit(OPC_EVENTS.opcAddressesLoading, {});
 
-  const request = $.post(selectAddressUrl, buildSelectAddressPayload(form));
-  activeSelectAddressRequest = request;
+  // Global OPC queue: payload built at SEND time; a queued selection superseded by a
+  // newer one is discarded and settles as stale (same contract as the old abort).
+  const outcome = $.Deferred();
+  enqueueOpcRequest('selectaddress', () => {
+    if (generation !== selectAddressGeneration) {
+      outcome.reject({stale: true});
 
-  return request.then((response) => {
+      return null;
+    }
+
+    const request = $.post(selectAddressUrl, buildSelectAddressPayload(form));
+    request.then(outcome.resolve, outcome.reject);
+
+    return request;
+  }, () => outcome.reject({stale: true}));
+
+  return outcome.then((response) => {
     if (generation !== selectAddressGeneration) {
       return $.Deferred().reject({stale: true}).promise();
     }
@@ -56,17 +67,13 @@ export function selectCurrentAddress() {
 
     return response;
   }, (jqXHR, textStatus) => {
-    if (generation !== selectAddressGeneration || textStatus === AJAX_STATUS_ABORT) {
+    if (generation !== selectAddressGeneration || textStatus === AJAX_STATUS_ABORT || (jqXHR && jqXHR.stale)) {
       return $.Deferred().reject({stale: true}).promise();
     }
 
     prestashop.emit(OPC_EVENTS.opcAddressesFailed, jqXHR && jqXHR.responseJSON);
 
     return $.Deferred().reject(jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON : jqXHR).promise();
-  }).always(() => {
-    if (activeSelectAddressRequest === request) {
-      activeSelectAddressRequest = null;
-    }
   });
 }
 

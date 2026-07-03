@@ -8,6 +8,7 @@ import {normalizeErrorEventResponse} from './runtime/opc-runtime';
 import {AJAX_STATUS_ABORT} from './runtime/opc-runtime';
 import {setOpcRuntimePersistAddressDraft} from './runtime/opc-runtime';
 import {emitWithContext} from './runtime/opc-context-sync';
+import {enqueueOpcRequest} from './runtime/opc-request-queue';
 import {areRenderedRequiredFieldsComplete, clearAddressPersistFailed, hasDeliveryMethodsSection, isInlineAutosaveActive, markAddressPersistFailed} from './runtime/address/opc-address-context';
 import {
   refreshAfterBillingAddressChange,
@@ -493,10 +494,19 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
   }
   const generation = ++addressFormGeneration;
 
-  $.post(
-    addressFormUrl,
-    requestData,
-  ).then((resp) => {
+  // Global OPC queue: the re-render is serialized with the savedraft/refresh traffic
+  // (its DOM swap can no longer land between a persist and its refreshes) and rapid
+  // country changes coalesce to the latest one.
+  enqueueOpcRequest('addressform', () => {
+    if (generation !== addressFormGeneration) {
+      return null;
+    }
+
+    const request = $.post(
+      addressFormUrl,
+      requestData,
+    );
+    request.then((resp) => {
     if (generation !== addressFormGeneration) {
       return;
     }
@@ -562,15 +572,18 @@ function refreshOpcAddressFormForCountryChange(target, selectors) {
       $(`${BILLING_FIELDS_SELECTOR} [name="id_address_invoice"]`).first().val('');
       emitAddressUpdate('billing', {target: addressContainer, resp});
     }
-  }).fail((resp) => {
-    if (generation !== addressFormGeneration) {
-      return;
-    }
+    }).fail((resp) => {
+      if (generation !== addressFormGeneration) {
+        return;
+      }
 
-    prestashop.emit('handleError', {
-      eventType: 'updateOpcAddressForm',
-      resp: normalizeErrorEventResponse(resp && resp.responseJSON, fallbackMessage),
+      prestashop.emit('handleError', {
+        eventType: 'updateOpcAddressForm',
+        resp: normalizeErrorEventResponse(resp && resp.responseJSON, fallbackMessage),
+      });
     });
+
+    return request;
   });
 }
 
@@ -777,7 +790,6 @@ function bindAddressDraftAutosave(selectors) {
 
   let debounceTimer = null;
   let pendingContainer = null;
-  let inFlightDraftRequest = null;
 
   const buildDraftPayload = (addressContainer) => {
     const payload = collectAddressDraftPayload(addressContainer);
@@ -818,10 +830,10 @@ function bindAddressDraftAutosave(selectors) {
     }
 
     const addressContainer = pendingContainer;
-    const payload = buildDraftPayload(pendingContainer);
     pendingContainer = null;
 
     if (useBeacon && typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const payload = buildDraftPayload(addressContainer);
       const formData = new FormData();
       Object.keys(payload).forEach((key) => formData.append(key, payload[key]));
       navigator.sendBeacon(draftUrl, formData);
@@ -829,22 +841,17 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
-    // Serialize the saves: two concurrent savedrafts can BOTH insert a new address (neither has
-    // the persisted id yet — it only lands with the response), leaving duplicates on the customer
-    // record on slow shops. Abort the superseded in-flight request — its server-side write (if it
-    // got that far) stays covered by the cart-pointer fallback (reusableCartAddressId), and
-    // handleDraftFailure already ignores aborts by design.
-    if (inFlightDraftRequest && inFlightDraftRequest.readyState !== 4) {
-      inFlightDraftRequest.abort();
-    }
-
     // The savedraft endpoint saves a complete & valid address as a real address attached to the cart
     // (when a customer exists). Keep the inline form intact (no list switch); just remember the saved
     // address id(s) so later edits update the same address and the final submit reuses it instead of
     // creating a duplicate. The saved-address list appears naturally on the next full page load.
-    inFlightDraftRequest = $.post(draftUrl, payload)
+    // Routed through the global OPC queue: never concurrent with another OPC call, payload built
+    // at SEND time (fresh field values AND the ids the previous response just delivered), bursts
+    // coalesced to the latest edit. Never aborted: an aborted POST still executes server-side and
+    // the address it inserts is never adopted client-side.
+    enqueueOpcRequest('savedraft', () => $.post(draftUrl, buildDraftPayload(addressContainer))
       .done((response) => handleDraftResponse(response, addressContainer))
-      .fail(handleDraftFailure);
+      .fail(handleDraftFailure));
   };
 
   const scheduleAutosave = (event) => {
@@ -900,13 +907,8 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
-    if (inFlightDraftRequest && inFlightDraftRequest.readyState !== 4) {
-      inFlightDraftRequest.abort();
-    }
-
-    inFlightDraftRequest = $.post(draftUrl, buildDraftPayload(addressContainer))
-      .done((response) => handleDraftResponse(response, addressContainer))
-      .fail(handleDraftFailure);
+    pendingContainer = addressContainer;
+    flushPendingDraft(false);
   };
 
   prestashop.on(OPC_EVENTS.opcGuestInitSuccess, persistCompletedAddressOnGuestInit);
