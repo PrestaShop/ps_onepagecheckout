@@ -166,6 +166,15 @@ function buildPaymentMethodsUrl(baseUrl) {
 // error templates), hide the module blocks directly through Core's canonical selector, with the
 // same inline-style mechanism Core uses so a later toggleOrderButton show() still reveals them.
 function resyncBinaryPaymentMachinery() {
+  // No binary module on the page — nothing for Core's machinery to re-arm, and the synthetic
+  // change below also triggers OPC's own selection listener: skip entirely so ordinary shops get
+  // zero extra traffic.
+  const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
+    || '.payment-binary, .js-payment-binary';
+  if (!document.querySelector(paymentBinarySelector)) {
+    return;
+  }
+
   const container = document.querySelector(CONTAINER_SELECTOR);
   const radio = container
     ? (container.querySelector(`${OPC_SELECTORS.inputs.paymentOption}:checked`)
@@ -178,8 +187,6 @@ function resyncBinaryPaymentMachinery() {
     return;
   }
 
-  const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
-    || '.payment-binary, .js-payment-binary';
   document.querySelectorAll(paymentBinarySelector).forEach((block) => {
     block.style.display = 'none';
   });
