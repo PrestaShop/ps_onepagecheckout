@@ -14,6 +14,7 @@ class OnePageCheckoutCarriersHandler
     private CartPresenterHelper $cartPresenterHelper;
     private TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage;
     private TempAddressStorage $tempAddressStorage;
+    private CheckoutAddressRequestGuard $addressRequestGuard;
 
     public function __construct(
         \Context $context,
@@ -24,6 +25,7 @@ class OnePageCheckoutCarriersHandler
         ?CartPresenterHelper $cartPresenterHelper = null,
         ?TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage = null,
         ?TempAddressStorage $tempAddressStorage = null,
+        ?CheckoutAddressRequestGuard $addressRequestGuard = null,
     ) {
         $this->context = $context;
         $this->translator = $translator;
@@ -32,6 +34,7 @@ class OnePageCheckoutCarriersHandler
         $this->cartPresenterHelper = $cartPresenterHelper ?? new CartPresenterHelper($context);
         $this->tempCarrierSelectionStorage = $tempCarrierSelectionStorage ?? new TempAddressCarrierSelectionStorage($context);
         $this->tempAddressStorage = $tempAddressStorage ?? new TempAddressStorage($context);
+        $this->addressRequestGuard = $addressRequestGuard ?? new CheckoutAddressRequestGuard($context, $this->customerResolver);
     }
 
     /**
@@ -179,48 +182,11 @@ class OnePageCheckoutCarriersHandler
 
     protected function isOwnedCheckoutAddress(int $addressId): bool
     {
-        if ($addressId <= 0) {
-            return false;
-        }
-
-        $customerId = $this->customerResolver->resolveId();
-        if ($customerId <= 0) {
-            return false;
-        }
-
-        return \Customer::customerHasAddress($customerId, $addressId);
+        return $this->addressRequestGuard->isOwnedCheckoutAddress($addressId);
     }
 
-    /**
-     * Edge case: with exactly one saved address, delivery is selected from the saved list while
-     * separate billing is rendered as inline fields. There is no saved invoice address id yet, but
-     * invoice-based carrier totals must still be computed from the inline billing country.
-     *
-     * @param array<string,mixed> $requestParameters
-     */
     private function applyTemporaryInlineInvoiceAddress(OpcTempAddress $tempAddress, array $requestParameters): void
     {
-        if ((string) ($requestParameters['use_same_address'] ?? '1') !== '0') {
-            return;
-        }
-
-        if (!empty($requestParameters['id_address_invoice'])) {
-            return;
-        }
-
-        if ((int) ($requestParameters['invoice_id_country'] ?? 0) <= 0) {
-            return;
-        }
-
-        $tempAddress->createFromRequest(
-            [
-                'use_same_address' => '0',
-                'invoice_id_country' => $requestParameters['invoice_id_country'],
-                'invoice_id_state' => $requestParameters['invoice_id_state'] ?? 0,
-                'invoice_postcode' => $requestParameters['invoice_postcode'] ?? '',
-                'invoice_city' => $requestParameters['invoice_city'] ?? '',
-            ],
-            true
-        );
+        $this->addressRequestGuard->applyTemporaryInlineInvoiceAddress($tempAddress, $requestParameters);
     }
 }
