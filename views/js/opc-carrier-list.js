@@ -13,6 +13,8 @@ import {
 } from './runtime/opc-runtime';
 import {
   collectVisibleAddressContext,
+  getPersistedInlineAddressId,
+  getSelectedAddressId,
   getUseSameAddressValue,
   hasAddressPersistFailed,
   INVOICE_ADDRESS_CONTEXT_FIELDS,
@@ -125,7 +127,13 @@ function buildCarriersUrl(baseUrl) {
 
   const useSameAddress = getUseSameAddressValue();
   const idCountry = getFormValue(form, 'id_country');
-  const selectedSavedDeliveryAddressId = selectedDeliveryAddressId || getSelectedSavedDeliveryAddressId();
+  // Saved-address selection first; otherwise the autosave-persisted inline address id, so the
+  // server takes its battle-tested id-branch (ownership check, cart pointer update,
+  // pending-carrier restore) instead of mounting a temp placeholder. Raw fields below stay as
+  // the fallback for the pre-persist window.
+  const selectedSavedDeliveryAddressId = selectedDeliveryAddressId
+    || getSelectedSavedDeliveryAddressId()
+    || getPersistedInlineAddressId(OPC_SELECTORS.opc.deliveryFields, 'id_address_delivery');
   if (!selectedSavedDeliveryAddressId && !idCountry) {
     return '';
   }
@@ -142,6 +150,14 @@ function buildCarriersUrl(baseUrl) {
     ).forEach(([field, value]) => {
       url.searchParams.set(field, value);
     });
+
+    // Same preference as the delivery side: the persisted separate-billing address id, so the
+    // server skips the temp invoice mount (it already prefers a front-sent invoice id).
+    const invoiceAddressId = getSelectedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
+      || getPersistedInlineAddressId(OPC_SELECTORS.opc.billingFields, 'id_address_invoice');
+    if (invoiceAddressId) {
+      url.searchParams.set('id_address_invoice', invoiceAddressId);
+    }
   }
 
   if (selectedSavedDeliveryAddressId) {

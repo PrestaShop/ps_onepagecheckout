@@ -1,6 +1,12 @@
 import {OPC_EVENTS} from './events';
 import OPC_SELECTORS from './selectors';
-import {collectBillingAddressContext} from './runtime/address/opc-address-context';
+import {
+  collectBillingAddressContext,
+  getPersistedInlineAddressId,
+  getSelectedAddressId,
+  getUseSameAddressValue,
+} from './runtime/address/opc-address-context';
+import {extractContextRefresh, syncPrestashopContext} from './runtime/opc-context-sync';
 import {
   AJAX_READY_STATE_DONE,
   AJAX_STATUS_ABORT,
@@ -127,7 +133,26 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
   const request = $.post(selectCarrierUrl, payload);
   activeSelectCarrierRequest = request;
 
-  request
+    // Resolve the real address ids the cart is on (saved-address selection, else the
+    // autosave-persisted inline address) so the server skips the temp mount and the selection is
+    // persisted — and actionCarrierProcess fired — against the real row. Raw fields below stay as
+    // the fallback for the pre-persist window.
+    const resolvedDeliveryAddressId = String($container.attr('data-id-address') || '')
+      || getSelectedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
+      || getPersistedInlineAddressId(OPC_SELECTORS.opc.deliveryFields, 'id_address_delivery');
+    const resolvedInvoiceAddressId = getUseSameAddressValue() === '0'
+      ? (getSelectedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
+        || getPersistedInlineAddressId(OPC_SELECTORS.opc.billingFields, 'id_address_invoice'))
+      : '';
+    const payload = {
+      delivery_option: deliveryOption,
+      ...collectBillingAddressContext(form),
+      ...(resolvedDeliveryAddressId ? {id_address_delivery: resolvedDeliveryAddressId} : {}),
+      ...(resolvedInvoiceAddressId ? {id_address_invoice: resolvedInvoiceAddressId} : {}),
+      ...($container.attr('data-id-address') ? {} : collectAddressFields()),
+    };
+
+    return $.post(selectCarrierUrl, payload)
     .done((response) => {
       if (generation !== selectCarrierGeneration) {
         return;
@@ -147,6 +172,11 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
         updateCartSummary(response.preview, response.totals);
       }
       setConfirmedDeliveryOption($container, deliveryOption);
+      // Core reloads the page after a carrier change at the payment step "to be sure amount is
+      // correctly updated on payment modules". OPC's equivalent: apply the response's
+      // context_refresh BEFORE emitting, so a module re-reading prestashop.cart.totals inside an
+      // updatedDeliveryForm handler always sees the total including the new shipping.
+      syncPrestashopContext(extractContextRefresh(response));
       // Keep existing themes compatible with the 4-step checkout carrier lifecycle.
       prestashop.emit('updatedDeliveryForm', {
         dataForm: $(OPC_FORM_SELECTOR).serializeArray(),
