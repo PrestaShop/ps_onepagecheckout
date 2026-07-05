@@ -103,6 +103,52 @@ class AddressFieldsFormatTraitTest extends TestCase
         self::assertSame(64, $format['invoice_firstname']->getMaxLength());
         self::assertSame(['isPhoneNumber'], $format['invoice_phone']->getConstraints());
         self::assertSame(3, $format['invoice_id_country']->getMaxLength());
+        self::assertSame('billing given-name', $format['invoice_firstname']->getAutocompleteAttribute());
+        self::assertSame('billing family-name', $format['invoice_lastname']->getAutocompleteAttribute());
+        self::assertSame('billing address-line1', $format['invoice_address1']->getAutocompleteAttribute());
+        self::assertSame('billing postal-code', $format['invoice_postcode']->getAutocompleteAttribute());
+        self::assertSame('billing country', $format['invoice_id_country']->getAutocompleteAttribute());
+        self::assertSame('billing address-level1', $format['invoice_id_state']->getAutocompleteAttribute());
+        self::assertSame('billing tel', $format['invoice_phone']->getAutocompleteAttribute());
+        self::assertSame('', $format['invoice_alias']->getAutocompleteAttribute());
+        self::assertSame('', $format['invoice_vat_number']->getAutocompleteAttribute());
+        self::assertSame('', $format['invoice_dni']->getAutocompleteAttribute());
+    }
+
+    public function testItScopesAutofillTokensToTheShippingSectionForTheDeliveryAddress(): void
+    {
+        \AddressFormat::$orderedFields = [
+            'firstname',
+            'lastname',
+            'company',
+            'address1',
+            'address2',
+            'postcode',
+            'city',
+            'Country:name',
+            'phone',
+        ];
+        \AddressFormat::$requiredFields = [];
+
+        $sut = $this->createHarness(
+            $this->createCountry(['id' => 33]),
+            CheckoutTestFixtures::translator(static fn (string $message): string => $message),
+            [['id_country' => 33, 'name' => 'France']],
+            []
+        );
+
+        $format = $sut->exposeGetAddressFieldsFormat('', false);
+
+        self::assertSame('shipping given-name', $format['firstname']->getAutocompleteAttribute());
+        self::assertSame('shipping family-name', $format['lastname']->getAutocompleteAttribute());
+        self::assertSame('shipping organization', $format['company']->getAutocompleteAttribute());
+        self::assertSame('shipping address-line1', $format['address1']->getAutocompleteAttribute());
+        self::assertSame('shipping address-line2', $format['address2']->getAutocompleteAttribute());
+        self::assertSame('shipping postal-code', $format['postcode']->getAutocompleteAttribute());
+        self::assertSame('shipping address-level2', $format['city']->getAutocompleteAttribute());
+        self::assertSame('shipping country', $format['id_country']->getAutocompleteAttribute());
+        self::assertSame('shipping tel', $format['phone']->getAutocompleteAttribute());
+        self::assertSame('', $format['alias']->getAutocompleteAttribute());
     }
 
     public function testItKeepsAliasOptionalWhenAliasRequiredIsFalse(): void

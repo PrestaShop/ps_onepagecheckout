@@ -32,6 +32,7 @@
         class="form-select"
         name="{$formFields[$_key_id_country].name}"
         id="{$modal_id}-field-id_country"
+        {if $formFields[$_key_id_country].autocomplete|default:''}autocomplete="{$formFields[$_key_id_country].autocomplete}"{/if}
         {if $formFields[$_key_id_country].required}required{/if}
       >
         <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
@@ -67,6 +68,7 @@
         name="{if isset($formFields[$_key_id_state])}{$formFields[$_key_id_state].name}{else}{$prefix}id_state{/if}"
         id="{$modal_id}-field-id_state"
         data-select-placeholder="{l s='-- please choose --' d='Modules.Onepagecheckout.Shop' js=1}"
+        {if isset($formFields[$_key_id_state]) && $formFields[$_key_id_state].autocomplete|default:''}autocomplete="{$formFields[$_key_id_state].autocomplete}"{/if}
         {if $_has_states && $formFields[$_key_id_state].required}required{/if}
       >
         <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
