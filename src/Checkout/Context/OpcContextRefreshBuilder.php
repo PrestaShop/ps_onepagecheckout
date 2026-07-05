@@ -16,13 +16,17 @@ namespace PrestaShop\Module\PsOnePageCheckout\Checkout\Context;
 class OpcContextRefreshBuilder
 {
     /**
+     * @param bool $withCartTotals when false, skip the cart totals enrichment (two
+     *                             Cart::getOrderTotal() runs) — for endpoints that
+     *                             cannot have changed the cart
+     *
      * @return array<string,mixed>
      */
-    public function build(\Context $context, ?\Country $country = null): array
+    public function build(\Context $context, ?\Country $country = null, bool $withCartTotals = true): array
     {
         $country = $country instanceof \Country ? $country : $this->resolveTaxCountry($context);
         $currency = $context->currency;
-        $cart = $context->cart;
+        $cart = $withCartTotals ? $context->cart : null;
 
         $data = [];
 
