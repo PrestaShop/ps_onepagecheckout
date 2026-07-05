@@ -84,6 +84,11 @@ class AddressFieldsFormatTraitTest extends TestCase
         self::assertTrue($format['invoice_postcode']->isRequired());
         self::assertSame(5, $format['invoice_postcode']->getMinLength());
         self::assertSame('tel', $format['invoice_phone']->getType());
+        self::assertSame(
+            'Only used if we need to contact you about the order or its delivery.',
+            $format['invoice_phone']->getAvailableValues()['comment'] ?? null
+        );
+        self::assertArrayNotHasKey('comment', $format['invoice_address1']->getAvailableValues());
         self::assertSame('countrySelect', $format['invoice_id_country']->getType());
         self::assertSame(33, $format['invoice_id_country']->getValue());
         self::assertSame(
