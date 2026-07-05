@@ -34,9 +34,9 @@
       </div>
       <div class="modal-footer">
         <button
-          id="submit-address-modal"
+          id="{$modal_id}-submit-address-modal"
           type="button"
-          class="btn btn-primary"
+          class="btn btn-primary js-opc-save-address"
         >
           <span class="spinner-border spinner-border-sm me-2 d-none" aria-hidden="true" data-opc-address-save-spinner></span>
           {l s='Save' d='Modules.Onepagecheckout.Shop'}
