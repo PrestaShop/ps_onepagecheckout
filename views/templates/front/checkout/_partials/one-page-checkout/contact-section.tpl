@@ -24,7 +24,7 @@
       {if isset($contactFields['email'])}
         <div class="one-page-checkout__field">
           <label class="form-label" for="field-email">{l s='Continue as guest' d='Modules.Onepagecheckout.Shop'}</label>
-          <input class="form-control" type="email" name="email" id="field-email" value="{$contactFields['email']['value']}" required>
+          <input class="form-control" type="email" name="email" id="field-email" value="{$contactFields['email']['value']}" autocomplete="email" required>
           {include file='_partials/form-errors.tpl' errors=$contactFields['email']['errors']|default:[]}
         </div>
       {/if}
