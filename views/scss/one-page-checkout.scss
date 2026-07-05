@@ -71,3 +71,15 @@ $component-name: one-page-checkout;
 .opc-payment-methods-wrapper {
   min-height: 6rem;
 }
+
+.opc-optional-fields {
+  margin-bottom: 1rem;
+
+  &__toggle {
+    width: fit-content;
+    margin-bottom: 0.5rem;
+    color: var(--bs-link-color);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
