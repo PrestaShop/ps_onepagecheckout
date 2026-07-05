@@ -161,6 +161,30 @@ function isGuestInitApplicable() {
   return $(OPC_FORM_SELECTOR).length > 0 && getOpcContactContainer().length > 0;
 }
 
+/**
+ * Adaptive invalid-email message: state what is actually wrong with the typed value
+ * (missing "@", missing domain, missing local part) instead of a generic message,
+ * falling back to the generic text for the remaining invalid shapes.
+ */
+function getInvalidEmailMessage($emailField) {
+  const emailValue = String($emailField.val() || '').trim();
+  const atIndex = emailValue.indexOf('@');
+
+  if (atIndex === -1) {
+    return getConfiguredOpcMessage('emailMissingAt', 'The email address is missing an "@" (e.g. name@example.com).');
+  }
+
+  if (atIndex === emailValue.length - 1) {
+    return getConfiguredOpcMessage('emailMissingDomain', 'The email address is missing the part after the "@" (e.g. name@example.com).');
+  }
+
+  if (atIndex === 0) {
+    return getConfiguredOpcMessage('emailMissingLocalPart', 'The email address is missing the part before the "@" (e.g. name@example.com).');
+  }
+
+  return getConfiguredOpcMessage('invalidEmail', 'Please enter a valid email address.');
+}
+
 function isEmailValid($emailField) {
   if (!$emailField.length) {
     return false;
@@ -475,7 +499,7 @@ $(() => {
 
     showContactFieldError(
       $emailField,
-      isEmailValid($emailField) ? '' : getConfiguredOpcMessage('invalidEmail', 'Please enter a valid email address.')
+      isEmailValid($emailField) ? '' : getInvalidEmailMessage($emailField)
     );
   });
 
