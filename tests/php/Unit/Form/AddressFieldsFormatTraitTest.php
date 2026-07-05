@@ -105,6 +105,39 @@ class AddressFieldsFormatTraitTest extends TestCase
         self::assertSame(3, $format['invoice_id_country']->getMaxLength());
     }
 
+    public function testItRequestsTheNumericKeyboardOnlyForDigitsOnlyZipFormats(): void
+    {
+        \AddressFormat::$orderedFields = ['postcode'];
+        \AddressFormat::$requiredFields = [];
+
+        $numeric = $this->createHarness(
+            $this->createCountry(['id' => 8, 'zip_code_format' => 'NNNNN']),
+            CheckoutTestFixtures::translator(static fn (string $message): string => $message),
+            [],
+            []
+        )->exposeGetAddressFieldsFormat('', false);
+
+        self::assertSame(['inputmode' => 'numeric'], $numeric['postcode']->getAttr());
+
+        $lettered = $this->createHarness(
+            $this->createCountry(['id' => 17, 'zip_code_format' => 'LN NL']),
+            CheckoutTestFixtures::translator(static fn (string $message): string => $message),
+            [],
+            []
+        )->exposeGetAddressFieldsFormat('', false);
+
+        self::assertSame([], $lettered['postcode']->getAttr());
+
+        $empty = $this->createHarness(
+            $this->createCountry(['id' => 1, 'zip_code_format' => '']),
+            CheckoutTestFixtures::translator(static fn (string $message): string => $message),
+            [],
+            []
+        )->exposeGetAddressFieldsFormat('', false);
+
+        self::assertSame([], $empty['postcode']->getAttr());
+    }
+
     public function testItKeepsAliasOptionalWhenAliasRequiredIsFalse(): void
     {
         \AddressFormat::$orderedFields = [];
