@@ -81,6 +81,13 @@ trait AddressFieldsFormatTrait
                     );
                 } elseif ($field === 'phone') {
                     $formField->setType('tel');
+                    // WHY: buyers hesitate to hand out a phone number; stating what it is
+                    // used for reduces that hesitation (the theme renders this under the
+                    // field as a form-text hint, next to the "Optional" marker).
+                    $formField->addAvailableValue(
+                        'comment',
+                        $this->translator->trans('Only used if we need to contact you about the order or its delivery.', [], 'Modules.Onepagecheckout.Shop')
+                    );
                 } elseif ($field === 'dni') {
                     if ($this->country->need_identification_number) {
                         $formField->setRequired(true);
