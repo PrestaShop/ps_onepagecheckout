@@ -158,11 +158,46 @@ function buildPaymentMethodsUrl(baseUrl) {
   return url.toString();
 }
 
+// Core's checkout-payment.js machinery (binary block visibility, terms gating) only reacts to
+// real `change` events, which programmatic list injections never dispatch — Core never needs to:
+// every checkout mutation reloads the page there. Re-arm it after every payment-list DOM
+// replacement: with a radio present, a synthetic change re-runs toggleOrderButton (which itself
+// handles the no-selection case by hiding every binary block); with NO radio left (awaiting and
+// error templates), hide the module blocks directly through Core's canonical selector, with the
+// same inline-style mechanism Core uses so a later toggleOrderButton show() still reveals them.
+function resyncBinaryPaymentMachinery() {
+  // No binary module on the page — nothing for Core's machinery to re-arm, and the synthetic
+  // change below also triggers OPC's own selection listener: skip entirely so ordinary shops get
+  // zero extra traffic.
+  const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
+    || '.payment-binary, .js-payment-binary';
+  if (!document.querySelector(paymentBinarySelector)) {
+    return;
+  }
+
+  const container = document.querySelector(CONTAINER_SELECTOR);
+  const radio = container
+    ? (container.querySelector(`${OPC_SELECTORS.inputs.paymentOption}:checked`)
+      || container.querySelector(OPC_SELECTORS.inputs.paymentOption))
+    : null;
+
+  if (radio) {
+    radio.dispatchEvent(new Event('change', {bubbles: true}));
+
+    return;
+  }
+
+  document.querySelectorAll(paymentBinarySelector).forEach((block) => {
+    block.style.display = 'none';
+  });
+}
+
 function renderPaymentAwaitingAddress() {
   renderAwaitingAddress(getContainer(), OPC_SELECTORS.templates.paymentAwaitingAddress);
   lastFetchedPaymentListDom = null;
   setPaymentOptionsState(OPC_OPTION_LIST_STATE.AWAITING_ADDRESS);
   hideLoader();
+  resyncBinaryPaymentMachinery();
 }
 
 function showPaymentLoading() {
@@ -238,6 +273,7 @@ function fetchPaymentMethods() {
         lastFetchedPaymentListDom = null;
         hideLoader();
         setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
+        resyncBinaryPaymentMachinery();
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
         prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
 
@@ -250,6 +286,7 @@ function fetchPaymentMethods() {
         $container.html(responsePaymentHtml);
         lastFetchedPaymentListDom = responsePaymentHtml;
         refreshPaymentOptionsState();
+        resyncBinaryPaymentMachinery();
         emitWithContext(OPC_EVENTS.opcPaymentMethodsUpdated, response);
       } else {
         refreshPaymentOptionsState();
@@ -268,6 +305,7 @@ function fetchPaymentMethods() {
       lastFetchedPaymentListDom = null;
       hideLoader();
       setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
+      resyncBinaryPaymentMachinery();
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
     });
@@ -309,6 +347,7 @@ prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
     $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
     lastFetchedPaymentListDom = null;
     setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
+    resyncBinaryPaymentMachinery();
   }
   hideLoader();
 

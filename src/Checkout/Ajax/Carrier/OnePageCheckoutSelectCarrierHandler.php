@@ -13,6 +13,7 @@ class OnePageCheckoutSelectCarrierHandler
     private CartPresenterHelper $cartPresenterHelper;
     private TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage;
     private TempAddressStorage $tempAddressStorage;
+    private CheckoutAddressRequestGuard $addressRequestGuard;
 
     public function __construct(
         \Context $context,
@@ -22,6 +23,7 @@ class OnePageCheckoutSelectCarrierHandler
         ?CartPresenterHelper $cartPresenterHelper = null,
         ?TempAddressCarrierSelectionStorage $tempCarrierSelectionStorage = null,
         ?TempAddressStorage $tempAddressStorage = null,
+        ?CheckoutAddressRequestGuard $addressRequestGuard = null,
     ) {
         $this->context = $context;
         $this->translator = $translator;
@@ -29,6 +31,7 @@ class OnePageCheckoutSelectCarrierHandler
         $this->cartPresenterHelper = $cartPresenterHelper ?? new CartPresenterHelper($context);
         $this->tempCarrierSelectionStorage = $tempCarrierSelectionStorage ?? new TempAddressCarrierSelectionStorage($context);
         $this->tempAddressStorage = $tempAddressStorage ?? new TempAddressStorage($context);
+        $this->addressRequestGuard = $addressRequestGuard ?? new CheckoutAddressRequestGuard($context);
     }
 
     /**
@@ -57,11 +60,33 @@ class OnePageCheckoutSelectCarrierHandler
         $tempAddressId = 0;
 
         try {
-            $tempAddressId = $tempAddress->createFromRequest(
-                $requestParameters,
-                true
-            );
-            $deliveryAddressId = $tempAddressId ?: $originalAddressId;
+            $requestedAddressId = (int) ($requestParameters['id_address_delivery'] ?? 0);
+            if ($requestedAddressId > 0) {
+                if (!$this->isOwnedCheckoutAddress($requestedAddressId)) {
+                    return CheckoutAjaxResponse::error(
+                        $this->translator->trans('Invalid delivery address.', [], 'Modules.Onepagecheckout.Shop'),
+                        'id_address_delivery'
+                    );
+                }
+
+                // Mirror of the carriers-handler id-branch: the front resolved a real address
+                // (saved selection or autosave-persisted inline draft) — point the cart at it and
+                // skip the delivery temp mount entirely, so the selection is persisted and the
+                // hook below fired against the real row. A separate-billing temp stays possible.
+                $deliveryAddressId = $requestedAddressId;
+                $this->context->cart->id_address_delivery = $requestedAddressId;
+                if ((string) ($requestParameters['use_same_address'] ?? '1') === '1') {
+                    $this->context->cart->id_address_invoice = $requestedAddressId;
+                }
+                $this->context->cart->save();
+                $this->addressRequestGuard->applyTemporaryInlineInvoiceAddress($tempAddress, $requestParameters);
+            } else {
+                $tempAddressId = $tempAddress->createFromRequest(
+                    $requestParameters,
+                    true
+                );
+                $deliveryAddressId = $tempAddressId ?: $originalAddressId;
+            }
 
             if ($deliveryAddressId <= 0) {
                 return CheckoutAjaxResponse::error(
@@ -77,6 +102,16 @@ class OnePageCheckoutSelectCarrierHandler
             // and core would fall back to the best-price (Free) carrier, so the summary shipping would not
             // reflect the chosen paid carrier.
             $this->persistCarrierSelection($deliveryAddressId, $deliveryOption);
+            // Core parity (docs/MODULE_COMPATIBILITY.md §1): CheckoutDeliveryStep fires this hook
+            // unconditionally right after the delivery option is persisted — carrier modules
+            // receive it on every selection, including sessions that end in a binary payment
+            // (whose order creation bypasses the OPC submit pipeline and its submit-time call).
+            // Guard: never fire against a temp placeholder (delivery OR invoice) — Core always has
+            // real customer addresses on the cart at fire time; the submit-time call still covers
+            // the degraded pre-persist window.
+            if ($tempAddressId === 0 && !$tempAddress->hasTemporaryInvoiceAddress()) {
+                \Hook::exec('actionCarrierProcess', ['cart' => $this->context->cart]);
+            }
             // Reload-persistence is handled out-of-band by the cookie: save it whenever the inline/temp
             // flow is used — INCLUDING when a real address is already persisted — so the carriers handler
             // restores it onto the real address on the next request (it used to save only when no real
@@ -107,6 +142,11 @@ class OnePageCheckoutSelectCarrierHandler
         $this->checkoutSessionFactory->create()->setDeliveryOption([
             $deliveryAddressId => $deliveryOption,
         ]);
+    }
+
+    protected function isOwnedCheckoutAddress(int $addressId): bool
+    {
+        return $this->addressRequestGuard->isOwnedCheckoutAddress($addressId);
     }
 
     private function persistTemporaryCarrierSelection(string $deliveryOption, bool $shouldPersist, array $requestParameters = []): void
