@@ -10,6 +10,14 @@
         <source>Account successfully created</source>
         <target>Compte créé avec succès</target>
       </trans-unit>
+      <trans-unit id="ff2f451d5e853f466b2dc819e1712afd">
+        <source>Add an address complement</source>
+        <target>Ajouter un complément d'adresse</target>
+      </trans-unit>
+      <trans-unit id="2fc62d9fcb65d7cc645f7e3348fb27af">
+        <source>Add company details</source>
+        <target>Ajouter les informations de la société</target>
+      </trans-unit>
       <trans-unit id="1412f7dcbcbe951b817f3f65b77b8e57">
         <source>Address details:</source>
         <target>Détails de l'adresse :</target>
