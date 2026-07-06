@@ -118,11 +118,6 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
   }
 
   const form = document.querySelector(CHECKOUT_FORM_SELECTOR);
-  const payload = {
-    delivery_option: deliveryOption,
-    ...collectBillingAddressContext(form),
-    ...($container.attr('data-id-address') ? {} : collectAddressFields()),
-  };
   const generation = ++selectCarrierGeneration;
   if (activeSelectCarrierRequest && activeSelectCarrierRequest.readyState !== AJAX_READY_STATE_DONE) {
     activeSelectCarrierRequest.abort();
