@@ -24,6 +24,22 @@
     <div id="center-column" class="center-column page page--full-width">
       <div class="checkout-grid row">
         <div class="checkout-grid__content col-lg-8 order-2 order-lg-1">
+          {block name='express_checkout'}
+            {* Express/wallet buttons above the form, mirroring the cart page slot. The wrapper
+               (and its "or" separator) only renders when a module actually returns content,
+               so shops without express-capable payment modules see no change. *}
+            {capture name='opcExpressCheckout'}{hook h='displayExpressCheckout'}{/capture}
+            {if trim($smarty.capture.opcExpressCheckout)}
+              <div class="opc-express-checkout">
+                <div class="opc-express-checkout__buttons">
+                  {$smarty.capture.opcExpressCheckout nofilter}
+                </div>
+                <div class="opc-express-checkout__separator" aria-hidden="true">
+                  <span class="opc-express-checkout__separator-label">{l s='or' d='Modules.Onepagecheckout.Shop'}</span>
+                </div>
+              </div>
+            {/if}
+          {/block}
           <div class="tab-content">
             {block name='checkout_process'}
               {render file='checkout/checkout-process.tpl' ui=$checkout_process}
