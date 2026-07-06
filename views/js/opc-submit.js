@@ -186,6 +186,9 @@ function validateForm() {
   const carrierOptionsState = document.querySelector(OPC_SELECTORS.opc.deliveryMethods)?.dataset.opcCarriersState || '';
   const paymentOptionsState = document.querySelector(PAYMENT_METHODS_SELECTOR)?.dataset.opcPaymentMethodsState || '';
 
+  // Native Pay-button gate: UNCHANGED (section states + payment-ready + terms). Deliberately does NOT
+  // include native field validity or the carrier/payment selections — the button must not be greyed
+  // out on those; the submit handler validates them at click time (ensureSubmitPreconditions).
   const isValid = !isFinalSubmitInFlight
     && !isCheckoutRefreshing()
     && !PAY_BUTTON_DISABLED_OPTION_LIST_STATES.includes(carrierOptionsState)
@@ -196,6 +199,17 @@ function validateForm() {
   payButton.disabled = !isValid;
   payButton.classList.toggle('disabled', !isValid);
 
+  // Gate module-provided binary buttons during refreshes exactly like the native Pay button — a
+  // mid-refresh click must not create an order against a stale total or carrier. A dedicated class
+  // (not `disabled`: Core's terms gating co-writes that one) on Core's canonical selector; modules
+  // gating by `disabled` only, without the conventional classes, are outside this protection.
+  const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
+    || '.payment-binary, .js-payment-binary';
+  const refreshing = isCheckoutRefreshing();
+  document.querySelectorAll(paymentBinarySelector).forEach((block) => {
+    block.classList.toggle('opc-refresh-disabled', refreshing);
+  });
+
   updatePayButtonLoadingState(payButton);
 
   // Once the customer has tried to submit, keep native invalid-field highlights in sync.
@@ -203,7 +217,20 @@ function validateForm() {
     markFieldsValidity(form);
   }
 
-  prestashop.emit(OPC_EVENTS.opcFormValidated, {isValid});
+  // Payload for payment modules (e.g. the ps_checkout SDK reads this via opcFormValidated to gate
+  // payment). Unlike the button gate above, this is the FULL, accurate validity — it also covers
+  // native field validity and the carrier/payment selections, mirroring the submit-time
+  // ensureSubmitPreconditions() so modules don't proceed while required fields are empty/invalid.
+  // Side-effect-free (no reportValidity/alerts/focus): this runs on every keystroke. This does NOT
+  // affect the OPC button state — that stays on `isValid` so the button is never greyed out here.
+  const isFormFullyValid = isValid
+    && form.checkValidity()
+    && isDeliverySelectionValid()
+    && isPaymentSelectionValid(form);
+
+  prestashop.emit(OPC_EVENTS.opcFormValidated, {isValid: isFormFullyValid});
+
+  return isFormFullyValid;
 }
 
 function initBillingToggle() {
@@ -313,6 +340,33 @@ function resolvePaymentSelection(form) {
     isValid: false,
     paymentRadio: null,
   };
+}
+
+function isDeliverySelectionValid() {
+  const deliveryContainer = document.querySelector(OPC_SELECTORS.opc.deliveryMethods);
+
+  if (!(deliveryContainer instanceof HTMLElement) || !isElementVisible(deliveryContainer)) {
+    return true;
+  }
+
+  const deliveryOptions = deliveryContainer.querySelectorAll(DELIVERY_OPTION_SELECTOR);
+
+  return deliveryOptions.length === 0
+    || Boolean(deliveryContainer.querySelector(`${DELIVERY_OPTION_SELECTOR}:checked`));
+}
+
+function isPaymentSelectionValid(form) {
+  const paymentContainer = getPaymentContainer();
+
+  if (!(paymentContainer instanceof HTMLElement) || !isElementVisible(paymentContainer)) {
+    return true;
+  }
+
+  if (paymentContainer.querySelectorAll(PAYMENT_OPTION_SELECTOR).length === 0) {
+    return true;
+  }
+
+  return findCheckedPaymentOption(form) instanceof HTMLInputElement;
 }
 
 function ajaxCheckCartStillOrderable() {
