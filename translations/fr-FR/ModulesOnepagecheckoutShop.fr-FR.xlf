@@ -34,6 +34,10 @@
         <source>Enter your email address above to see the delivery and payment options.</source>
         <target>Saisissez votre adresse e-mail ci-dessus pour voir les options de livraison et de paiement.</target>
       </trans-unit>
+      <trans-unit id="c80d5ff149d583a237206544502fcae0">
+        <source>Only used if we need to contact you about the order or its delivery.</source>
+        <target>Utilisé uniquement si nous devons vous contacter au sujet de la commande ou de sa livraison.</target>
+      </trans-unit>
       <trans-unit id="9c8ca7810846ba6ed6a281e4413e8eca">
         <source>Please accept the required terms above to see the delivery and payment options.</source>
         <target>Veuillez accepter les conditions requises ci-dessus pour voir les options de livraison et de paiement.</target>
