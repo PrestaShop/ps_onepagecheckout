@@ -125,27 +125,27 @@ $(document).on('change', `${CONTAINER_SELECTOR} ${OPC_SELECTORS.inputs.deliveryO
 
   prestashop.emit(OPC_EVENTS.opcCarrierSelectionLoading, {});
 
+  // Pointer-backed contexts send NEITHER ids NOR raw fields: the cart pointers (set by the
+  // carriers fetch / the autosave) are authoritative, so the server skips the temp mounts and
+  // the selection is persisted — and actionCarrierProcess fired — against the real rows. The
+  // delivery side already had this contract through data-id-address; the invoice side gets the
+  // same treatment when a saved billing selection or an autosave-persisted inline billing id
+  // backs it. Raw fields stay as the fallback for the pre-persist windows.
+  const invoicePointerBacked = getUseSameAddressValue() === '0'
+    && Boolean(
+      getSelectedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
+      || getPersistedInlineAddressId(OPC_SELECTORS.opc.billingFields, 'id_address_invoice')
+    );
+  const payload = {
+    delivery_option: deliveryOption,
+    ...(invoicePointerBacked ? {use_same_address: getUseSameAddressValue()} : collectBillingAddressContext(form)),
+    ...($container.attr('data-id-address') ? {} : collectAddressFields()),
+  };
+
   const request = $.post(selectCarrierUrl, payload);
   activeSelectCarrierRequest = request;
 
-    // Pointer-backed contexts send NEITHER ids NOR raw fields: the cart pointers (set by the
-    // carriers fetch / the autosave) are authoritative, so the server skips the temp mounts and
-    // the selection is persisted — and actionCarrierProcess fired — against the real rows. The
-    // delivery side already had this contract through data-id-address; the invoice side gets the
-    // same treatment when a saved billing selection or an autosave-persisted inline billing id
-    // backs it. Raw fields stay as the fallback for the pre-persist windows.
-    const invoicePointerBacked = getUseSameAddressValue() === '0'
-      && Boolean(
-        getSelectedAddressId(OPC_SELECTORS.opc.billingList, 'id_address_invoice')
-        || getPersistedInlineAddressId(OPC_SELECTORS.opc.billingFields, 'id_address_invoice')
-      );
-    const payload = {
-      delivery_option: deliveryOption,
-      ...(invoicePointerBacked ? {use_same_address: getUseSameAddressValue()} : collectBillingAddressContext(form)),
-      ...($container.attr('data-id-address') ? {} : collectAddressFields()),
-    };
-
-    return $.post(selectCarrierUrl, payload)
+  request
     .done((response) => {
       if (generation !== selectCarrierGeneration) {
         return;
