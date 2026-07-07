@@ -28,7 +28,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '0.6.2';
+        $this->version = '0.6.3';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -339,6 +339,9 @@ class Ps_Onepagecheckout extends Module
                 'awaitingAddressNeedsContact' => $this->trans('Enter your email address above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
                 'awaitingAddressNeedsConsent' => $this->trans('Please accept the required terms above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
                 'invalidEmail' => $this->trans('Please enter a valid email address.', [], 'Modules.Onepagecheckout.Shop'),
+                'emailMissingAt' => $this->trans('The email address is missing an "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
+                'emailMissingDomain' => $this->trans('The email address is missing the part after the "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
+                'emailMissingLocalPart' => $this->trans('The email address is missing the part before the "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
                 'awaitingAddressPersistFailed' => $this->trans("We couldn't save your delivery address. Please check the fields above and try again.", [], 'Modules.Onepagecheckout.Shop'),
                 'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'saveAddressFailed' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),

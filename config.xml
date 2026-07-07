@@ -2,7 +2,7 @@
 <module>
     <name>ps_onepagecheckout</name>
     <displayName><![CDATA[One-page checkout]]></displayName>
-    <version><![CDATA[0.6.2]]></version>
+    <version><![CDATA[0.6.3]]></version>
     <description><![CDATA[Native one-page checkout.]]></description>
     <author><![CDATA[PrestaShop]]></author>
     <tab><![CDATA[front_office_features]]></tab>

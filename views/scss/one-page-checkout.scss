@@ -101,3 +101,11 @@ $component-name: one-page-checkout;
     font-size: 0.875rem;
   }
 }
+
+// Gate module-provided binary payment blocks (displayPaymentByBinaries output) during checkout
+// refreshes, mirroring the native Pay button's isCheckoutRefreshing gating (opc-submit.js).
+.js-payment-binary.opc-refresh-disabled,
+.payment-binary.opc-refresh-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
