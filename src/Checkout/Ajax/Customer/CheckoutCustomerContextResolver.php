@@ -42,6 +42,25 @@ class CheckoutCustomerContextResolver
         return !empty($customer->getSimpleAddresses((int) ($this->context->language->id ?? 0)));
     }
 
+    /**
+     * Whether the inline address form is still the resolved customer's ACTIVE editing surface,
+     * so the typed-address autosave (savedraft) must keep judging and persisting their edits.
+     * A guest always edits inline — CheckoutCustomerTemplateBuilder never shows them the
+     * saved-address list — so a persisted address must not disarm their autosave: a reload
+     * would hand them a prefilled form that no longer validates or saves anything. Registered
+     * customers switch to the saved-address list on their next page load, where edits go
+     * through the address modal instead.
+     */
+    public function usesInlineAddressAutosave(): bool
+    {
+        $customer = $this->resolve();
+        if ($customer instanceof \Customer && (int) $customer->id > 0 && $customer->isGuest()) {
+            return true;
+        }
+
+        return !$this->hasSavedAddress();
+    }
+
     private function resolvePersistedCartOwner(): ?\Customer
     {
         if (!\Validate::isLoadedObject($this->context->cart)) {
