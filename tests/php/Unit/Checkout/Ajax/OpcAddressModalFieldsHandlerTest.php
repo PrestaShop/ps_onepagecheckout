@@ -10,46 +10,10 @@ use PrestaShop\Module\PsOnePageCheckout\Form\OnePageCheckoutForm;
 
 class OpcAddressModalFieldsHandlerTest extends TestCase
 {
-    public function testItBuildsDeliveryModalVariablesByDefaultWithoutRefillingWhenNoCountryIsSent(): void
-    {
-        $opcForm = $this->createMock(OnePageCheckoutForm::class);
-        $opcForm->expects(self::never())->method('fillWith');
-        $opcForm->method('getTemplateVariables')->willReturn([
-            'deliveryFields' => ['delivery-field'],
-            'invoiceFields' => ['invoice-field'],
-        ]);
-
-        $result = (new OnePageCheckoutAddressModalFieldsHandler($opcForm))->getTemplateVariables([]);
-
-        self::assertSame([
-            'formFields' => ['delivery-field'],
-            'prefix' => '',
-            'modal_id' => 'modal-delivery',
-            'address_type' => 'delivery',
-        ], $result);
-    }
-
-    public function testItRebuildsInvoiceModalForTheRequestedCountry(): void
-    {
-        $opcForm = $this->createMock(OnePageCheckoutForm::class);
-        $opcForm->expects(self::once())->method('fillWith')->with(['invoice_id_country' => 8]);
-        $opcForm->method('getTemplateVariables')->willReturn([
-            'deliveryFields' => ['delivery-field'],
-            'invoiceFields' => ['invoice-field'],
-        ]);
-
-        $result = (new OnePageCheckoutAddressModalFieldsHandler($opcForm))->getTemplateVariables([
-            'address_type' => 'invoice',
-            'id_country' => 8,
-        ]);
-
-        self::assertSame([
-            'formFields' => ['invoice-field'],
-            'prefix' => 'invoice_',
-            'modal_id' => 'modal-invoice',
-            'address_type' => 'invoice',
-        ], $result);
-    }
+    // Note: the delivery-default and invoice-rebuild-for-country scenarios are covered end to end by
+    // OpcAddressModalFieldsHandlerIntegrationTest (tests/php/Integration). This unit test keeps only the
+    // guard/edge cases that integration test does not exercise: a present but non-positive country id,
+    // and a form that returns no matching field key.
 
     public function testItDoesNotRefillWhenTheCountryIdIsNotPositive(): void
     {
