@@ -237,6 +237,25 @@ function hasPersistedInlineAddress(fieldsSelector, fieldName) {
   return Boolean(field) && parseInt(field.value, 10) > 0;
 }
 
+// The persisted inline address id, readable ONLY while the inline form is visible — a hidden form
+// (buyer switched back to the saved-address list) must not leak its id. Deliberately separate from
+// getVisibleInlineAddressId: that one excludes hidden inputs to keep the "typed fields are
+// authoritative" contract of the final submit, while this one exists precisely to hand the
+// carrier endpoints the same persisted address the autosave already put on the cart, so shipping
+// is computed against the real row instead of a temp placeholder.
+export function getPersistedInlineAddressId(fieldsSelector, fieldName) {
+  const fields = document.querySelector(fieldsSelector);
+
+  if (!fields || fields.classList.contains('d-none')) {
+    return '';
+  }
+
+  const field = fields.querySelector(`[name="${fieldName}"]`);
+  const id = field ? parseInt(field.value, 10) : 0;
+
+  return id > 0 ? String(id) : '';
+}
+
 export function hasUsableDeliveryAddress() {
   if (getSelectedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery') !== '') {
     return true;
