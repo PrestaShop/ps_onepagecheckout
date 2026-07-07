@@ -42,6 +42,10 @@
         <source>Please enter a valid email address.</source>
         <target>Please enter a valid email address.</target>
       </trans-unit>
+      <trans-unit id="064b4dcc3a8023941a26dbb661d162e6">
+        <source>Please enter your email address.</source>
+        <target>Please enter your email address.</target>
+      </trans-unit>
       <trans-unit id="14a2234d18588bd23796f21de2b778e3">
         <source>The email address is missing an "@" (e.g. name@example.com).</source>
         <target>The email address is missing an "@" (e.g. name@example.com).</target>

@@ -1,5 +1,7 @@
 import OPC_OPTION_LIST_STATE from '../opc-option-list-state';
+import OPC_SELECTORS from '../../selectors';
 import {getConfiguredOpcMessage} from '../opc-runtime';
+import {showFieldError} from '../form/opc-field-errors';
 import {
   getAwaitingAddressHint,
   hasAddressPersistFailed,
@@ -15,6 +17,32 @@ import {
 
 const AWAITING_ADDRESS_FIELDS_SELECTOR = '.js-opc-awaiting-address-fields';
 const AWAITING_ADDRESS_MESSAGE_SELECTOR = '.js-opc-awaiting-address-message';
+
+/**
+ * The option sections are about to say "enter your email above": also flag the email field itself,
+ * so the hint and the field designate each other (SPE-151 — the buyer must see WHICH field blocks
+ * the order, right at the field). Only an EMPTY, not-already-flagged field is flagged: a value
+ * being typed keeps its blur-time verdict from the guest-init runtime, and an existing message
+ * (e.g. a specific invalid-format one) is never clobbered by the generic required one. The
+ * guest-init runtime clears the flag on the next input in the field.
+ */
+function flagEmailFieldAsBlocker() {
+  const contactSection = document.querySelector(OPC_SELECTORS.opc.contactSection);
+  const emailField = contactSection && contactSection.querySelector(OPC_SELECTORS.inputs.email);
+
+  if (!emailField || emailField.dataset.opcFieldError === '1') {
+    return;
+  }
+
+  if (String(emailField.value || '').trim() !== '') {
+    return;
+  }
+
+  showFieldError(
+    emailField,
+    getConfiguredOpcMessage('emailRequired', 'Please enter your email address.')
+  );
+}
 
 function getTemplateHtml(templateSelector) {
   const template = document.querySelector(templateSelector);
@@ -61,6 +89,8 @@ export function fillAwaitingAddressFields($container) {
     if (fieldsTarget.length) {
       fieldsTarget.text('');
     }
+
+    flagEmailFieldAsBlocker();
 
     return;
   }

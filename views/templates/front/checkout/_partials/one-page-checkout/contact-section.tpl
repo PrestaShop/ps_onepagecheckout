@@ -22,8 +22,11 @@
 
     {if $isGuestCheckoutEnabled}
       {if isset($contactFields['email'])}
+        <p class="one-page-checkout__guest-cta">{l s='Continue as guest' d='Modules.Onepagecheckout.Shop'}</p>
         <div class="one-page-checkout__field">
-          <label class="form-label" for="field-email">{l s='Continue as guest' d='Modules.Onepagecheckout.Shop'}</label>
+          {* The label must NAME the field like every other form field (SPE-151): the guest CTA above
+             is a funnel choice, not a substitute for the field's own label. *}
+          <label class="form-label" for="field-email">{$contactFields['email']['label']}</label>
           <input class="form-control" type="email" name="email" id="field-email" value="{$contactFields['email']['value']}" required>
           {include file='_partials/form-errors.tpl' errors=$contactFields['email']['errors']|default:[]}
         </div>
