@@ -30,6 +30,12 @@ const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const URL_KEY = 'paymentMethods';
 let fetchGeneration = 0;
 let lastFetchedPaymentListDom = null;
+// A carriers round is in flight (opcCarriersLoading fired, no terminal yet). While it lasts, the
+// round's outcome is the ONLY payment-refresh trigger: Updated/Selected fetch, Awaiting retracts,
+// Failed renders the error. Direct fetches (address persist, billing-mirror retry, updatedCart)
+// are skipped — they would either be invalidated by the round or duplicate its fetch, re-running
+// every payment module's hook and replacing the payment DOM (module iframes) a second time.
+let carriersRoundInFlight = false;
 
 function setPaymentOptionsState(state) {
   const container = document.querySelector(CONTAINER_SELECTOR);
@@ -224,6 +230,12 @@ function fetchPaymentMethods() {
     return;
   }
 
+  // One refresh round -> one payment fetch: while carriers are refreshing, defer to the round's
+  // terminal event (see carriersRoundInFlight). The loader is already up (opcCarriersLoading).
+  if (carriersRoundInFlight) {
+    return;
+  }
+
   // Identity gate at the single fetch chokepoint: options are only ever shown to an identified buyer
   // (logged-in, or a guest who entered a valid email + required consent). Without this, a non-readiness
   // trigger — a cart mutation (updatedCart), a carriers refresh, or an address-update event — would
@@ -305,6 +317,7 @@ $(document).on('click', '[data-opc-action="retry-payment"]', (event) => {
 prestashop.on(CORE_EVENTS.updatedCart, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarrierSelected, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarriersUpdated, () => {
+  carriersRoundInFlight = false;
   if (!hasSelectedCarrier()) {
     fetchPaymentMethods();
   }
@@ -319,6 +332,7 @@ prestashop.on(OPC_EVENTS.opcGuestInitSuccess, paymentReadiness.syncReadiness);
 prestashop.on(OPC_EVENTS.opcAddressPersistFailed, paymentReadiness.syncReadiness);
 prestashop.on(OPC_EVENTS.opcPaymentMethodsRetry, fetchPaymentMethods);
 prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
+  carriersRoundInFlight = true;
   fetchGeneration += 1;
   showLoader();
 });
@@ -326,6 +340,7 @@ prestashop.on(OPC_EVENTS.opcCarriersLoading, () => {
 prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
   const $container = getContainer();
 
+  carriersRoundInFlight = false;
   fetchGeneration += 1;
   if ($container.length) {
     $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
@@ -367,6 +382,7 @@ prestashop.on(OPC_EVENTS.opcAddressPersisted, paymentReadiness.refreshReadiness)
 // "ready", and the readiness AVAILABLE-guard would leave the previous country's options shown). The
 // carrier tags that case (countryChange). Other awaiting triggers keep the readiness-based behaviour.
 prestashop.on(OPC_EVENTS.opcCarriersAwaiting, (payload) => {
+  carriersRoundInFlight = false;
   if (payload && payload.countryChange) {
     // Invalidate any in-flight payment fetch (e.g. a trailing fetch from the previous country) so its
     // .done() cannot render stale options AFTER we retract to awaiting for the unpersisted new country.

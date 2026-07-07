@@ -43,6 +43,12 @@ const FAILED_EVENT_NAME = OPC_EVENTS.opcCarriersFailed;
 let selectedDeliveryAddressId = null;
 let fetchCarriersGeneration = 0;
 let activeFetchCarriersRequest = null;
+// A trigger fired while a carriers request was already in flight. Aborting-and-refiring would NOT
+// stop the server (an aborted opcCarriers call still executes — and WRITES cart pointers and temp
+// addresses), so concurrent triggers used to race concurrent writes on the same cart. Instead the
+// fetch is single-flight: triggers during flight coalesce into ONE trailing refetch that rebuilds
+// its URL from the freshest state once the in-flight request completes.
+let pendingCarriersRefetch = false;
 // Inline delivery COUNTRY change: hold the carrier list on a loader until the new country is persisted
 // onto the cart, then fetch against the persisted cart (so third-party carrier/payment modules read the
 // fresh delivery country server-side). Driven by opcDeliveryCountryChanging -> opcAddressPersisted.
@@ -319,10 +325,13 @@ function fetchCarriers() {
     return;
   }
 
-  const generation = ++fetchCarriersGeneration;
   if (activeFetchCarriersRequest && activeFetchCarriersRequest.readyState !== AJAX_READY_STATE_DONE) {
-    activeFetchCarriersRequest.abort();
+    pendingCarriersRefetch = true;
+
+    return;
   }
+
+  const generation = ++fetchCarriersGeneration;
 
   $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierLoader.replace('#', '')));
   setCarrierOptionsState(OPC_OPTION_LIST_STATE.LOADING);
@@ -334,6 +343,13 @@ function fetchCarriers() {
   request
     .done((response) => {
       if (generation !== fetchCarriersGeneration) {
+        return;
+      }
+
+      // Superseded mid-flight: the trailing refetch (armed below) renders against the freshest
+      // state — rendering and emitting for THIS response would publish a stale round (and its
+      // opcCarrierSelected would trigger a payment fetch for it).
+      if (pendingCarriersRefetch) {
         return;
       }
 
@@ -382,6 +398,11 @@ function fetchCarriers() {
         return;
       }
 
+      // Superseded mid-flight: skip the error render — the trailing refetch retries anyway.
+      if (pendingCarriersRefetch) {
+        return;
+      }
+
       const resp = getAjaxErrorResponse(jqXHR, fallbackMessage);
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierError.replace('#', '')));
       setCarrierOptionsState(OPC_OPTION_LIST_STATE.FAILED);
@@ -391,6 +412,11 @@ function fetchCarriers() {
     .always(() => {
       if (activeFetchCarriersRequest === request) {
         activeFetchCarriersRequest = null;
+      }
+
+      if (pendingCarriersRefetch) {
+        pendingCarriersRefetch = false;
+        fetchCarriers();
       }
     });
 }
