@@ -13,7 +13,10 @@ on:
         default: true
         type: boolean
       draft:
-        description: Create the GitHub release as a draft. The git tag is still created.
+        description: >-
+          Create the GitHub release as a draft (the git tag is still created). A draft's assets
+          are only downloadable by maintainers: review the draft, then PUBLISH it — the module
+          zip is not installable by anyone else until then (see docs/RELEASING.md).
         required: true
         default: true
         type: boolean
@@ -198,6 +201,16 @@ jobs:
 
           zipinfo -1 "${ZIP}" | grep -Fx "${MODULE}/vendor/autoload.php"
           zipinfo -1 "${ZIP}" | grep -Fx "${MODULE}/ps_onepagecheckout.php"
+
+          # The BO Module Manager resolves the module from a `<module>/<module>.php` entry and
+          # extracts the archive as-is into modules/: every entry must live under the exact
+          # module folder (a version-suffixed root like `ps_onepagecheckout-1.2.3/` is rejected
+          # by the core with "This file does not seem to be a valid module zip").
+          if zipinfo -1 "${ZIP}" | grep -qv "^${MODULE}/"; then
+            echo "The zip contains entries outside the ${MODULE}/ root folder:" >&2
+            zipinfo -1 "${ZIP}" | grep -v "^${MODULE}/" >&2
+            exit 1
+          fi
 
       - name: Create release tag
         shell: bash
