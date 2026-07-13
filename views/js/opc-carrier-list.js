@@ -58,6 +58,13 @@ let pendingCountryChangeTimer = null;
 // persist completes in ~1s, so 5s is a wide margin while keeping a worst-case race from ever looking
 // like an "infinite" loader. Each new country change re-arms it (see beginPendingCountryChangeRefresh).
 const PENDING_COUNTRY_CHANGE_BACKSTOP_MS = 5000;
+// The single-flight guard WAITS for the in-flight request instead of aborting it (an aborted
+// opcCarriers call still executes — and writes — server-side). A request that never completes
+// (black-holed connection) would therefore freeze BOTH option sections with no recovery path:
+// cap it. On timeout the normal .fail path renders the error + retry (jQuery reports 'timeout',
+// which the abort guard lets through) and the trailing coalesced refetch still runs. Nominal
+// rounds complete in ~1-2s; this only ever fires on a dead socket, not a slow-but-alive response.
+const CARRIERS_REQUEST_TIMEOUT_MS = 20000;
 
 // The order-options block (delivery comment / recyclable packaging / gift wrapping) belongs to the
 // delivery section and must stay hidden until a valid delivery address reveals the carriers, 
@@ -72,6 +79,9 @@ function syncOrderOptionsVisibility(state) {
   }
 }
 
+// Cross-section contract: the payment section reads this state straight from the DOM (its round
+// guard, isCarriersRoundInFlight in opc-payment-list.js) instead of shadowing it from events —
+// every state write MUST therefore happen BEFORE the event announcing that transition is emitted.
 function setCarrierOptionsState(state) {
   const container = document.querySelector(CONTAINER_SELECTOR);
 
@@ -337,7 +347,7 @@ function fetchCarriers() {
   setCarrierOptionsState(OPC_OPTION_LIST_STATE.LOADING);
   prestashop.emit(OPC_EVENTS.opcCarriersLoading, {});
 
-  const request = $.get(carriersUrl);
+  const request = $.ajax({url: carriersUrl, timeout: CARRIERS_REQUEST_TIMEOUT_MS});
   activeFetchCarriersRequest = request;
 
   request
