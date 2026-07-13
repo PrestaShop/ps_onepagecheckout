@@ -199,18 +199,6 @@ function validateForm() {
   payButton.disabled = !isValid;
   payButton.classList.toggle('disabled', !isValid);
 
-  // Gate module-provided binary buttons in lockstep with the native Pay button, following the same
-  // `isValid` gate so a binary block is greyed out/blocked whenever OPC's own Pay button would be
-  // (mid-refresh, empty or failed carrier/payment sections, payment methods not ready, or required
-  // terms unchecked). We use a dedicated `opc-binary-disabled` class — NOT `disabled` — so we never
-  // co-write with Core's own terms gating (checkout-payment.js toggleOrderButton), which owns
-  // `disabled` on these same blocks. Applied to Core's canonical binary selector.
-  const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
-    || '.payment-binary, .js-payment-binary';
-  document.querySelectorAll(paymentBinarySelector).forEach((block) => {
-    block.classList.toggle('opc-binary-disabled', !isValid);
-  });
-
   updatePayButtonLoadingState(payButton);
 
   // Once the customer has tried to submit, keep native invalid-field highlights in sync.
@@ -228,6 +216,18 @@ function validateForm() {
     && form.checkValidity()
     && isDeliverySelectionValid()
     && isPaymentSelectionValid(form);
+
+  // Gate module-provided binary buttons in lockstep with the native Pay button, following the same
+  // `isValid` gate so a binary block is greyed out/blocked whenever OPC's own Pay button would be
+  // (mid-refresh, empty or failed carrier/payment sections, payment methods not ready, or required
+  // terms unchecked). We use a dedicated `opc-binary-disabled` class — NOT `disabled` — so we never
+  // co-write with Core's own terms gating (checkout-payment.js toggleOrderButton), which owns
+  // `disabled` on these same blocks. Applied to Core's canonical binary selector.
+  const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
+      || '.payment-binary, .js-payment-binary';
+  document.querySelectorAll(paymentBinarySelector).forEach((block) => {
+    block.classList.toggle('opc-binary-disabled', !isFormFullyValid);
+  });
 
   prestashop.emit(OPC_EVENTS.opcFormValidated, {isValid: isFormFullyValid});
 
