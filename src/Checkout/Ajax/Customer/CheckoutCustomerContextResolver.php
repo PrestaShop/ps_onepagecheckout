@@ -29,8 +29,10 @@ class CheckoutCustomerContextResolver
 
     /**
      * Whether the resolved checkout customer already owns at least one saved address.
-     * Used to decide if the typed-address draft still helps (guests and brand-new accounts
-     * have none) or if the saved-address flow has taken over.
+     * Gates the cookie-draft layer (savedraft store, checkout-step restore): once a real
+     * address exists it is the source of truth, so partial drafts are deliberately dropped —
+     * even for guests, whose inline autosave stays armed (see usesInlineAddressAutosave())
+     * but from then on only persists complete-and-valid edits.
      */
     public function hasSavedAddress(): bool
     {
