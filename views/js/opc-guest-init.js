@@ -6,7 +6,7 @@ import {getConfiguredOpcUrl} from './runtime/opc-runtime';
 import {normalizeErrorEventResponse} from './runtime/opc-runtime';
 import {markAddressPersistFailed, markBuyerIdentified} from './runtime/address/opc-address-context';
 import {isRequiredConsentMissing} from './runtime/address/opc-contact-consent';
-import {clearFieldError} from './runtime/form/opc-field-errors';
+import {clearFieldError, showFieldError} from './runtime/form/opc-field-errors';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -55,6 +55,9 @@ let lastSubmittedFingerprint = '';
 let pendingFingerprint = '';
 let guestCustomerId = getGuestCustomerIdFromContext();
 let isFinalSubmitInProgress = false;
+// The buyer actually typed in the email field: a later empty blur is a walked-away-from mandatory
+// field (worth a "required" verdict), while tabbing through an untouched field stays silent.
+let isEmailFieldTouched = false;
 
 /**
  * @typedef {Object} OpcGuestInitPayload
@@ -456,21 +459,7 @@ function showContactFieldError($field, message) {
     return;
   }
 
-  clearFieldError(field);
-
-  if (!message) {
-    return;
-  }
-
-  const target = field.closest('.form-group, .mb-3') || field.parentElement || field;
-  field.classList.add('is-invalid');
-  field.dataset.opcFieldError = '1';
-
-  const error = document.createElement('div');
-  error.className = 'invalid-feedback d-block js-opc-field-error';
-  error.textContent = message;
-  target.classList.add('has-error');
-  target.appendChild(error);
+  showFieldError(field, message);
 }
 
 $(() => {
@@ -481,18 +470,28 @@ $(() => {
   setInitialGuestEmailFingerprint();
 
   $('body').on('input change', `${OPC_CONTACT_SECTION_SELECTOR} ${EMAIL_FIELD_SELECTOR}`, (event) => {
+    isEmailFieldTouched = true;
     // Clear a stale invalid-email message as soon as the buyer edits the field again.
     clearFieldError($(event.currentTarget).get(0));
     scheduleGuestInit();
   });
 
-  // Validate the email format on blur so the buyer sees, right at the field, why guest-init (and thus
-  // the carriers/payment) is not progressing — without nagging mid-typing or on an untouched-empty field.
+  // Validate the email on blur so the buyer sees, right at the field, why guest-init (and thus
+  // the carriers/payment) is not progressing — without nagging mid-typing or on an untouched-empty
+  // field. A field the buyer touched and left EMPTY is a mandatory field walked away from: it gets
+  // the explicit required message instead of silence (SPE-151).
   $('body').on('focusout', `${OPC_CONTACT_SECTION_SELECTOR} ${EMAIL_FIELD_SELECTOR}`, (event) => {
     const $emailField = $(event.currentTarget);
 
     if (String($emailField.val() || '').trim() === '') {
-      clearFieldError($emailField.get(0));
+      if (isEmailFieldTouched) {
+        showContactFieldError(
+          $emailField,
+          getConfiguredOpcMessage('emailRequired', 'Please enter your email address.')
+        );
+      } else {
+        clearFieldError($emailField.get(0));
+      }
 
       return;
     }

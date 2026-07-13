@@ -341,6 +341,7 @@ class Ps_Onepagecheckout extends Module
                 'awaitingAddressNeedsContact' => $this->trans('Enter your email address above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
                 'awaitingAddressNeedsConsent' => $this->trans('Please accept the required terms above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
                 'invalidEmail' => $this->trans('Please enter a valid email address.', [], 'Modules.Onepagecheckout.Shop'),
+                'emailRequired' => $this->trans('Please enter your email address.', [], 'Modules.Onepagecheckout.Shop'),
                 'emailMissingAt' => $this->trans('The email address is missing an "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
                 'emailMissingDomain' => $this->trans('The email address is missing the part after the "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
                 'emailMissingLocalPart' => $this->trans('The email address is missing the part before the "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
