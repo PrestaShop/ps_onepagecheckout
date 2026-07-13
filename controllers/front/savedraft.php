@@ -1,8 +1,11 @@
 <?php
 
 /**
- * AJAX endpoint that persists the guest's in-progress address form to the visitor cookie,
- * so the typed data survives navigating away from checkout and back.
+ * AJAX endpoint that autosaves the inline address form. Complete and valid input is persisted
+ * as a real address attached to the cart; incomplete input is kept as a visitor-cookie draft,
+ * but only until that first real address exists — from then on the persisted address is the
+ * source of truth, and an edit left incomplete when the buyer navigates away is deliberately
+ * dropped (the form re-prefills from the persisted address on their return).
  */
 
 use PrestaShop\Module\PsOnePageCheckout\Checkout\Ajax\AddressDraftStorage;
@@ -79,8 +82,10 @@ class Ps_OnepagecheckoutSaveDraftModuleFrontController extends Ps_Onepagecheckou
             ];
         }
 
-        // Otherwise keep the partial draft in the cookie, but only while no real address exists yet
-        // (a saved address makes the draft pointless).
+        // Otherwise keep the partial draft in the cookie, but only while no real address exists yet.
+        // Once one is persisted it is the source of truth — the form re-prefills from it and the cart
+        // already uses it for carriers/taxes — so a partial draft is deliberately dropped rather than
+        // stored where it could mask the persisted address on the next render.
         if (!(new CheckoutCustomerContextResolver($this->context))->hasSavedAddress()) {
             $this->persistAddressDraft($requestParameters);
         }
