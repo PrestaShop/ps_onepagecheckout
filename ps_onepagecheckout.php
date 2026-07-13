@@ -163,11 +163,13 @@ class Ps_Onepagecheckout extends Module
         $opcRuntimeConfiguration = [
             'enabled' => true,
             'taxAddressType' => (string) Configuration::get('PS_TAX_ADDRESS_TYPE'),
-            // Customers with no saved address yet have no saved address to start from, so their
-            // typed address is autosaved to a cookie draft. The same autosave saves it as a real
-            // address attached to the cart once it is complete and valid and a customer exists.
-            // Once an address is saved, the saved-address flow takes over on the next page load.
-            'persistAddressDraft' => !$checkoutCustomerContextResolver->hasSavedAddress(),
+            // Active while the inline address form is the buyer's editing surface: the typed
+            // address is autosaved (cookie draft until a real cart address exists, then in-place
+            // updates of that address once the edit is complete and valid — the persisted address
+            // stays the source of truth, so a partial edit is deliberately ephemeral). Guests keep
+            // the inline form — and therefore this autosave — even once an address is saved; for
+            // registered customers the saved-address flow takes over on the next page load.
+            'persistAddressDraft' => $checkoutCustomerContextResolver->usesInlineAddressAutosave(),
             // Server-rendered identity when a checkout customer is already attached to the cart
             // (a logged-in customer, or a guest whose guest-init created one). The option sections gate
             // their reveal on an identified buyer; this lets a returning/reloading guest stay identified
