@@ -199,15 +199,16 @@ function validateForm() {
   payButton.disabled = !isValid;
   payButton.classList.toggle('disabled', !isValid);
 
-  // Gate module-provided binary buttons during refreshes exactly like the native Pay button — a
-  // mid-refresh click must not create an order against a stale total or carrier. A dedicated class
-  // (not `disabled`: Core's terms gating co-writes that one) on Core's canonical selector; modules
-  // gating by `disabled` only, without the conventional classes, are outside this protection.
+  // Gate module-provided binary buttons in lockstep with the native Pay button, following the same
+  // `isValid` gate so a binary block is greyed out/blocked whenever OPC's own Pay button would be
+  // (mid-refresh, empty or failed carrier/payment sections, payment methods not ready, or required
+  // terms unchecked). We use a dedicated `opc-binary-disabled` class — NOT `disabled` — so we never
+  // co-write with Core's own terms gating (checkout-payment.js toggleOrderButton), which owns
+  // `disabled` on these same blocks. Applied to Core's canonical binary selector.
   const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
     || '.payment-binary, .js-payment-binary';
-  const refreshing = isCheckoutRefreshing();
   document.querySelectorAll(paymentBinarySelector).forEach((block) => {
-    block.classList.toggle('opc-refresh-disabled', refreshing);
+    block.classList.toggle('opc-binary-disabled', !isValid);
   });
 
   updatePayButtonLoadingState(payButton);

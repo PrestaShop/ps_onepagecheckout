@@ -72,10 +72,11 @@ $component-name: one-page-checkout;
   min-height: 6rem;
 }
 
-// Gate module-provided binary payment blocks (displayPaymentByBinaries output) during checkout
-// refreshes, mirroring the native Pay button's isCheckoutRefreshing gating (opc-submit.js).
-.js-payment-binary.opc-refresh-disabled,
-.payment-binary.opc-refresh-disabled {
+// Gate module-provided binary payment blocks (displayPaymentByBinaries output) in lockstep with the
+// native Pay button's validity (opc-submit.js validateForm): dim and block interaction whenever the
+// Pay button itself would be disabled. Dedicated class so we never clash with Core's own `disabled`.
+.js-payment-binary.opc-binary-disabled,
+.payment-binary.opc-binary-disabled {
   pointer-events: none;
   opacity: 0.5;
 }
