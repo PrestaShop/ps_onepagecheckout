@@ -86,6 +86,63 @@ class OpcTempAddressIntegrationTest extends TestCase
         );
     }
 
+    public function testCleanupYieldsToAConcurrentPointerCommit(): void
+    {
+        \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_invoice');
+
+        $context = self::getContext();
+        $customer = $this->createCustomer();
+        $context->customer = $customer;
+
+        $originalDelivery = $this->createAddress($customer, 'Original delivery', 'FR', '75001', 'Paris');
+        $originalInvoice = $this->createAddress($customer, 'Original invoice', 'FR', '69001', 'Lyon');
+
+        $cart = new \Cart();
+        $cart->id_currency = (int) \Configuration::get('PS_CURRENCY_DEFAULT');
+        $cart->id_lang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        $cart->id_shop_group = 1;
+        $cart->id_shop = 1;
+        $cart->id_customer = (int) $customer->id;
+        $cart->id_address_delivery = (int) $originalDelivery->id;
+        $cart->id_address_invoice = (int) $originalInvoice->id;
+        self::assertTrue($cart->add());
+        $context->cart = $cart;
+
+        // A carriers/selectaddress-style request swaps the cart to temp addresses,
+        // capturing the pre-swap originals (delivery + separate invoice).
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'id_country' => (string) \Country::getByIso('FR'),
+            'postcode' => '75009',
+            'city' => 'Paris',
+            'use_same_address' => '0',
+            'invoice_id_country' => (string) \Country::getByIso('FR'),
+            'invoice_postcode' => '69001',
+            'invoice_city' => 'Lyon',
+        ]);
+        self::assertGreaterThan(0, $tempDeliveryId);
+
+        // Meanwhile a concurrent use_same re-check commits its revert: the invoice
+        // pointer mirrors the delivery address and the abandoned billing row is deleted.
+        \Db::getInstance()->update('cart', [
+            'id_address_delivery' => (int) $originalDelivery->id,
+            'id_address_invoice' => (int) $originalDelivery->id,
+        ], 'id_cart = ' . (int) $cart->id);
+        (new \Address((int) $originalInvoice->id))->delete();
+
+        // The slower request finishes last: its cleanup must yield to the newer commit —
+        // never resurrect the pointer to the now-deleted billing address.
+        $tempAddress->cleanup($tempDeliveryId, (int) $originalDelivery->id);
+
+        $freshCart = new \Cart((int) $cart->id);
+        self::assertSame((int) $originalDelivery->id, (int) $freshCart->id_address_delivery);
+        self::assertSame((int) $originalDelivery->id, (int) $freshCart->id_address_invoice);
+        self::assertSame(
+            '0',
+            (string) \Db::getInstance()->getValue('SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'address` WHERE alias LIKE "' . pSQL(OpcTempAddress::TEMPORARY_ADDRESS_ALIAS_PREFIX) . '%"')
+        );
+    }
+
     public function testItFallsBackToDeliveryCountryForTempInvoiceAddressWhenUseSameAddressIsEnabled(): void
     {
         \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_invoice');
