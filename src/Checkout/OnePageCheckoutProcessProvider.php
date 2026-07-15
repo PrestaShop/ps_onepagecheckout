@@ -3,7 +3,7 @@
 namespace PrestaShop\Module\PsOnePageCheckout\Checkout;
 
 use PrestaShop\PrestaShop\Adapter\Order\Checkout\CheckoutProcessProviderInterface;
-use PrestaShopBundle\Translation\TranslatorComponent;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class OnePageCheckoutProcessProvider implements CheckoutProcessProviderInterface
 {
@@ -25,7 +25,7 @@ class OnePageCheckoutProcessProvider implements CheckoutProcessProviderInterface
 
     public function buildCheckoutProcess(
         \CheckoutSession $session,
-        TranslatorComponent $translator,
+        TranslatorInterface $translator,
     ): \CheckoutProcess {
         return $this->checkoutProcessBuilder->build($session, $translator);
     }
