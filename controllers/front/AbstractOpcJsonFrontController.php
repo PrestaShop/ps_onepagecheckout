@@ -34,10 +34,40 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
             return $this->buildTechnicalErrorResponse();
         }
 
+        // Serialize OPC ajax requests PER CART with a MySQL advisory lock. Concurrent
+        // requests (autosave, carriers/payment refreshes, selectaddress) all mutate the
+        // same cart row — several through full-row Cart::save() calls (including core's
+        // carrier computation) built from each request's own snapshot, so interleavings
+        // lose writes: duplicated/orphaned inline addresses, invoice pointer reverted to
+        // a stale value. Sequential flows only ever see an uncontended lock (~sub-ms);
+        // on timeout — or any error acquiring the lock — the request proceeds unlocked,
+        // i.e. degrades to today's behavior, never worse.
+        $lockName = null;
+        $lockTaken = false;
+        $cartId = (int) ($this->context->cart->id ?? 0);
+        if ($cartId > 0) {
+            $lockName = 'opc_cart_' . $cartId;
+            try {
+                $lockTaken = (bool) Db::getInstance()->getValue(
+                    "SELECT GET_LOCK('" . pSQL($lockName) . "', 10)"
+                );
+            } catch (Throwable $lockException) {
+                $lockTaken = false;
+            }
+        }
+
         try {
             return $this->handleAvailableOpcRequest();
         } catch (Throwable $exception) {
             return $this->handleRuntimeException($exception);
+        } finally {
+            if ($lockTaken && $lockName !== null) {
+                try {
+                    Db::getInstance()->getValue("SELECT RELEASE_LOCK('" . pSQL($lockName) . "')");
+                } catch (Throwable $releaseException) {
+                    // The lock auto-releases when the connection closes.
+                }
+            }
         }
     }
 
