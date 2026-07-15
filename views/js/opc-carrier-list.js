@@ -17,6 +17,7 @@ import {
   getSelectedAddressId,
   getUseSameAddressValue,
   hasAddressPersistFailed,
+  hasPendingInlineDraft,
   INVOICE_ADDRESS_CONTEXT_FIELDS,
   isBuyerIdentified,
   isCarrierSectionReady,
@@ -298,6 +299,10 @@ const carrierReadiness = createSectionReadiness({
   fetch: () => fetchCarriers(),
 });
 
+// Persist-first: a fetch that finds the typed inline address mid-persist defers to the
+// autosave confirmation (see the gate in fetchCarriers and the listeners below).
+let carrierFetchDeferredOnPersist = false;
+
 function fetchCarriers() {
   const $container = $(CONTAINER_SELECTOR);
 
@@ -318,6 +323,21 @@ function fetchCarriers() {
     // re-evaluates and withholds too — driven AFTER the carrier (preserving the carrier -> payment
     // order), rather than the payment listening to the raw address-update event in parallel.
     prestashop.emit(OPC_EVENTS.opcCarriersAwaiting, {});
+
+    return;
+  }
+
+  // Persist-first: the typed inline address has a persist in flight and no persisted id
+  // yet (first fill) — fetching now would price raw fields against nothing. Hold the
+  // loader and re-fetch once the autosave confirms (opcAddressPersisted below); an
+  // inconclusive persist retracts to awaiting instead of spinning.
+  if (
+    hasPendingInlineDraft(OPC_SELECTORS.opc.deliveryFields)
+    && !getSelectedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
+    && !getPersistedInlineAddressId(OPC_SELECTORS.opc.deliveryFields, 'id_address_delivery')
+  ) {
+    carrierFetchDeferredOnPersist = true;
+    showCarrierLoading();
 
     return;
   }
@@ -536,6 +556,21 @@ prestashop.on(OPC_EVENTS.opcGuestInitSuccess, () => {
 prestashop.on(CORE_EVENTS.updatedCart, () => {
   // Cart mutations can change shipping eligibility and carrier prices.
   fetchCarriers();
+});
+
+prestashop.on(OPC_EVENTS.opcAddressPersisted, (response) => {
+  if (carrierFetchDeferredOnPersist && response && response.address_persisted) {
+    carrierFetchDeferredOnPersist = false;
+    fetchCarriers();
+  }
+});
+prestashop.on(OPC_EVENTS.opcAddressPersistInconclusive, () => {
+  if (carrierFetchDeferredOnPersist) {
+    // Keep the defer ARMED: inconclusive autosaves are routine mid-typing and the
+    // eventual successful persist must still trigger the deferred fetch. Only the
+    // display retracts (no loader may outlive an inconclusive persist).
+    renderCarrierAwaitingAddress();
+  }
 });
 
 // On every address-field edit, keep the awaiting/loading state in sync (which required fields are

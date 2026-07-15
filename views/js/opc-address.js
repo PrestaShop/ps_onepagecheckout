@@ -654,6 +654,18 @@ function rememberPersistedInlineAddresses(response) {
     if ($field.length) {
       $field.val(String(id));
     }
+
+    // This type's typed state is now persisted: persisted-id reads (previews, deferred
+    // carrier fetches) may trust the hidden id again. A use_same=1 save merely MIRRORS
+    // the delivery id onto the invoice pointer (the separate billing edit itself was
+    // skipped — hidden inline billing never persists as the delivery row, the server
+    // mirror-reject guarantees distinct rows), so it must not lift the billing hold.
+    const isMirroredInvoice = fieldName === 'id_address_invoice'
+      && id === (parseInt(response.id_address_delivery, 10) || 0);
+    const fields = document.querySelector(fieldsSelector);
+    if (fields && !isMirroredInvoice) {
+      delete fields.dataset.opcDraftPending;
+    }
   });
 }
 
@@ -872,6 +884,13 @@ function bindAddressDraftAutosave(selectors) {
     const addressContainer = target.closest(selectors.address);
     if (!addressContainer.length) {
       return;
+    }
+
+    // Mark the edited address type dirty: its typed state and persisted address may now
+    // differ, so persisted-id reads defer until the autosave confirms the persist.
+    const fieldsContainer = target.closest(`${DELIVERY_FIELDS_SELECTOR}, ${BILLING_FIELDS_SELECTOR}`);
+    if (fieldsContainer.length) {
+      fieldsContainer.get(0).dataset.opcDraftPending = '1';
     }
 
     pendingContainer = addressContainer;

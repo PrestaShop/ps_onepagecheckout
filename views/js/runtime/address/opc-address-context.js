@@ -118,20 +118,45 @@ export function getSelectedOrInlineAddressId(listSelector, fieldsSelector, field
     || getVisibleInlineAddressId(fieldsSelector, fieldName);
 }
 
+/**
+ * An inline edit is pending its autosave persist: the typed fields and the persisted
+ * address may differ, so persisted-id reads must wait for opcAddressPersisted.
+ * The flag is set on input (opc-address.js scheduleAutosave) and cleared per address
+ * type once the persist response delivers that type's id.
+ */
+export function hasPendingInlineDraft(fieldsSelector) {
+  const fields = document.querySelector(fieldsSelector);
+
+  return Boolean(fields) && fields.dataset.opcDraftPending === '1';
+}
+
+/**
+ * Persist-first: once the inline address is persisted and untouched since, the hidden
+ * persisted id IS the typed state — previews can carry it instead of raw fields. While
+ * an edit is pending (dirty), returns '' so callers defer on the persist instead.
+ */
+export function getCleanPersistedInlineAddressId(fieldsSelector, fieldName) {
+  if (hasPendingInlineDraft(fieldsSelector)) {
+    return '';
+  }
+
+  return getPersistedInlineAddressId(fieldsSelector, fieldName);
+}
+
 export function buildSelectAddressPayload(form) {
   const useSameAddress = getUseSameAddressValue();
   const deliveryAddressId = getSelectedOrInlineAddressId(
     OPC_SELECTORS.opc.deliveryList,
     OPC_SELECTORS.opc.deliveryFields,
     'id_address_delivery'
-  );
+  ) || getCleanPersistedInlineAddressId(OPC_SELECTORS.opc.deliveryFields, 'id_address_delivery');
   const invoiceAddressId = useSameAddress === '1'
     ? deliveryAddressId
-    : getSelectedOrInlineAddressId(
+    : (getSelectedOrInlineAddressId(
       OPC_SELECTORS.opc.billingList,
       OPC_SELECTORS.opc.billingFields,
       'id_address_invoice'
-    );
+    ) || getCleanPersistedInlineAddressId(OPC_SELECTORS.opc.billingFields, 'id_address_invoice'));
 
   const payload = {use_same_address: useSameAddress};
 
