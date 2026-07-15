@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\PrestaShop\Adapter\Order\Checkout;
 
-use PrestaShopBundle\Translation\TranslatorComponent;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 if (!interface_exists(CheckoutProcessProviderInterface::class)) {
     interface CheckoutProcessProviderInterface
@@ -13,7 +13,7 @@ if (!interface_exists(CheckoutProcessProviderInterface::class)) {
 
         public function buildCheckoutProcess(
             \CheckoutSession $session,
-            TranslatorComponent $translator,
+            TranslatorInterface $translator,
         ): \CheckoutProcess;
     }
 }
