@@ -59,6 +59,24 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
             } catch (Throwable $lockException) {
                 $lockTaken = false;
             }
+
+            if (!$lockTaken) {
+                // Degrading is deliberate (never worse than the unserialized behavior), but a
+                // shop that degrades repeatedly is running the old race windows again — make
+                // that observable. Logging must never break the request it instruments.
+                try {
+                    PrestaShopLogger::addLog(
+                        sprintf('ps_onepagecheckout: per-cart lock not acquired for cart %d — request proceeds unserialized', $cartId),
+                        2,
+                        null,
+                        'Cart',
+                        $cartId,
+                        true
+                    );
+                } catch (Throwable $logException) {
+                    // Nothing to do: the request itself must proceed.
+                }
+            }
         }
 
         try {
