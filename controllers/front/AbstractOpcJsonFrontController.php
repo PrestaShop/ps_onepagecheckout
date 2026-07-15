@@ -46,7 +46,11 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
         $lockTaken = false;
         $cartId = (int) ($this->context->cart->id ?? 0);
         if ($cartId > 0) {
-            $lockName = 'opc_cart_' . $cartId;
+            // GET_LOCK's namespace is server-wide, so two PrestaShop installs sharing one
+            // MySQL server would contend on bare cart ids. Discriminate by database + table
+            // prefix, hashed to a fixed length: lock names are capped at 64 characters and
+            // an over-long name is an ERROR (which would silently disable the lock).
+            $lockName = 'opc_' . substr(md5(_DB_NAME_ . '/' . _DB_PREFIX_), 0, 8) . '_cart_' . $cartId;
             try {
                 $lockTaken = (bool) Db::getInstance()->getValue(
                     "SELECT GET_LOCK('" . pSQL($lockName) . "', 10)"
