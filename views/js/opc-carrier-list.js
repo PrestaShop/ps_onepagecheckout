@@ -17,6 +17,7 @@ import {
   getSelectedAddressId,
   getUseSameAddressValue,
   hasAddressPersistFailed,
+  hasPendingInlineDraft,
   INVOICE_ADDRESS_CONTEXT_FIELDS,
   isBuyerIdentified,
   isCarrierSectionReady,
@@ -318,6 +319,22 @@ function fetchCarriers() {
     // re-evaluates and withholds too — driven AFTER the carrier (preserving the carrier -> payment
     // order), rather than the payment listening to the raw address-update event in parallel.
     prestashop.emit(OPC_EVENTS.opcCarriersAwaiting, {});
+
+    return;
+  }
+
+  // Persist-first: the typed inline address has a persist in flight and no persisted id
+  // yet (first fill) — fetching now would price raw fields against nothing. Show the
+  // loader and let the EXISTING persist rails follow up: refreshReadiness (driven by
+  // opcAddressPersisted) fetches any non-AVAILABLE section, and the persist-failed /
+  // inconclusive paths retract the loader. No extra listener — a second driver here
+  // would double the round (one fetch per section per round is a pinned contract).
+  if (
+    hasPendingInlineDraft(OPC_SELECTORS.opc.deliveryFields)
+    && !getSelectedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
+    && !getPersistedInlineAddressId(OPC_SELECTORS.opc.deliveryFields, 'id_address_delivery')
+  ) {
+    showCarrierLoading();
 
     return;
   }
