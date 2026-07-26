@@ -654,6 +654,23 @@ function rememberPersistedInlineAddresses(response) {
     if ($field.length) {
       $field.val(String(id));
     }
+
+    // This type's typed state is now persisted: persisted-id reads (previews, deferred
+    // carrier fetches) may trust the hidden id again. A use_same=1 save merely MIRRORS
+    // the delivery id onto the invoice pointer (the separate billing edit itself was
+    // skipped — the server mirror-reject guarantees distinct rows for a real separate
+    // billing), so it must not lift the billing hold. Mirroring only exists while the
+    // use_same checkbox is present AND checked: a virtual cart (billing-only, no
+    // checkbox) legitimately persists its billing onto BOTH cart pointers — treating
+    // that as a mirror would hold the payment refresh forever.
+    const useSameCheckbox = document.querySelector(SAME_ADDRESS_SELECTOR);
+    const isMirroredInvoice = fieldName === 'id_address_invoice'
+      && Boolean(useSameCheckbox && useSameCheckbox.checked)
+      && id === (parseInt(response.id_address_delivery, 10) || 0);
+    const fields = document.querySelector(fieldsSelector);
+    if (fields && !isMirroredInvoice) {
+      delete fields.dataset.opcDraftPending;
+    }
   });
 }
 
@@ -777,7 +794,7 @@ function bindAddressDraftAutosave(selectors) {
 
   let debounceTimer = null;
   let pendingContainer = null;
-  let inFlightDraftRequest = null;
+  let draftRequestInFlight = false;
 
   const buildDraftPayload = (addressContainer) => {
     const payload = collectAddressDraftPayload(addressContainer);
@@ -817,6 +834,17 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
+    // Serialize the saves WITHOUT aborting: an aborted POST still executes server-side
+    // and the address it inserts is never adopted client-side (its id only lands with
+    // the response) — an interleaved use_same re-check then strands it on the customer
+    // record. Never keep more than one savedraft in flight: the edit stays pending and
+    // ONE request — built from the form state at SEND time, carrying the ids the
+    // in-flight response just delivered — goes out when the current one settles.
+    // (pagehide beacons are exempt: the page is going away.)
+    if (!useBeacon && draftRequestInFlight) {
+      return;
+    }
+
     const addressContainer = pendingContainer;
     const payload = buildDraftPayload(pendingContainer);
     pendingContainer = null;
@@ -829,22 +857,20 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
-    // Serialize the saves: two concurrent savedrafts can BOTH insert a new address (neither has
-    // the persisted id yet — it only lands with the response), leaving duplicates on the customer
-    // record on slow shops. Abort the superseded in-flight request — its server-side write (if it
-    // got that far) stays covered by the cart-pointer fallback (reusableCartAddressId), and
-    // handleDraftFailure already ignores aborts by design.
-    if (inFlightDraftRequest && inFlightDraftRequest.readyState !== 4) {
-      inFlightDraftRequest.abort();
-    }
-
     // The savedraft endpoint saves a complete & valid address as a real address attached to the cart
     // (when a customer exists). Keep the inline form intact (no list switch); just remember the saved
     // address id(s) so later edits update the same address and the final submit reuses it instead of
     // creating a duplicate. The saved-address list appears naturally on the next full page load.
-    inFlightDraftRequest = $.post(draftUrl, payload)
+    draftRequestInFlight = true;
+    $.post(draftUrl, payload)
       .done((response) => handleDraftResponse(response, addressContainer))
-      .fail(handleDraftFailure);
+      .fail(handleDraftFailure)
+      .always(() => {
+        draftRequestInFlight = false;
+        if (pendingContainer) {
+          flushPendingDraft(false);
+        }
+      });
   };
 
   const scheduleAutosave = (event) => {
@@ -863,6 +889,13 @@ function bindAddressDraftAutosave(selectors) {
     const addressContainer = target.closest(selectors.address);
     if (!addressContainer.length) {
       return;
+    }
+
+    // Mark the edited address type dirty: its typed state and persisted address may now
+    // differ, so persisted-id reads defer until the autosave confirms the persist.
+    const fieldsContainer = target.closest(`${DELIVERY_FIELDS_SELECTOR}, ${BILLING_FIELDS_SELECTOR}`);
+    if (fieldsContainer.length) {
+      fieldsContainer.get(0).dataset.opcDraftPending = '1';
     }
 
     pendingContainer = addressContainer;
@@ -900,13 +933,8 @@ function bindAddressDraftAutosave(selectors) {
       return;
     }
 
-    if (inFlightDraftRequest && inFlightDraftRequest.readyState !== 4) {
-      inFlightDraftRequest.abort();
-    }
-
-    inFlightDraftRequest = $.post(draftUrl, buildDraftPayload(addressContainer))
-      .done((response) => handleDraftResponse(response, addressContainer))
-      .fail(handleDraftFailure);
+    pendingContainer = addressContainer;
+    flushPendingDraft(false);
   };
 
   prestashop.on(OPC_EVENTS.opcGuestInitSuccess, persistCompletedAddressOnGuestInit);

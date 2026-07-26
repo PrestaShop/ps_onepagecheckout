@@ -34,10 +34,63 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
             return $this->buildTechnicalErrorResponse();
         }
 
+        // Serialize OPC ajax requests PER CART with a MySQL advisory lock. Concurrent
+        // requests (autosave, carriers/payment refreshes, selectaddress) all mutate the
+        // same cart row — several through full-row Cart::save() calls (including core's
+        // carrier computation) built from each request's own snapshot, so interleavings
+        // lose writes: duplicated/orphaned inline addresses, invoice pointer reverted to
+        // a stale value. Sequential flows only ever see an uncontended lock (~sub-ms);
+        // on timeout — or any error acquiring the lock — the request proceeds unlocked,
+        // i.e. degrades to today's behavior, never worse.
+        $lockName = null;
+        $lockTaken = false;
+        $cartId = (int) ($this->context->cart->id ?? 0);
+        if ($cartId > 0) {
+            try {
+                // GET_LOCK's namespace is server-wide, so two PrestaShop installs sharing one
+                // MySQL server would contend on bare cart ids. Discriminate by database + table
+                // prefix, hashed to a fixed length: lock names are capped at 64 characters and
+                // an over-long name is an ERROR (which would silently disable the lock). Built
+                // inside the try so an environment without the constants degrades unlocked too.
+                $lockName = 'opc_' . substr(md5(_DB_NAME_ . '/' . _DB_PREFIX_), 0, 8) . '_cart_' . $cartId;
+                $lockTaken = (bool) Db::getInstance()->getValue(
+                    "SELECT GET_LOCK('" . pSQL($lockName) . "', 10)"
+                );
+            } catch (Throwable $lockException) {
+                $lockTaken = false;
+            }
+
+            if (!$lockTaken) {
+                // Degrading is deliberate (never worse than the unserialized behavior), but a
+                // shop that degrades repeatedly is running the old race windows again — make
+                // that observable. Logging must never break the request it instruments.
+                try {
+                    PrestaShopLogger::addLog(
+                        sprintf('ps_onepagecheckout: per-cart lock not acquired for cart %d — request proceeds unserialized', $cartId),
+                        2,
+                        null,
+                        'Cart',
+                        $cartId,
+                        true
+                    );
+                } catch (Throwable $logException) {
+                    // Nothing to do: the request itself must proceed.
+                }
+            }
+        }
+
         try {
             return $this->handleAvailableOpcRequest();
         } catch (Throwable $exception) {
             return $this->handleRuntimeException($exception);
+        } finally {
+            if ($lockTaken && $lockName !== null) {
+                try {
+                    Db::getInstance()->getValue("SELECT RELEASE_LOCK('" . pSQL($lockName) . "')");
+                } catch (Throwable $releaseException) {
+                    // The lock auto-releases when the connection closes.
+                }
+            }
         }
     }
 
