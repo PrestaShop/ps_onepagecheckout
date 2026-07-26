@@ -30,7 +30,6 @@ const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const URL_KEY = 'paymentMethods';
 let fetchGeneration = 0;
 let lastFetchedPaymentListDom = null;
-
 function setPaymentOptionsState(state) {
   const container = document.querySelector(CONTAINER_SELECTOR);
 
@@ -75,6 +74,23 @@ function hasSelectedCarrier() {
   return Boolean(
     deliveryMethods.querySelector(`${OPC_SELECTORS.inputs.deliveryOption}:checked`)
   );
+}
+
+// A carriers round is in flight while the carrier section publishes its LOADING state. While it
+// lasts, the round's outcome is the ONLY payment-refresh trigger: Updated/Selected fetch, Awaiting
+// retracts, Failed renders the error. Direct fetches (address persist, billing-mirror retry,
+// updatedCart) are skipped — they would either be invalidated by the round or duplicate its fetch,
+// re-running every payment module's hook and replacing the payment DOM (module iframes) a second
+// time. Read from the DOM state (written by the carrier section BEFORE each of its events fires —
+// see setCarrierOptionsState) instead of an event-maintained flag: a flag whose clear rides on
+// event dispatch sticks forever if a third-party listener throws mid-dispatch (module front JS
+// registers before the OPC bundles and the emitter aborts dispatch on a throw), freezing every
+// payment fetch until reload. No carrier section at all (virtual cart) => never in flight.
+function isCarriersRoundInFlight() {
+  const deliveryMethods = document.querySelector(OPC_SELECTORS.opc.deliveryMethods);
+
+  return deliveryMethods instanceof HTMLElement
+    && deliveryMethods.dataset.opcCarriersState === OPC_OPTION_LIST_STATE.LOADING;
 }
 
 function getLoaderOverlay() {
@@ -157,11 +173,46 @@ function buildPaymentMethodsUrl(baseUrl) {
   return url.toString();
 }
 
+// Core's checkout-payment.js machinery (binary block visibility, terms gating) only reacts to
+// real `change` events, which programmatic list injections never dispatch — Core never needs to:
+// every checkout mutation reloads the page there. Re-arm it after every payment-list DOM
+// replacement: with a radio present, a synthetic change re-runs toggleOrderButton (which itself
+// handles the no-selection case by hiding every binary block); with NO radio left (awaiting and
+// error templates), hide the module blocks directly through Core's canonical selector, with the
+// same inline-style mechanism Core uses so a later toggleOrderButton show() still reveals them.
+function resyncBinaryPaymentMachinery() {
+  // No binary module on the page — nothing for Core's machinery to re-arm, and the synthetic
+  // change below also triggers OPC's own selection listener: skip entirely so ordinary shops get
+  // zero extra traffic.
+  const paymentBinarySelector = (prestashop.selectors && prestashop.selectors.checkout && prestashop.selectors.checkout.paymentBinary)
+    || '.payment-binary, .js-payment-binary';
+  if (!document.querySelector(paymentBinarySelector)) {
+    return;
+  }
+
+  const container = document.querySelector(CONTAINER_SELECTOR);
+  const radio = container
+    ? (container.querySelector(`${OPC_SELECTORS.inputs.paymentOption}:checked`)
+      || container.querySelector(OPC_SELECTORS.inputs.paymentOption))
+    : null;
+
+  if (radio) {
+    radio.dispatchEvent(new Event('change', {bubbles: true}));
+
+    return;
+  }
+
+  document.querySelectorAll(paymentBinarySelector).forEach((block) => {
+    block.style.display = 'none';
+  });
+}
+
 function renderPaymentAwaitingAddress() {
   renderAwaitingAddress(getContainer(), OPC_SELECTORS.templates.paymentAwaitingAddress);
   lastFetchedPaymentListDom = null;
   setPaymentOptionsState(OPC_OPTION_LIST_STATE.AWAITING_ADDRESS);
   hideLoader();
+  resyncBinaryPaymentMachinery();
 }
 
 function showPaymentLoading() {
@@ -186,6 +237,12 @@ function fetchPaymentMethods() {
   const $container = getContainer();
 
   if (!$container.length) {
+    return;
+  }
+
+  // One refresh round -> one payment fetch: while carriers are refreshing, defer to the round's
+  // terminal event (see isCarriersRoundInFlight). The loader is already up (opcCarriersLoading).
+  if (isCarriersRoundInFlight()) {
     return;
   }
 
@@ -223,6 +280,7 @@ function fetchPaymentMethods() {
         lastFetchedPaymentListDom = null;
         hideLoader();
         setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
+        resyncBinaryPaymentMachinery();
         prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
         prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
 
@@ -235,6 +293,7 @@ function fetchPaymentMethods() {
         $container.html(responsePaymentHtml);
         lastFetchedPaymentListDom = responsePaymentHtml;
         refreshPaymentOptionsState();
+        resyncBinaryPaymentMachinery();
         emitWithContext(OPC_EVENTS.opcPaymentMethodsUpdated, response);
       } else {
         refreshPaymentOptionsState();
@@ -253,6 +312,7 @@ function fetchPaymentMethods() {
       lastFetchedPaymentListDom = null;
       hideLoader();
       setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
+      resyncBinaryPaymentMachinery();
       prestashop.emit(OPC_EVENTS.opcPaymentMethodsFailed, {error});
       prestashop.emit('handleError', {eventType: 'opcPaymentMethods', resp: error});
     });
@@ -293,6 +353,7 @@ prestashop.on(OPC_EVENTS.opcCarriersFailed, () => {
     $container.html(getTemplateHtml(OPC_SELECTORS.templates.paymentError.replace('#', '')));
     lastFetchedPaymentListDom = null;
     setPaymentOptionsState(OPC_OPTION_LIST_STATE.FAILED);
+    resyncBinaryPaymentMachinery();
   }
   hideLoader();
 

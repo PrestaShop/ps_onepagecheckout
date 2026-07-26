@@ -28,7 +28,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '0.6.2';
+        $this->version = '0.6.5';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -163,11 +163,13 @@ class Ps_Onepagecheckout extends Module
         $opcRuntimeConfiguration = [
             'enabled' => true,
             'taxAddressType' => (string) Configuration::get('PS_TAX_ADDRESS_TYPE'),
-            // Customers with no saved address yet have no saved address to start from, so their
-            // typed address is autosaved to a cookie draft. The same autosave saves it as a real
-            // address attached to the cart once it is complete and valid and a customer exists.
-            // Once an address is saved, the saved-address flow takes over on the next page load.
-            'persistAddressDraft' => !$checkoutCustomerContextResolver->hasSavedAddress(),
+            // Active while the inline address form is the buyer's editing surface: the typed
+            // address is autosaved (cookie draft until a real cart address exists, then in-place
+            // updates of that address once the edit is complete and valid — the persisted address
+            // stays the source of truth, so a partial edit is deliberately ephemeral). Guests keep
+            // the inline form — and therefore this autosave — even once an address is saved; for
+            // registered customers the saved-address flow takes over on the next page load.
+            'persistAddressDraft' => $checkoutCustomerContextResolver->usesInlineAddressAutosave(),
             // Server-rendered identity when a checkout customer is already attached to the cart
             // (a logged-in customer, or a guest whose guest-init created one). The option sections gate
             // their reveal on an identified buyer; this lets a returning/reloading guest stay identified
@@ -339,6 +341,9 @@ class Ps_Onepagecheckout extends Module
                 'awaitingAddressNeedsContact' => $this->trans('Enter your email address above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
                 'awaitingAddressNeedsConsent' => $this->trans('Please accept the required terms above to see the delivery and payment options.', [], 'Modules.Onepagecheckout.Shop'),
                 'invalidEmail' => $this->trans('Please enter a valid email address.', [], 'Modules.Onepagecheckout.Shop'),
+                'emailMissingAt' => $this->trans('The email address is missing an "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
+                'emailMissingDomain' => $this->trans('The email address is missing the part after the "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
+                'emailMissingLocalPart' => $this->trans('The email address is missing the part before the "@" (e.g. name@example.com).', [], 'Modules.Onepagecheckout.Shop'),
                 'awaitingAddressPersistFailed' => $this->trans("We couldn't save your delivery address. Please check the fields above and try again.", [], 'Modules.Onepagecheckout.Shop'),
                 'missingSaveAddressUrl' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
                 'saveAddressFailed' => $this->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop'),
