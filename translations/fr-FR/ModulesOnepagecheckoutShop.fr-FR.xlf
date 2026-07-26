@@ -50,6 +50,18 @@
         <source>Please enter a valid email address.</source>
         <target>Veuillez saisir une adresse e-mail valide.</target>
       </trans-unit>
+      <trans-unit id="14a2234d18588bd23796f21de2b778e3">
+        <source>The email address is missing an "@" (e.g. name@example.com).</source>
+        <target>L'adresse e-mail ne contient pas de « @ » (ex. : name@example.com).</target>
+      </trans-unit>
+      <trans-unit id="90774d672a96e30eda96bfe6f0068ac8">
+        <source>The email address is missing the part after the "@" (e.g. name@example.com).</source>
+        <target>Il manque la partie après le « @ » dans l'adresse e-mail (ex. : name@example.com).</target>
+      </trans-unit>
+      <trans-unit id="cde1d1133facc6832c7353ddbcf86663">
+        <source>The email address is missing the part before the "@" (e.g. name@example.com).</source>
+        <target>Il manque la partie avant le « @ » dans l'adresse e-mail (ex. : name@example.com).</target>
+      </trans-unit>
       <trans-unit id="66fe14c61ce185bcc46dfbdaa355c03b">
         <source>Unable to resolve checkout cart.</source>
         <target>Impossible de résoudre le panier de la commande.</target>

@@ -13,12 +13,6 @@
   {block name='checkout_notifications'}
     {include file='_partials/notifications.tpl'}
   {/block}
-  <div
-    id="js-account-created-toast"
-    class="d-none"
-    data-show="{$show_account_created_toast|intval|default:0}"
-    data-message="{l s='Account successfully created' d='Modules.Onepagecheckout.Shop'}"
-  ></div>
 
   <div class="columns-container container">
     <div id="center-column" class="center-column page page--full-width">

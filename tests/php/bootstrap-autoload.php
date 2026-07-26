@@ -56,6 +56,7 @@ $loader->addClassMap([
     'PrestaShop\\Module\\PsOnePageCheckout\\Checkout\\Ajax\\CartPresenterHelper' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src/Checkout/Ajax/Shared/CartPresenterHelper.php',
     'PrestaShop\\Module\\PsOnePageCheckout\\Checkout\\Ajax\\CheckoutSessionFactory' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src/Checkout/Ajax/Shared/CheckoutSessionFactory.php',
     'PrestaShop\\Module\\PsOnePageCheckout\\Checkout\\Ajax\\CheckoutAddressContextUpdater' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src/Checkout/Ajax/Shared/CheckoutAddressContextUpdater.php',
+    'PrestaShop\\Module\\PsOnePageCheckout\\Checkout\\Ajax\\CheckoutAddressRequestGuard' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src/Checkout/Ajax/Shared/CheckoutAddressRequestGuard.php',
     'PrestaShop\\Module\\PsOnePageCheckout\\Checkout\\Ajax\\CheckoutCustomerContextResolver' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src/Checkout/Ajax/Customer/CheckoutCustomerContextResolver.php',
     'PrestaShop\\Module\\PsOnePageCheckout\\Checkout\\Ajax\\CheckoutCustomerTemplateBuilder' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src/Checkout/Ajax/Customer/CheckoutCustomerTemplateBuilder.php',
     'PrestaShop\\Module\\PsOnePageCheckout\\Checkout\\Ajax\\OnePageCheckoutGuestInitHandler' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/src/Checkout/Ajax/Customer/OnePageCheckoutGuestInitHandler.php',

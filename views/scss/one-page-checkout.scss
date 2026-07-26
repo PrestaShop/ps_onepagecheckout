@@ -83,3 +83,12 @@ $component-name: one-page-checkout;
     cursor: pointer;
   }
 }
+
+// Gate module-provided binary payment blocks (displayPaymentByBinaries output) in lockstep with the
+// native Pay button's validity (opc-submit.js validateForm): dim and block interaction whenever the
+// Pay button itself would be disabled. Dedicated class so we never clash with Core's own `disabled`.
+.js-payment-binary.opc-binary-disabled,
+.payment-binary.opc-binary-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
