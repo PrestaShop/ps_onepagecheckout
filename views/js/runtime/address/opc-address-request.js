@@ -12,6 +12,7 @@ import {
   buildSelectAddressPayload,
   carrierPricesDependOnBillingAddress,
   hasDeliveryMethodsSection,
+  hasPendingInlineDraft,
 } from './opc-address-context';
 
 let selectAddressGeneration = 0;
@@ -84,7 +85,23 @@ function handleSelectAddressFailure(response) {
   });
 }
 
+// Persist-first: while an inline edit awaits its autosave, a preview request would leave
+// with raw fields (or a stale persisted id) — hold it and re-run once a persist
+// confirms. Inconclusive autosaves (incomplete address mid-typing) keep the hold armed:
+// section readiness owns the retract meanwhile, and the eventual successful persist is
+// the one that re-runs the refresh.
+let billingRefreshDeferredOnPersist = false;
+
 export function refreshAfterBillingAddressChange() {
+  if (
+    hasPendingInlineDraft(OPC_SELECTORS.opc.deliveryFields)
+    || hasPendingInlineDraft(OPC_SELECTORS.opc.billingFields)
+  ) {
+    billingRefreshDeferredOnPersist = true;
+
+    return;
+  }
+
   selectCurrentAddress()
     .done(() => {
       if (carrierPricesDependOnBillingAddress() && hasDeliveryMethodsSection()) {
@@ -96,6 +113,14 @@ export function refreshAfterBillingAddressChange() {
     })
     .fail(handleSelectAddressFailure);
 }
+
+prestashop.on(OPC_EVENTS.opcAddressPersisted, (response) => {
+  if (billingRefreshDeferredOnPersist && response && response.address_persisted) {
+    billingRefreshDeferredOnPersist = false;
+    // Re-runs the pending checks: a still-dirty other address type re-arms the hold.
+    refreshAfterBillingAddressChange();
+  }
+});
 
 export function refreshAfterVirtualDeliveryAddressChange() {
   if (hasDeliveryMethodsSection()) {
