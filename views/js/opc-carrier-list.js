@@ -17,6 +17,7 @@ import {
   getSelectedAddressId,
   getUseSameAddressValue,
   hasAddressPersistFailed,
+  hasPendingInlineDraft,
   INVOICE_ADDRESS_CONTEXT_FIELDS,
   isBuyerIdentified,
   isCarrierSectionReady,
@@ -43,6 +44,12 @@ const FAILED_EVENT_NAME = OPC_EVENTS.opcCarriersFailed;
 let selectedDeliveryAddressId = null;
 let fetchCarriersGeneration = 0;
 let activeFetchCarriersRequest = null;
+// A trigger fired while a carriers request was already in flight. Aborting-and-refiring would NOT
+// stop the server (an aborted opcCarriers call still executes — and WRITES cart pointers and temp
+// addresses), so concurrent triggers used to race concurrent writes on the same cart. Instead the
+// fetch is single-flight: triggers during flight coalesce into ONE trailing refetch that rebuilds
+// its URL from the freshest state once the in-flight request completes.
+let pendingCarriersRefetch = false;
 // Inline delivery COUNTRY change: hold the carrier list on a loader until the new country is persisted
 // onto the cart, then fetch against the persisted cart (so third-party carrier/payment modules read the
 // fresh delivery country server-side). Driven by opcDeliveryCountryChanging -> opcAddressPersisted.
@@ -52,6 +59,13 @@ let pendingCountryChangeTimer = null;
 // persist completes in ~1s, so 5s is a wide margin while keeping a worst-case race from ever looking
 // like an "infinite" loader. Each new country change re-arms it (see beginPendingCountryChangeRefresh).
 const PENDING_COUNTRY_CHANGE_BACKSTOP_MS = 5000;
+// The single-flight guard WAITS for the in-flight request instead of aborting it (an aborted
+// opcCarriers call still executes — and writes — server-side). A request that never completes
+// (black-holed connection) would therefore freeze BOTH option sections with no recovery path:
+// cap it. On timeout the normal .fail path renders the error + retry (jQuery reports 'timeout',
+// which the abort guard lets through) and the trailing coalesced refetch still runs. Nominal
+// rounds complete in ~1-2s; this only ever fires on a dead socket, not a slow-but-alive response.
+const CARRIERS_REQUEST_TIMEOUT_MS = 20000;
 
 // The order-options block (delivery comment / recyclable packaging / gift wrapping) belongs to the
 // delivery section and must stay hidden until a valid delivery address reveals the carriers, 
@@ -66,6 +80,9 @@ function syncOrderOptionsVisibility(state) {
   }
 }
 
+// Cross-section contract: the payment section reads this state straight from the DOM (its round
+// guard, isCarriersRoundInFlight in opc-payment-list.js) instead of shadowing it from events —
+// every state write MUST therefore happen BEFORE the event announcing that transition is emitted.
 function setCarrierOptionsState(state) {
   const container = document.querySelector(CONTAINER_SELECTOR);
 
@@ -306,6 +323,22 @@ function fetchCarriers() {
     return;
   }
 
+  // Persist-first: the typed inline address has a persist in flight and no persisted id
+  // yet (first fill) — fetching now would price raw fields against nothing. Show the
+  // loader and let the EXISTING persist rails follow up: refreshReadiness (driven by
+  // opcAddressPersisted) fetches any non-AVAILABLE section, and the persist-failed /
+  // inconclusive paths retract the loader. No extra listener — a second driver here
+  // would double the round (one fetch per section per round is a pinned contract).
+  if (
+    hasPendingInlineDraft(OPC_SELECTORS.opc.deliveryFields)
+    && !getSelectedAddressId(OPC_SELECTORS.opc.deliveryList, 'id_address_delivery')
+    && !getPersistedInlineAddressId(OPC_SELECTORS.opc.deliveryFields, 'id_address_delivery')
+  ) {
+    showCarrierLoading();
+
+    return;
+  }
+
   const carriersUrl = buildCarriersUrl(getConfiguredOpcUrl(URL_KEY));
   const fallbackMessage = getConfiguredOpcMessage('loadCarriersFailed', 'Unable to load delivery methods.');
 
@@ -319,21 +352,31 @@ function fetchCarriers() {
     return;
   }
 
-  const generation = ++fetchCarriersGeneration;
   if (activeFetchCarriersRequest && activeFetchCarriersRequest.readyState !== AJAX_READY_STATE_DONE) {
-    activeFetchCarriersRequest.abort();
+    pendingCarriersRefetch = true;
+
+    return;
   }
+
+  const generation = ++fetchCarriersGeneration;
 
   $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierLoader.replace('#', '')));
   setCarrierOptionsState(OPC_OPTION_LIST_STATE.LOADING);
   prestashop.emit(OPC_EVENTS.opcCarriersLoading, {});
 
-  const request = $.get(carriersUrl);
+  const request = $.ajax({url: carriersUrl, timeout: CARRIERS_REQUEST_TIMEOUT_MS});
   activeFetchCarriersRequest = request;
 
   request
     .done((response) => {
       if (generation !== fetchCarriersGeneration) {
+        return;
+      }
+
+      // Superseded mid-flight: the trailing refetch (armed below) renders against the freshest
+      // state — rendering and emitting for THIS response would publish a stale round (and its
+      // opcCarrierSelected would trigger a payment fetch for it).
+      if (pendingCarriersRefetch) {
         return;
       }
 
@@ -382,6 +425,11 @@ function fetchCarriers() {
         return;
       }
 
+      // Superseded mid-flight: skip the error render — the trailing refetch retries anyway.
+      if (pendingCarriersRefetch) {
+        return;
+      }
+
       const resp = getAjaxErrorResponse(jqXHR, fallbackMessage);
       $container.html(getTemplateHtml(OPC_SELECTORS.templates.carrierError.replace('#', '')));
       setCarrierOptionsState(OPC_OPTION_LIST_STATE.FAILED);
@@ -391,6 +439,11 @@ function fetchCarriers() {
     .always(() => {
       if (activeFetchCarriersRequest === request) {
         activeFetchCarriersRequest = null;
+      }
+
+      if (pendingCarriersRefetch) {
+        pendingCarriersRefetch = false;
+        fetchCarriers();
       }
     });
 }

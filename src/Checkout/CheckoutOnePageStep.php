@@ -392,7 +392,9 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
      * checkout — including the "I typed my address, then created an account" flow, where a
      * brand-new customer has no saved address yet. Lowest precedence: never overrides a
      * selected saved address or a restored failed-submit state, and stops once the customer
-     * has a saved address to pick from.
+     * owns a real address — for registered customers the saved-address list takes over; for
+     * guests the persisted autosave address is the source of truth the form re-prefills from,
+     * so a draft left incomplete is deliberately not restored over it.
      */
     private function restoreAddressDraft(): void
     {
