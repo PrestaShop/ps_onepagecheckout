@@ -81,6 +81,11 @@ class OpcTempAddress
         return $this->tempInvoiceAddressId;
     }
 
+    public function hasTemporaryInvoiceAddress(): bool
+    {
+        return $this->tempInvoiceAddressId > 0;
+    }
+
     public function cleanup(int $tempAddressId, int $originalAddressId): void
     {
         if ($tempAddressId <= 0 && $this->tempInvoiceAddressId <= 0) {
