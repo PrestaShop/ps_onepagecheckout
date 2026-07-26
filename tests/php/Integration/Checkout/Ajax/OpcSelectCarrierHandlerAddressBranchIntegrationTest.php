@@ -139,6 +139,29 @@ class OpcSelectCarrierHandlerAddressBranchIntegrationTest extends TestCase
         }
     }
 
+    public function testAMissingUseSameAddressKeyDoesNotMirrorTheInvoicePointer(): void
+    {
+        $customer = $this->createCustomer();
+        $deliveryAddress = $this->createAddress($customer, 'FR', 'Delivery draft');
+        $invoiceAddress = $this->createAddress($customer, 'FR', 'Separate billing');
+        $cart = $this->createCart($customer, (int) $deliveryAddress->id, (int) $invoiceAddress->id);
+        $context = $this->createCheckoutContext($customer, $cart);
+
+        // A carrier choice that carries the delivery id but NO use_same_address key
+        // expresses no billing intent at all: it must not touch the invoice pointer
+        // (same guard as the carriers handler — array_key_exists, not a '1' default).
+        $response = $this->createSelectCarrierHandler($context, $this->createRecordingCartPresenter($context))->handle([
+            'delivery_option' => '1,',
+            'id_address_delivery' => (string) $deliveryAddress->id,
+        ]);
+
+        self::assertTrue($response['success'] ?? false, var_export($response, true));
+
+        $freshCart = new \Cart((int) $cart->id);
+        self::assertSame((int) $deliveryAddress->id, (int) $freshCart->id_address_delivery);
+        self::assertSame((int) $invoiceAddress->id, (int) $freshCart->id_address_invoice);
+    }
+
     public function testWithoutARequestedIdTheTempFallbackStillRuns(): void
     {
         $customer = $this->createCustomer();

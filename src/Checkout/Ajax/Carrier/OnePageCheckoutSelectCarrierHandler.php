@@ -75,7 +75,10 @@ class OnePageCheckoutSelectCarrierHandler
                 // hook below fired against the real row. A separate-billing temp stays possible.
                 $deliveryAddressId = $requestedAddressId;
                 $this->context->cart->id_address_delivery = $requestedAddressId;
-                if ((string) ($requestParameters['use_same_address'] ?? '1') === '1') {
+                if (
+                    array_key_exists('use_same_address', $requestParameters)
+                    && (string) $requestParameters['use_same_address'] === '1'
+                ) {
                     $this->context->cart->id_address_invoice = $requestedAddressId;
                 }
                 $this->context->cart->save();
