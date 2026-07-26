@@ -30,7 +30,6 @@ const CHECKOUT_FORM_SELECTOR = OPC_SELECTORS.opc.checkout;
 const URL_KEY = 'paymentMethods';
 let fetchGeneration = 0;
 let lastFetchedPaymentListDom = null;
-
 function setPaymentOptionsState(state) {
   const container = document.querySelector(CONTAINER_SELECTOR);
 
@@ -75,6 +74,23 @@ function hasSelectedCarrier() {
   return Boolean(
     deliveryMethods.querySelector(`${OPC_SELECTORS.inputs.deliveryOption}:checked`)
   );
+}
+
+// A carriers round is in flight while the carrier section publishes its LOADING state. While it
+// lasts, the round's outcome is the ONLY payment-refresh trigger: Updated/Selected fetch, Awaiting
+// retracts, Failed renders the error. Direct fetches (address persist, billing-mirror retry,
+// updatedCart) are skipped — they would either be invalidated by the round or duplicate its fetch,
+// re-running every payment module's hook and replacing the payment DOM (module iframes) a second
+// time. Read from the DOM state (written by the carrier section BEFORE each of its events fires —
+// see setCarrierOptionsState) instead of an event-maintained flag: a flag whose clear rides on
+// event dispatch sticks forever if a third-party listener throws mid-dispatch (module front JS
+// registers before the OPC bundles and the emitter aborts dispatch on a throw), freezing every
+// payment fetch until reload. No carrier section at all (virtual cart) => never in flight.
+function isCarriersRoundInFlight() {
+  const deliveryMethods = document.querySelector(OPC_SELECTORS.opc.deliveryMethods);
+
+  return deliveryMethods instanceof HTMLElement
+    && deliveryMethods.dataset.opcCarriersState === OPC_OPTION_LIST_STATE.LOADING;
 }
 
 function getLoaderOverlay() {
@@ -221,6 +237,12 @@ function fetchPaymentMethods() {
   const $container = getContainer();
 
   if (!$container.length) {
+    return;
+  }
+
+  // One refresh round -> one payment fetch: while carriers are refreshing, defer to the round's
+  // terminal event (see isCarriersRoundInFlight). The loader is already up (opcCarriersLoading).
+  if (isCarriersRoundInFlight()) {
     return;
   }
 
