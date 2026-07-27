@@ -214,6 +214,7 @@ function validateForm() {
   // affect the OPC button state — that stays on `isValid` so the button is never greyed out here.
   const isFormFullyValid = isValid
     && form.checkValidity()
+    && !hasFlaggedFieldErrors(form)
     && isDeliverySelectionValid()
     && isPaymentSelectionValid(form);
 
@@ -465,6 +466,10 @@ function markFieldsValidity(form) {
 
     element.classList.toggle('is-invalid', !element.checkValidity());
   });
+}
+
+function hasFlaggedFieldErrors(form) {
+  return form.querySelector('.is-invalid, [data-opc-field-error="1"]') !== null;
 }
 
 function clearStaleFieldError(event) {
