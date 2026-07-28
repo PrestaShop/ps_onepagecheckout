@@ -72,6 +72,18 @@ $component-name: one-page-checkout;
   min-height: 6rem;
 }
 
+.opc-optional-fields {
+  margin-bottom: 1rem;
+
+  &__toggle {
+    width: fit-content;
+    margin-bottom: 0.5rem;
+    color: var(--bs-link-color);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
+
 // Gate module-provided binary payment blocks (displayPaymentByBinaries output) in lockstep with the
 // native Pay button's validity (opc-submit.js validateForm): dim and block interaction whenever the
 // Pay button itself would be disabled. Dedicated class so we never clash with Core's own `disabled`.
