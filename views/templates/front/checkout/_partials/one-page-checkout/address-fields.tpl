@@ -5,71 +5,110 @@
 
 {**
  * One Page Checkout - Address fields partial
+ *
+ * Renders one address section (delivery or invoice) in the order the formatter emitted, which is
+ * the address format configured for the selected country in International > Locations > Countries.
+ * Only the country select leads the section, because changing it rebuilds every other field.
+ *
+ * Some fields read better side by side (first/last name, city/state/postcode). They share a row
+ * ONLY when the configured format puts them next to each other, so a merchant who moves a field
+ * into the middle of one of those groups still gets the layout they asked for.
+ *
+ * Used for the inline form and, through address-modal-fields.tpl, for the address modals.
+ *
+ * @param array  $formFields        Field arrays keyed by form-field name, in formatter order
+ * @param string $prefix            Field-name prefix for this section ('' or 'invoice_')
+ * @param string $id_prefix         Prefix for generated element ids (the modals namespace theirs)
+ * @param bool   $state_placeholder Emit an inert state select when the format has no state field
  *}
 
-{assign var="_prefix_len" value=$prefix|strlen}
-{assign var="_key_firstname" value="{$prefix}firstname"}
-{assign var="_key_lastname" value="{$prefix}lastname"}
-{assign var="_key_city" value="{$prefix}city"}
-{assign var="_key_postcode" value="{$prefix}postcode"}
-{assign var="_key_id_state" value="{$prefix}id_state"}
+{assign var="_prefix" value=$prefix|default:''}
+{assign var="_id_prefix" value=$id_prefix|default:''}
+{assign var="_state_placeholder" value=$state_placeholder|default:false}
+{assign var="_prefix_len" value=$_prefix|strlen}
 
-{assign var="_has_name_row" value=isset($formFields[$_key_firstname]) && isset($formFields[$_key_lastname])}
-{assign var="_has_city_row" value=isset($formFields[$_key_city]) && isset($formFields[$_key_postcode])}
-{assign var="_has_state" value=isset($formFields[$_key_id_state])}
+{* Fields that may share a row, as sets. Adjacency in the configured format decides whether a set
+   actually becomes a row; the order within the row follows the format, not this list. *}
+{assign var="_row_groups" value=[['firstname', 'lastname'], ['city', 'postcode', 'id_state']]}
 
-{foreach from=$formFields item="field"}
-  {if $prefix && strpos($field.name, $prefix) !== 0}{continue}{/if}
-  {if !$prefix && strpos($field.name, 'invoice_') === 0}{continue}{/if}
+{* This section's base field names in formatter order, plus a base name => field lookup. *}
+{assign var="_bases" value=[]}
+{assign var="_fields_by_base" value=[]}
+{foreach from=$formFields item="_field"}
+  {if $_prefix && strpos($_field.name, $_prefix) !== 0}{continue}{/if}
+  {if !$_prefix && strpos($_field.name, 'invoice_') === 0}{continue}{/if}
 
-  {if $prefix}
-    {assign var="_base" value=$field.name|substr:$_prefix_len}
+  {if $_prefix}
+    {assign var="_base" value=$_field.name|substr:$_prefix_len}
   {else}
-    {assign var="_base" value=$field.name}
+    {assign var="_base" value=$_field.name}
   {/if}
 
-  {if $_base === 'alias'}
-    {form_field field=$field}
-
-  {elseif $_base === 'firstname' && $_has_name_row}
-    {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
-      fields=[$formFields[$_key_firstname], $formFields[$_key_lastname]]
-    }
-
-  {elseif $_base === 'lastname' && $_has_name_row}
-  {elseif $_base === 'city' && $_has_city_row}
-    {if $_has_state}
-      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
-        fields=[$formFields[$_key_city], $formFields[$_key_id_state], $formFields[$_key_postcode]]
-      }
-    {else}
-      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
-        fields=[$formFields[$_key_city], $formFields[$_key_postcode]]
-      }
-    {/if}
-
-  {elseif $_base === 'postcode' && $_has_city_row}
-  {elseif $_base === 'id_state' && $_has_city_row}
-  {elseif $_base === 'id_country'}
-    <div class="form-group mb-3">
-      <label class="form-label{if $field.required} required{/if}" for="field-{$field.name}">
-        {$field.label}
-      </label>
-      <select
-        class="form-select"
-        name="{$field.name}"
-        id="field-{$field.name}"
-        {if $field.required}required{/if}
-      >
-        <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
-        {foreach from=$field.availableValues item="label" key="value"}
-          <option value="{$value}" {if (string) $value === (string) $field.value}selected{/if}>{$label}</option>
-        {/foreach}
-      </select>
-      {include file='_partials/form-errors.tpl' errors=$field.errors|default:[]}
-    </div>
-
-  {else}
-    {form_field field=$field}
-  {/if}
+  {append var="_bases" value=$_base}
+  {$_fields_by_base[$_base] = $_field}
 {/foreach}
+
+{assign var="_total" value=$_bases|count}
+{assign var="_cursor" value=0}
+
+{while $_cursor < $_total}
+  {assign var="_base" value=$_bases[$_cursor]}
+
+  {* The row group this field belongs to, if any. *}
+  {assign var="_group" value=[]}
+  {foreach from=$_row_groups item="_candidate"}
+    {if in_array($_base, $_candidate)}
+      {assign var="_group" value=$_candidate}
+      {break}
+    {/if}
+  {/foreach}
+
+  {* Longest run of adjacent fields drawn from that group, never longer than the group itself. *}
+  {assign var="_run" value=[]}
+  {if $_group}
+    {assign var="_scan" value=$_cursor}
+    {while $_scan < $_total && ($_run|count) < ($_group|count) && in_array($_bases[$_scan], $_group)}
+      {append var="_run" value=$_bases[$_scan]}
+      {assign var="_scan" value=$_scan + 1}
+    {/while}
+  {/if}
+
+  {if ($_run|count) > 1}
+    {* A state field the selected country has no states for is hidden, so it claims no column. *}
+    {assign var="_row_columns" value=$_run|count}
+    {if in_array('id_state', $_run) && empty($_fields_by_base['id_state'].availableValues)}
+      {assign var="_row_columns" value=$_row_columns - 1}
+    {/if}
+    <div class="opc-form-fields-row opc-form-fields-row--{$_row_columns}">
+      {foreach from=$_run item="_row_base"}
+        {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-field.tpl'
+          field=$_fields_by_base[$_row_base]
+          base=$_row_base
+          id_prefix=$_id_prefix
+        }
+      {/foreach}
+    </div>
+    {assign var="_cursor" value=$_cursor + ($_run|count)}
+
+  {else}
+    {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-field.tpl'
+      field=$_fields_by_base[$_base]
+      base=$_base
+      id_prefix=$_id_prefix
+    }
+    {assign var="_cursor" value=$_cursor + 1}
+  {/if}
+{/while}
+
+{* Countries whose format has no state field at all: the modals keep an inert select in the DOM so
+   the section always posts a state value. *}
+{if $_state_placeholder && !isset($_fields_by_base['id_state'])}
+  <div class="form-group mb-3 state-field-wrapper" style="display: none;">
+    <label class="form-label" for="{$_id_prefix}field-id_state">
+      {l s='State' d='Modules.Onepagecheckout.Shop'}
+    </label>
+    <select class="form-select" name="{$_prefix}id_state" id="{$_id_prefix}field-id_state">
+      <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>
+    </select>
+  </div>
+{/if}

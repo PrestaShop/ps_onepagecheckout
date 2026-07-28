@@ -123,7 +123,34 @@ trait AddressFieldsFormatTrait
             $format[$formField->getName()] = $formField;
         }
 
-        return $format;
+        return $this->pinLeadingFields($format, [$prefix . 'id_country', $prefix . 'alias']);
+    }
+
+    /**
+     * Move the given fields to the front, in the order listed, and leave every other field in the
+     * order it already had — which is the per-country address format configured in the Back Office.
+     *
+     * Only the country select and the alias are pinned: changing the country rebuilds the whole
+     * section (postcode rules, state list, identification number), so it has to be reachable first,
+     * and the alias is a PrestaShop-side field with no place in the country format. Everything else
+     * must follow the merchant's configuration, exactly like the native checkout does.
+     *
+     * @param array<string, \FormField> $format
+     * @param array<int, string> $leadingFieldNames
+     *
+     * @return array<string, \FormField>
+     */
+    protected function pinLeadingFields(array $format, array $leadingFieldNames)
+    {
+        $pinned = [];
+        foreach ($leadingFieldNames as $fieldName) {
+            if (array_key_exists($fieldName, $format)) {
+                $pinned[$fieldName] = $format[$fieldName];
+                unset($format[$fieldName]);
+            }
+        }
+
+        return $pinned + $format;
     }
 
     /**
