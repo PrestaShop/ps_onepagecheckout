@@ -91,7 +91,14 @@ trait AddressFieldsFormatTrait
                 $formField->setType('select');
 
                 if ($entity === 'Country') {
-                    $formField->setType('countrySelect');
+                    // Deliberately left as 'select' rather than 'countrySelect'. A theme's
+                    // countrySelect branch adds the `js-country` class, and core's address.js
+                    // binds `$('body').on('change', '.js-country')` to hijack the field for the
+                    // four-step flow: it reads the FIRST `.js-country` on the page (wrong element
+                    // once OPC renders an inline form plus two modals) and POSTs to a
+                    // `.js-address-form` refresh URL OPC does not have. OPC drives country changes
+                    // itself. Both bundled themes render the two branches identically apart from
+                    // that class, so keeping 'select' lets the theme own the markup.
                     $formField->setValue($this->country->id);
                     foreach ($this->availableCountries as $country) {
                         $formField->addAvailableValue(

@@ -84,7 +84,10 @@ class AddressFieldsFormatTraitTest extends TestCase
         self::assertTrue($format['invoice_postcode']->isRequired());
         self::assertSame(5, $format['invoice_postcode']->getMinLength());
         self::assertSame('tel', $format['invoice_phone']->getType());
-        self::assertSame('countrySelect', $format['invoice_id_country']->getType());
+        // 'select', NOT 'countrySelect': the theme's countrySelect branch adds `js-country`, which
+        // core's address.js uses to hijack the field for the four-step flow. See the comment in
+        // AddressFieldsFormatTrait::getAddressFieldsFormat().
+        self::assertSame('select', $format['invoice_id_country']->getType());
         self::assertSame(33, $format['invoice_id_country']->getValue());
         self::assertSame(
             [33 => 'France', 34 => 'Spain'],

@@ -14,11 +14,15 @@
  * ONLY when the configured format puts them next to each other, so a merchant who moves a field
  * into the middle of one of those groups still gets the layout they asked for.
  *
+ * Every field is rendered by the theme's {form_field} (see address-field.tpl), so themes keep
+ * control of field markup. This partial only decides ORDER and row grouping.
+ *
  * Used for the inline form and, through address-modal-fields.tpl, for the address modals.
  *
  * @param array  $formFields        Field arrays keyed by form-field name, in formatter order
  * @param string $prefix            Field-name prefix for this section ('' or 'invoice_')
- * @param string $id_prefix         Prefix for generated element ids (the modals namespace theirs)
+ * @param string $id_prefix         Element-id prefix for the inert state placeholder only, so the
+ *                                  modals do not collide with each other
  * @param bool   $state_placeholder Emit an inert state select when the format has no state field
  *}
 
@@ -84,7 +88,6 @@
         {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-field.tpl'
           field=$_fields_by_base[$_row_base]
           base=$_row_base
-          id_prefix=$_id_prefix
         }
       {/foreach}
     </div>
@@ -94,7 +97,6 @@
     {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-field.tpl'
       field=$_fields_by_base[$_base]
       base=$_base
-      id_prefix=$_id_prefix
     }
     {assign var="_cursor" value=$_cursor + 1}
   {/if}
