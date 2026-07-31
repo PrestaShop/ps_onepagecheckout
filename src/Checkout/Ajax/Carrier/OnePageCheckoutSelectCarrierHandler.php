@@ -137,6 +137,20 @@ class OnePageCheckoutSelectCarrierHandler
             ];
         } finally {
             $tempAddress->cleanup($tempAddressId, $originalAddressId);
+            if ($tempAddressId > 0) {
+                // The persisted delivery_option is keyed by the temp address id,
+                // which cleanup() just deleted: Cart::getDeliveryOption() invalidates
+                // the whole map and every later total computation (paymentmethods →
+                // hookPaymentOptions, e.g. the ps_checkpayment amount, carttotals,
+                // submit validation) silently falls back to the default carrier
+                // instead of the selected one. Re-key the selection onto the
+                // restored delivery address (0 = not yet persisted, a valid
+                // package-list key) so subsequent readers keep the chosen carrier.
+                $this->context->cart->setDeliveryOption([
+                    $originalAddressId => $deliveryOption,
+                ]);
+                $this->context->cart->save();
+            }
         }
     }
 
