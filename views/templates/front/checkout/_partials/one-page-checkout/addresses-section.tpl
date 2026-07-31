@@ -80,6 +80,7 @@ prefix='invoice_'
       <div id="opc-delivery-address-fields" class="{if $_addresses_count > 0}d-none{/if}">
         {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-fields.tpl'
           formFields=$deliveryFields
+          fieldRows=$deliveryFieldRows
           prefix=''
         }
       </div>
@@ -118,6 +119,7 @@ prefix='invoice_'
 
         {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-fields.tpl'
           formFields=$invoiceFields
+          fieldRows=$invoiceFieldRows
           prefix='invoice_'
         }
       </div>

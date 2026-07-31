@@ -12,6 +12,7 @@
 <div class="row">
   {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-fields.tpl'
     formFields=$formFields
+    fieldRows=$fieldRows
     prefix=$prefix
     id_prefix="{$modal_id}-"
     state_placeholder=true

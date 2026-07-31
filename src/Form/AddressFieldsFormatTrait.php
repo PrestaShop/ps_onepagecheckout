@@ -130,34 +130,40 @@ trait AddressFieldsFormatTrait
             $format[$formField->getName()] = $formField;
         }
 
-        return $this->pinLeadingFields($format, [$prefix . 'id_country', $prefix . 'alias']);
+        return $this->moveCountryFirst($format, $prefix);
     }
 
     /**
-     * Move the given fields to the front, in the order listed, and leave every other field in the
-     * order it already had — which is the per-country address format configured in the Back Office.
+     * Move the country select to the front and leave every other field in the order it already
+     * had — which is the per-country address format configured in the Back Office. This is a
+     * deliberate deviation from core, which prepends the alias and then follows the configured
+     * format as is, country included.
      *
-     * Only the country select and the alias are pinned: changing the country rebuilds the whole
-     * section (postcode rules, state list, identification number), so it has to be reachable first,
-     * and the alias is a PrestaShop-side field with no place in the country format. Everything else
-     * must follow the merchant's configuration, exactly like the native checkout does.
+     * OPC needs the country first because changing it rebuilds the section around it: the inline
+     * autosave validates each field against the currently selected country (postcode takes its
+     * length and required flag from the country, the state list is replaced, the identification
+     * number becomes required or not), and the change also kicks off the carrier and payment
+     * refresh. A country select sitting halfway down the form would mean the buyer fills fields
+     * that are then re-validated against different rules. Please don't "fix" this back.
+     *
+     * Everything after it follows the merchant's configuration, exactly like the native checkout.
      *
      * @param array<string, \FormField> $format
-     * @param array<int, string> $leadingFieldNames
+     * @param string $prefix Field-name prefix for this section ('' or 'invoice_')
      *
      * @return array<string, \FormField>
      */
-    protected function pinLeadingFields(array $format, array $leadingFieldNames)
+    protected function moveCountryFirst(array $format, $prefix = '')
     {
-        $pinned = [];
-        foreach ($leadingFieldNames as $fieldName) {
-            if (array_key_exists($fieldName, $format)) {
-                $pinned[$fieldName] = $format[$fieldName];
-                unset($format[$fieldName]);
-            }
+        $countryFieldName = $prefix . 'id_country';
+        if (!array_key_exists($countryFieldName, $format)) {
+            return $format;
         }
 
-        return $pinned + $format;
+        $country = [$countryFieldName => $format[$countryFieldName]];
+        unset($format[$countryFieldName]);
+
+        return $country + $format;
     }
 
     /**
