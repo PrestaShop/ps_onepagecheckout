@@ -242,9 +242,9 @@
         <source>Order summary</source>
         <target>Order summary</target>
       </trans-unit>
-      <trans-unit id="99938b17c91170dfb0c2f3f8bc9f2a85">
-        <source>Pay</source>
-        <target>Pay</target>
+      <trans-unit id="5486191906ec27c1c4bb5bd3e46b3442">
+        <source>Order with an obligation to pay</source>
+        <target>Order with an obligation to pay</target>
       </trans-unit>
       <trans-unit id="f0aaaae189e9c7711931a65ffcd22543">
         <source>Payment method</source>
