@@ -21,6 +21,7 @@ if (!class_exists('FormField', false)) {
         private ?int $maxLength = null;
         private array $constraints = [];
         private array $errors = [];
+        private string $autocomplete = '';
 
         public function setName($name): self
         {
@@ -156,6 +157,18 @@ if (!class_exists('FormField', false)) {
             return $this->errors;
         }
 
+        public function setAutocompleteAttribute($autocomplete): self
+        {
+            $this->autocomplete = $autocomplete;
+
+            return $this;
+        }
+
+        public function getAutocompleteAttribute(): string
+        {
+            return $this->autocomplete;
+        }
+
         public function toArray(): array
         {
             return [
@@ -169,6 +182,7 @@ if (!class_exists('FormField', false)) {
                 'maxLength' => $this->maxLength,
                 'constraints' => $this->constraints,
                 'errors' => $this->errors,
+                'autocomplete' => $this->autocomplete,
             ];
         }
     }

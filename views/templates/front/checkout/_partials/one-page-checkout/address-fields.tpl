@@ -59,6 +59,7 @@
         class="form-select"
         name="{$field.name}"
         id="field-{$field.name}"
+        {if $field.autocomplete|default:''}autocomplete="{$field.autocomplete}"{/if}
         {if $field.required}required{/if}
       >
         <option value="">{l s='-- please choose --' d='Modules.Onepagecheckout.Shop'}</option>

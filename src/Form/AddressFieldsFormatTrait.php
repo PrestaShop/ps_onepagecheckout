@@ -120,10 +120,57 @@ trait AddressFieldsFormatTrait
                 );
             }
 
+            $autofillToken = $this->getAutofillToken($fieldName);
+            if ($autofillToken !== '') {
+                $formField->setAutocompleteAttribute(
+                    (strpos($prefix, 'invoice') === 0 ? 'billing ' : 'shipping ') . $autofillToken
+                );
+            }
+
             $format[$formField->getName()] = $formField;
         }
 
         return $format;
+    }
+
+    /**
+     * WHATWG autofill detail token for an address field, empty when no standard token applies.
+     *
+     * The delivery and the invoice address forms live on the same checkout page, so the
+     * caller scopes each token with the `shipping`/`billing` section keyword — that is what
+     * lets the browser fill the right form instead of guessing between the two.
+     *
+     * @param string $fieldName
+     *
+     * @return string
+     */
+    protected function getAutofillToken($fieldName)
+    {
+        switch ($fieldName) {
+            case 'firstname':
+                return 'given-name';
+            case 'lastname':
+                return 'family-name';
+            case 'company':
+                return 'organization';
+            case 'address1':
+                return 'address-line1';
+            case 'address2':
+                return 'address-line2';
+            case 'city':
+                return 'address-level2';
+            case 'id_state':
+                return 'address-level1';
+            case 'postcode':
+                return 'postal-code';
+            case 'phone':
+            case 'phone_mobile':
+                return 'tel';
+            case 'id_country':
+                return 'country';
+            default:
+                return '';
+        }
     }
 
     /**
