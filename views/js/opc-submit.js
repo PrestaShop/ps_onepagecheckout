@@ -64,7 +64,33 @@ let carriersState = 'idle';
 let carrierSelectionState = 'idle';
 let paymentMethodsState = 'idle';
 let isFinalSubmitInFlight = false;
+let hasStartedTerminalNavigation = false;
 let hasAttemptedSubmit = false;
+
+/**
+ * Core parity (themes/_core/js/checkout-payment.js confirm(): it marks the confirmation button
+ * `.disabled` and never restores it). Once the submit has handed the buyer over to a navigation
+ * that ends the checkout — the payment module's form POST, or a redirect — that navigation IS the
+ * terminal state and the confirmation button must stay locked behind it until the next document
+ * takes over. Unlocking it re-opens the checkout for as long as the shop needs to run
+ * validateOrder (mails, invoice, stock: seconds on a real shop), and a press landing in that
+ * window starts a whole second submit against a cart that is already becoming an order — the
+ * customer then ends up on the cart, or stranded on the payment module's URL, with no
+ * confirmation and no error while the order exists server-side.
+ */
+function markTerminalNavigationStarted() {
+  hasStartedTerminalNavigation = true;
+  isFinalSubmitInFlight = true;
+}
+
+function releaseFinalSubmitLock() {
+  if (hasStartedTerminalNavigation) {
+    return;
+  }
+
+  isFinalSubmitInFlight = false;
+  validateForm();
+}
 
 function getCheckoutForm() {
   return document.querySelector(OPC_FORM_ID_SELECTOR) || document.querySelector(CHECKOUT_SELECTOR);
@@ -398,11 +424,14 @@ function submitPaymentModuleForm(paymentRadio) {
   prestashop.emit(OPC_EVENTS.opcFinalSubmitStarted);
 
   if (innerForm instanceof HTMLFormElement) {
+    markTerminalNavigationStarted();
     HTMLFormElement.prototype.submit.call(innerForm);
 
     return;
   }
 
+  // No form to hand off to: nothing is navigating, so the checkout stays unlocked and the buyer
+  // can act on the error.
   emitSubmitRuntimeError(
     getConfiguredOpcMessage('missingPaymentForm', 'Unable to initialize the selected payment method.')
   );
@@ -578,6 +607,7 @@ async function fetchOpcSubmitResponse(submitUrl, payload) {
 
 function handleOpcSubmitFailure(response) {
   if (response && response.reload) {
+    markTerminalNavigationStarted();
     window.location.href = response.checkout_url || window.location.href;
 
     return true;
@@ -611,9 +641,13 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
 
   if (typeof checkoutHandler === 'function') {
     if (checkoutHandler(checkResponse, {})) {
+      // The theme took the buyer away (core: orderConfirmationErrors -> location.href = cartUrl).
+      markTerminalNavigationStarted();
+
       return;
     }
   } else if (checkResponse && checkResponse.errors === true && checkResponse.cartUrl) {
+    markTerminalNavigationStarted();
     window.location.href = checkResponse.cartUrl;
 
     return;
@@ -625,6 +659,7 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
     return;
   }
 
+  markTerminalNavigationStarted();
   window.location.href = response.checkout_url || window.prestashop.urls.pages.order;
 }
 
@@ -664,8 +699,7 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
       });
       prestashop.emit(OPC_EVENTS.opcSubmitFailed, {error});
     } finally {
-      isFinalSubmitInFlight = false;
-      validateForm();
+      releaseFinalSubmitLock();
     }
   }
 
@@ -709,8 +743,7 @@ async function submitOpcPay(form) {
       )
     );
   } finally {
-    isFinalSubmitInFlight = false;
-    validateForm();
+    releaseFinalSubmitLock();
   }
 }
 
@@ -819,6 +852,21 @@ $(document).ready(() => {
 
   prestashop.on(OPC_EVENTS.opcFinalSubmitStarted, () => {
     isFinalSubmitInFlight = true;
+  });
+
+  // A back/forward-cache restore means the navigation we handed off to did NOT replace this
+  // document after all — the buyer came back, typically from a redirect-based payment provider.
+  // This page is live again, so drop the terminal lock and let the normal gate decide; without
+  // this the confirmation button would stay disabled forever and the buyer could never retry.
+  // `persisted` is what distinguishes a restore from a fresh load, where nothing is locked yet.
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) {
+      return;
+    }
+
+    hasStartedTerminalNavigation = false;
+    isFinalSubmitInFlight = false;
+    validateForm();
   });
 
   bindCheckoutValidation();
