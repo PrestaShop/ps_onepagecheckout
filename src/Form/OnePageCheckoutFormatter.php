@@ -178,8 +178,6 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
             $format = array_merge($format, $this->getAddressFieldsFormat('invoice_', false));
         }
 
-        $format = $this->sortAddressFields($format);
-
         // Add constraints and max length
         $format = $this->addConstraints(
             $this->addMaxLength($format)
@@ -224,41 +222,6 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
     protected function getDefinitionKey($name)
     {
         return strpos($name, 'invoice_') === 0 ? substr($name, 8) : $name;
-    }
-
-    /**
-     * @param array<string, \FormField> $fields
-     *
-     * @return array<string, \FormField>
-     */
-    protected function sortAddressFields(array $fields): array
-    {
-        $customOrder = [
-            'id_country' => 1,
-            'alias' => 2,
-            'firstname' => 3,
-            'lastname' => 4,
-            'company' => 5,
-            'vat_number' => 6,
-            'address1' => 7,
-            'address2' => 8,
-            'city' => 9,
-            'postcode' => 10,
-            'id_state' => 11,
-            'phone' => 12,
-        ];
-
-        uksort($fields, static function (string $keyA, string $keyB) use ($customOrder): int {
-            $baseA = str_replace('invoice_', '', $keyA);
-            $baseB = str_replace('invoice_', '', $keyB);
-
-            $positionA = $customOrder[$baseA] ?? 999;
-            $positionB = $customOrder[$baseB] ?? 999;
-
-            return $positionA <=> $positionB;
-        });
-
-        return $fields;
     }
 
     public function getFieldGroup(string $key): ?string

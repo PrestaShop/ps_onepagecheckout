@@ -36,6 +36,33 @@ class OpcAddressModalFieldsHandlerIntegrationTest extends TestCase
         self::assertSame('delivery', $response['address_type']);
     }
 
+    /**
+     * The modal renders the rows the inline form was built with, so page and modal cannot drift.
+     */
+    public function testItPassesTheRequestedSectionsRowsThrough(): void
+    {
+        $deliveryRows = [[['name' => 'firstname'], ['name' => 'lastname']], [['name' => 'address1']]];
+        $invoiceRows = [[['name' => 'invoice_address1']]];
+
+        $formSpy = new IntegrationOpcAddressModalFormSpy();
+        $formSpy->templateVars = [
+            'deliveryFields' => ['firstname' => ['name' => 'firstname']],
+            'invoiceFields' => ['invoice_address1' => ['name' => 'invoice_address1']],
+            'deliveryFieldRows' => $deliveryRows,
+            'invoiceFieldRows' => $invoiceRows,
+        ];
+        $handler = new OnePageCheckoutAddressModalFieldsHandler($formSpy);
+
+        self::assertSame(
+            $deliveryRows,
+            $handler->getTemplateVariables(['id_country' => '8', 'address_type' => 'delivery'])['fieldRows']
+        );
+        self::assertSame(
+            $invoiceRows,
+            $handler->getTemplateVariables(['id_country' => '8', 'address_type' => 'invoice'])['fieldRows']
+        );
+    }
+
     public function testItRebuildsInvoiceFieldsWithInvoiceCountryAndPrefix(): void
     {
         $formSpy = new IntegrationOpcAddressModalFormSpy();
