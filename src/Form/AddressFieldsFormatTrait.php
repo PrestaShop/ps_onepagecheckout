@@ -91,7 +91,14 @@ trait AddressFieldsFormatTrait
                 $formField->setType('select');
 
                 if ($entity === 'Country') {
-                    $formField->setType('countrySelect');
+                    // Deliberately left as 'select' rather than 'countrySelect'. A theme's
+                    // countrySelect branch adds the `js-country` class, and core's address.js
+                    // binds `$('body').on('change', '.js-country')` to hijack the field for the
+                    // four-step flow: it reads the FIRST `.js-country` on the page (wrong element
+                    // once OPC renders an inline form plus two modals) and POSTs to a
+                    // `.js-address-form` refresh URL OPC does not have. OPC drives country changes
+                    // itself. Both bundled themes render the two branches identically apart from
+                    // that class, so keeping 'select' lets the theme own the markup.
                     $formField->setValue($this->country->id);
                     foreach ($this->availableCountries as $country) {
                         $formField->addAvailableValue(
@@ -123,7 +130,40 @@ trait AddressFieldsFormatTrait
             $format[$formField->getName()] = $formField;
         }
 
-        return $format;
+        return $this->moveCountryFirst($format, $prefix);
+    }
+
+    /**
+     * Move the country select to the front and leave every other field in the order it already
+     * had — which is the per-country address format configured in the Back Office. This is a
+     * deliberate deviation from core, which prepends the alias and then follows the configured
+     * format as is, country included.
+     *
+     * OPC needs the country first because changing it rebuilds the section around it: the inline
+     * autosave validates each field against the currently selected country (postcode takes its
+     * length and required flag from the country, the state list is replaced, the identification
+     * number becomes required or not), and the change also kicks off the carrier and payment
+     * refresh. A country select sitting halfway down the form would mean the buyer fills fields
+     * that are then re-validated against different rules. Please don't "fix" this back.
+     *
+     * Everything after it follows the merchant's configuration, exactly like the native checkout.
+     *
+     * @param array<string, \FormField> $format
+     * @param string $prefix Field-name prefix for this section ('' or 'invoice_')
+     *
+     * @return array<string, \FormField>
+     */
+    protected function moveCountryFirst(array $format, $prefix = '')
+    {
+        $countryFieldName = $prefix . 'id_country';
+        if (!array_key_exists($countryFieldName, $format)) {
+            return $format;
+        }
+
+        $country = [$countryFieldName => $format[$countryFieldName]];
+        unset($format[$countryFieldName]);
+
+        return $country + $format;
     }
 
     /**

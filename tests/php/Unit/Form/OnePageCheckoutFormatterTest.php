@@ -136,6 +136,89 @@ class OnePageCheckoutFormatterTest extends TestCase
         self::assertSame($deliveryCountry, $formatter->getCountry());
     }
 
+    /**
+     * The Back Office address format for the country is authoritative: only the country select
+     * (which rebuilds the whole form) and the alias lead the section. See GitHub issue #132.
+     */
+    public function testItOrdersAddressFieldsByTheConfiguredCountryAddressFormat(): void
+    {
+        \Context::getContext()->customer = CheckoutTestFixtures::customer([], true);
+
+        \Address::$definition = [
+            'fields' => [
+                'alias' => ['size' => 32],
+                'firstname' => ['size' => 64],
+                'address1' => ['size' => 128],
+                'city' => ['size' => 64],
+                'postcode' => ['size' => 12],
+                'phone' => ['size' => 16],
+                'id_country' => ['size' => 3],
+                'id_state' => ['size' => 10],
+            ],
+        ];
+        // "phone" deliberately sits before "address1", the layout the issue reports as ignored.
+        \AddressFormat::$orderedFields = [
+            'firstname',
+            'phone',
+            'address1',
+            'city',
+            'State:name',
+            'postcode',
+            'Country:name',
+        ];
+        \AddressFormat::$requiredFields = [];
+        \State::$statesByCountry = [7 => [['id_state' => 3, 'name' => 'Lazio']]];
+        \Configuration::$values['PS_CUSTOMER_OPTIN'] = false;
+        \Customer::$requiredFields = [];
+        \Hook::$responses['additionalCustomerFormFields'] = [];
+        \Hook::$responses['additionalCustomerAddressFields'] = [];
+
+        $country = $this->createCountry(['id' => 7, 'contains_states' => true]);
+
+        $translator = $this->createMock(TranslatorInterface::class);
+        $translator->method('trans')->willReturnArgument(0);
+
+        $formatter = $this->createFormatter($country, $translator, [['id_country' => 7, 'name' => 'Italy']]);
+
+        $format = $formatter->getFormat();
+
+        $expected = ['id_country', 'alias', 'firstname', 'phone', 'address1', 'city', 'id_state', 'postcode'];
+
+        self::assertSame($expected, $this->addressSectionKeys($format, ''));
+        self::assertSame(
+            array_map(static fn (string $key): string => 'invoice_' . $key, $expected),
+            $this->addressSectionKeys($format, 'invoice_')
+        );
+    }
+
+    /**
+     * The address-field keys of one section, in the order the formatter emits them.
+     *
+     * @param array<string, \FormField> $format
+     *
+     * @return array<int, string>
+     */
+    private function addressSectionKeys(array $format, string $prefix): array
+    {
+        $sectionKeys = [];
+        $nonAddressKeys = ['email', 'optin', 'use_same_address', 'id_address_delivery', 'id_address_invoice'];
+
+        foreach (array_keys($format) as $key) {
+            if (in_array($key, $nonAddressKeys, true)) {
+                continue;
+            }
+
+            $isInvoiceKey = strpos($key, 'invoice_') === 0;
+            if ($isInvoiceKey !== ($prefix === 'invoice_')) {
+                continue;
+            }
+
+            $sectionKeys[] = $key;
+        }
+
+        return $sectionKeys;
+    }
+
     public function testItBuildsFormatWithoutOptinAndUsesDeliveryCountryForInvoiceWhenInvoiceCountryIsNotSet(): void
     {
         \Context::getContext()->customer = CheckoutTestFixtures::customer([], false);

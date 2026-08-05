@@ -34,6 +34,10 @@
         <source>Enter your email address above to see the delivery and payment options.</source>
         <target>Saisissez votre adresse e-mail ci-dessus pour voir les options de livraison et de paiement.</target>
       </trans-unit>
+      <trans-unit id="e81c4e4f2b7b93b481e13a8553c2ae1b">
+        <source>or</source>
+        <target>ou</target>
+      </trans-unit>
       <trans-unit id="9c8ca7810846ba6ed6a281e4413e8eca">
         <source>Please accept the required terms above to see the delivery and payment options.</source>
         <target>Veuillez accepter les conditions requises ci-dessus pour voir les options de livraison et de paiement.</target>
@@ -238,9 +242,9 @@
         <source>Order summary</source>
         <target>Récapitulatif de commande</target>
       </trans-unit>
-      <trans-unit id="99938b17c91170dfb0c2f3f8bc9f2a85">
-        <source>Pay</source>
-        <target>Payer</target>
+      <trans-unit id="5486191906ec27c1c4bb5bd3e46b3442">
+        <source>Order with an obligation to pay</source>
+        <target>Commande avec obligation de paiement</target>
       </trans-unit>
       <trans-unit id="f0aaaae189e9c7711931a65ffcd22543">
         <source>Payment method</source>

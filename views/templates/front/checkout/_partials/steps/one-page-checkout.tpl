@@ -71,7 +71,7 @@
   <div id="opc-payment-confirmation" class="js-opc-payment-confirmation">
     <button class="one-page-checkout__submit btn btn-primary btn-lg w-100" type="button" id="opc-pay-button" disabled>
       <span class="spinner-border spinner-border-sm me-2 d-none" aria-hidden="true" data-opc-pay-spinner></span>
-      {l s='Pay' d='Modules.Onepagecheckout.Shop'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
+      {l s='Order with an obligation to pay' d='Modules.Onepagecheckout.Shop'} <span id="opc-pay-amount">{$cart.totals.total.value}</span>
     </button>
   </div>
 

@@ -490,6 +490,54 @@ class OnePageCheckoutFormTest extends TestCase
         self::assertSame('id_address_invoice', $templateVariables['invoiceMetaFields']['id_address_invoice']['name']);
     }
 
+    /**
+     * Both address sections are handed to the templates already split into rows, so the layout is
+     * decided (and tested) in PHP instead of in Smarty.
+     */
+    public function testTemplateVariablesExposeBothAddressSectionsSplitIntoRows(): void
+    {
+        $form = $this->createForm();
+        $form->setFormFieldsForTest([
+            'email' => (new \FormField())->setName('email')->setType('email'),
+            'firstname' => (new \FormField())->setName('firstname')->setType('text'),
+            'lastname' => (new \FormField())->setName('lastname')->setType('text'),
+            'address1' => (new \FormField())->setName('address1')->setType('text'),
+            'invoice_firstname' => (new \FormField())->setName('invoice_firstname')->setType('text'),
+            'invoice_lastname' => (new \FormField())->setName('invoice_lastname')->setType('text'),
+        ]);
+
+        $templateVariables = $form->getTemplateVariables();
+
+        self::assertSame(
+            [['firstname', 'lastname'], ['address1']],
+            $this->rowNames($templateVariables['deliveryFieldRows'])
+        );
+        self::assertSame(
+            [['invoice_firstname', 'invoice_lastname']],
+            $this->rowNames($templateVariables['invoiceFieldRows'])
+        );
+    }
+
+    /**
+     * @param array<int, array<int, array<string, mixed>>> $rows
+     *
+     * @return array<int, array<int, string>>
+     */
+    private function rowNames(array $rows): array
+    {
+        return array_map(
+            static function (array $row): array {
+                return array_map(
+                    static function (array $field): string {
+                        return (string) $field['name'];
+                    },
+                    $row
+                );
+            },
+            $rows
+        );
+    }
+
     public function testRestoreSubmissionStateRestoresErrorsOnModuleCustomerFieldsByInternalKey(): void
     {
         $customerProbeText = (new \FormField())
