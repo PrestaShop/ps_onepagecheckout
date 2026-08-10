@@ -28,6 +28,7 @@
         <div class="js-opc-address-modal-fields">
           {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-modal-fields.tpl'
             formFields=$formFields
+            fieldRows=$fieldRows
             prefix=$prefix
             modal_id=$modal_id}
         </div>
