@@ -44,9 +44,12 @@ class OnePageCheckoutAddressModalFieldsHandler
 
         $templateVariables = $this->opcForm->getTemplateVariables();
         $fieldsKey = $addressType === 'invoice' ? 'invoiceFields' : 'deliveryFields';
+        $rowsKey = $addressType === 'invoice' ? 'invoiceFieldRows' : 'deliveryFieldRows';
 
         return [
             'formFields' => $templateVariables[$fieldsKey] ?? [],
+            // Same rows as the inline form, so the modal and the page never drift apart.
+            'fieldRows' => $templateVariables[$rowsKey] ?? [],
             'prefix' => $prefix,
             'modal_id' => $addressType === 'invoice' ? 'modal-invoice' : 'modal-delivery',
             'address_type' => $addressType,

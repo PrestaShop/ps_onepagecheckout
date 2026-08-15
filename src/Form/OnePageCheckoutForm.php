@@ -682,6 +682,8 @@ class OnePageCheckoutForm extends \AbstractForm
 
         $fieldsByGroup = $this->mapFieldsByGroup();
         $formFields = $this->convertFieldsToTemplateArray($this->formFields);
+        $deliveryFields = $this->convertFieldsToTemplateArray($fieldsByGroup['deliveryFields']);
+        $invoiceFields = $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceFields']);
 
         return [
             'action' => $this->action,
@@ -691,8 +693,12 @@ class OnePageCheckoutForm extends \AbstractForm
             'contactFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['contactFields']),
             'additionalCustomerFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['additionalCustomerFields']),
             'useSameAddressField' => $this->convertFieldToTemplateArray($fieldsByGroup['useSameAddressField']['use_same_address'] ?? null),
-            'deliveryFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['deliveryFields']),
-            'invoiceFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceFields']),
+            'deliveryFields' => $deliveryFields,
+            'invoiceFields' => $invoiceFields,
+            // The address sections split into rows here rather than in the template, so the layout
+            // is unit tested and the modals go through the same code (see AddressFieldRows).
+            'deliveryFieldRows' => AddressFieldRows::build($deliveryFields),
+            'invoiceFieldRows' => AddressFieldRows::build($invoiceFields, 'invoice_'),
             'invoiceMetaFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceMetaFields']),
             'token' => \Tools::getToken(true, $this->context),
         ];
