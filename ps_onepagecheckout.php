@@ -28,7 +28,7 @@ class Ps_Onepagecheckout extends Module
     {
         $this->name = 'ps_onepagecheckout';
         $this->tab = 'front_office_features';
-        $this->version = '0.6.6';
+        $this->version = '0.6.7';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
