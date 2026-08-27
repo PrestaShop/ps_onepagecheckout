@@ -9,7 +9,9 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
 
     public function initContent()
     {
-        parent::initContent();
+        if ($this->needsThemePageAssembly()) {
+            parent::initContent();
+        }
 
         $response = $this->handleOpcRequest();
 
@@ -19,10 +21,40 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
         // OPC events. A handler that resolves a more precise country (e.g. an inline-typed
         // address) provides its own 'context_refresh', which we never overwrite.
         if (!array_key_exists('context_refresh', $response)) {
-            $response['context_refresh'] = (new OpcContextRefreshBuilder())->build($this->context);
+            $response['context_refresh'] = (new OpcContextRefreshBuilder())->build(
+                $this->context,
+                null,
+                $this->refreshesCartTotals()
+            );
         }
 
         $this->renderJsonResponse($response);
+    }
+
+    /**
+     * Whether this endpoint needs FrontController's theme page assembly before handling.
+     *
+     * The assembly (general purpose smarty variables and the displayHeader hooks) only
+     * feeds template output: endpoints that render theme/module template fragments keep
+     * it, while pure-JSON endpoints override this with false — nothing of the assembly
+     * reaches a JSON response and it costs ~45 SQL queries per call on a stock install.
+     */
+    protected function needsThemePageAssembly(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Whether the default context_refresh should recompute the cart totals.
+     *
+     * Endpoints that cannot change the cart override this with false: their two
+     * Cart::getOrderTotal() runs would recompute totals guaranteed identical to what
+     * the client already holds. The country/currency part of context_refresh is kept
+     * either way — the client-side sync skips absent keys.
+     */
+    protected function refreshesCartTotals(): bool
+    {
+        return true;
     }
 
     /**
