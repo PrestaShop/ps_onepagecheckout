@@ -221,7 +221,7 @@ class OnePageCheckoutPaymentMethodsHandler
         $selectedPaymentSelectionKey = $this->getSelectedPaymentSelectionKey();
 
         if ($selectedPaymentModule === '' && $selectedPaymentSelectionKey === '') {
-            return ['', ''];
+            return $this->resolveDefaultSelection($paymentOptions);
         }
 
         if ($this->hasValidPersistedSelection($paymentOptions, $selectedPaymentSelectionKey, $selectedPaymentModule)) {
@@ -229,6 +229,40 @@ class OnePageCheckoutPaymentMethodsHandler
         }
 
         $this->clearPersistedSelection();
+
+        return $this->resolveDefaultSelection($paymentOptions);
+    }
+
+    /**
+     * Default to the first available payment option when the buyer holds no (valid) choice yet.
+     *
+     * Merchants order payment modules by position, so the first option is the shop's preferred
+     * method; preselecting it lets most buyers proceed without a mandatory extra decision at an
+     * unselected list, while any other option stays one click away. The existing render and
+     * client-side confirmation paths for a server-selected option are reused as-is.
+     *
+     * @param array<string, mixed> $paymentOptions
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function resolveDefaultSelection(array $paymentOptions): array
+    {
+        foreach ($paymentOptions as $moduleName => $moduleOptions) {
+            if (!is_array($moduleOptions)) {
+                continue;
+            }
+
+            foreach ($moduleOptions as $paymentOption) {
+                if (!is_array($paymentOption)) {
+                    continue;
+                }
+
+                return [
+                    (string) ($paymentOption['module_name'] ?? $moduleName),
+                    (string) ($paymentOption['selection_key'] ?? ''),
+                ];
+            }
+        }
 
         return ['', ''];
     }
