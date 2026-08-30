@@ -7,6 +7,7 @@
 {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-modal.tpl'
 modal_id='modal-delivery'
 formFields=$deliveryFields
+fieldRows=$deliveryFieldRows
 title_new={l s='New delivery address' d='Modules.Onepagecheckout.Shop'}
 title_edit={l s='Edit delivery address' d='Modules.Onepagecheckout.Shop'}
 address_type='delivery'
@@ -17,6 +18,7 @@ prefix=''
 {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-modal.tpl'
 modal_id='modal-invoice'
 formFields=$invoiceFields
+fieldRows=$invoiceFieldRows
 title_new={l s='New billing address' d='Modules.Onepagecheckout.Shop'}
 title_edit={l s='Edit billing address' d='Modules.Onepagecheckout.Shop'}
 address_type='invoice'
