@@ -137,6 +137,16 @@ class OnePageCheckoutSelectCarrierHandler
             ];
         } finally {
             $tempAddress->cleanup($tempAddressId, $originalAddressId);
+            if ($tempAddressId > 0) {
+                // cleanup() deleted the temp address delivery_option was keyed by: without
+                // re-keying, Cart::getDeliveryOption() invalidates the whole map and every
+                // later total (paymentmethods, carttotals, submit validation) falls back to
+                // the default carrier. Assigned directly because Cart::setDeliveryOption()
+                // re-validates through the Calculator, which needs the Symfony container,
+                // for an option already validated above.
+                $this->context->cart->delivery_option = json_encode([$originalAddressId => $deliveryOption]);
+                $this->context->cart->save();
+            }
         }
     }
 
