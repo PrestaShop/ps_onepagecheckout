@@ -209,6 +209,93 @@ class OpcTempAddressIntegrationTest extends TestCase
         self::assertSame((int) $originalInvoice->id, (int) $freshCart->id_address_invoice);
     }
 
+    public function testItDoesNotAttachADeliveryPreviewAddressWithAnInvalidPostcode(): void
+    {
+        $context = self::getContext();
+        $customer = $this->createCustomer();
+        $context->customer = $customer;
+        $context->cart = $this->createCartForCustomer($customer);
+
+        // Belgium requires a 4-digit (NNNN) postcode; 12345 is invalid, so the preview address
+        // must be withheld exactly like the real saved-address paths reject it.
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'id_country' => (string) \Country::getByIso('BE'),
+            'postcode' => '12345',
+            'city' => 'Bruxelles',
+        ]);
+
+        self::assertSame(0, $tempDeliveryId);
+        self::assertSame(0, (int) $context->cart->id_address_delivery);
+    }
+
+    public function testItAttachesADeliveryPreviewAddressWithAValidPostcode(): void
+    {
+        $context = self::getContext();
+        $customer = $this->createCustomer();
+        $context->customer = $customer;
+        $context->cart = $this->createCartForCustomer($customer);
+
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'id_country' => (string) \Country::getByIso('BE'),
+            'postcode' => '1000',
+            'city' => 'Bruxelles',
+        ]);
+
+        self::assertGreaterThan(0, $tempDeliveryId);
+        self::assertSame($tempDeliveryId, (int) $context->cart->id_address_delivery);
+
+        $tempAddress->cleanup($tempDeliveryId, 0);
+    }
+
+    public function testItDoesNotAttachAnInvoicePreviewAddressWithAnInvalidPostcode(): void
+    {
+        \Configuration::updateValue('PS_TAX_ADDRESS_TYPE', 'id_address_invoice');
+
+        $context = self::getContext();
+        $customer = $this->createCustomer();
+        $context->customer = $customer;
+
+        $originalInvoice = $this->createAddress($customer, 'Original invoice', 'FR', '69001', 'Lyon');
+        $cart = $this->createCartForCustomer($customer);
+        $cart->id_address_invoice = (int) $originalInvoice->id;
+        self::assertTrue($cart->update());
+        $context->cart = $cart;
+
+        // Valid FR delivery postcode but an invalid BE invoice postcode: only the invoice preview
+        // must be withheld, and the cart's invoice pointer must stay on the original address.
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'id_country' => (string) \Country::getByIso('FR'),
+            'postcode' => '75009',
+            'city' => 'Paris',
+            'use_same_address' => '0',
+            'invoice_id_country' => (string) \Country::getByIso('BE'),
+            'invoice_postcode' => '12345',
+            'invoice_city' => 'Bruxelles',
+        ]);
+
+        self::assertGreaterThan(0, $tempDeliveryId);
+        self::assertFalse($tempAddress->hasTemporaryInvoiceAddress());
+        self::assertSame((int) $originalInvoice->id, (int) $context->cart->id_address_invoice);
+
+        $tempAddress->cleanup($tempDeliveryId, 0);
+    }
+
+    private function createCartForCustomer(\Customer $customer): \Cart
+    {
+        $cart = new \Cart();
+        $cart->id_currency = (int) \Configuration::get('PS_CURRENCY_DEFAULT');
+        $cart->id_lang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        $cart->id_shop_group = 1;
+        $cart->id_shop = 1;
+        $cart->id_customer = (int) $customer->id;
+        self::assertTrue($cart->add());
+
+        return $cart;
+    }
+
     private function createCustomer(): \Customer
     {
         $customer = new \Customer();
