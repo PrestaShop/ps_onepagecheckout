@@ -11,6 +11,11 @@ require_once __DIR__ . '/AbstractOpcJsonFrontController.php';
 
 class Ps_OnepagecheckoutGuestInitModuleFrontController extends Ps_OnepagecheckoutAbstractOpcJsonFrontController
 {
+    protected function needsThemePageAssembly(): bool
+    {
+        return false;
+    }
+
     /**
      * @return array<string,mixed>
      */

@@ -10,6 +10,11 @@ require_once __DIR__ . '/AbstractOpcJsonFrontController.php';
 
 class Ps_OnepagecheckoutSelectCarrierModuleFrontController extends Ps_OnepagecheckoutAbstractOpcJsonFrontController
 {
+    protected function needsThemePageAssembly(): bool
+    {
+        return false;
+    }
+
     /**
      * @return array<string,mixed>
      */

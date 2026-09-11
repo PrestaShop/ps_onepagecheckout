@@ -18,6 +18,16 @@ require_once __DIR__ . '/AbstractOpcJsonFrontController.php';
 
 class Ps_OnepagecheckoutSaveDraftModuleFrontController extends Ps_OnepagecheckoutAbstractOpcJsonFrontController
 {
+    protected function needsThemePageAssembly(): bool
+    {
+        return false;
+    }
+
+    protected function refreshesCartTotals(): bool
+    {
+        return false;
+    }
+
     /**
      * @return array<string,mixed>
      */
