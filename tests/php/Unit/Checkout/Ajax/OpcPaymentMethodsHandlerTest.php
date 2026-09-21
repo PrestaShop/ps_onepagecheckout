@@ -73,6 +73,61 @@ class OpcPaymentMethodsHandlerTest extends TestCase
         self::assertFalse($response['is_free']);
     }
 
+    public function testItDefaultsToTheFirstPaymentOptionWhenNoSelectionIsPersisted(): void
+    {
+        $firstOption = [
+            'module_name' => 'ps_checkpayment',
+            'call_to_action_text' => 'Pay by Check',
+            'action' => '/module/ps_checkpayment/validation',
+        ];
+        $secondOption = [
+            'module_name' => 'ps_wirepayment',
+            'call_to_action_text' => 'Wire payment',
+            'action' => '/module/ps_wirepayment/validation',
+        ];
+        $expectedSelectionKey = (new PaymentSelectionKeyBuilder())->buildSelectionKey($firstOption);
+
+        $context = CheckoutTestFixtures::context([
+            'cart' => CheckoutTestFixtures::pricedCart(42.0, ['id' => 1]),
+            'country' => CheckoutTestFixtures::country(),
+            'shop' => CheckoutTestFixtures::shop(1),
+        ]);
+        $context->cookie = new class {
+            public function __get(string $name)
+            {
+                return null;
+            }
+
+            public function __unset(string $name): void
+            {
+            }
+
+            public function write(): void
+            {
+            }
+        };
+
+        $finder = $this->getMockBuilder(\PaymentOptionsFinder::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['present'])
+            ->getMock();
+        $finder->method('present')->willReturn([
+            'ps_checkpayment' => [
+                0 => $firstOption,
+            ],
+            'ps_wirepayment' => [
+                0 => $secondOption,
+            ],
+        ]);
+
+        $handler = new OnePageCheckoutPaymentMethodsHandler($context, $finder);
+        $response = $handler->handle();
+
+        self::assertTrue($response['success']);
+        self::assertSame('ps_checkpayment', $response['selected_payment_module']);
+        self::assertSame($expectedSelectionKey, $response['selected_payment_selection_key']);
+    }
+
     public function testItReturnsStructuredErrorWhenCartIsMissing(): void
     {
         $context = CheckoutTestFixtures::context([
