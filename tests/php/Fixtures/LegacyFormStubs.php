@@ -21,6 +21,7 @@ if (!class_exists('FormField', false)) {
         private ?int $maxLength = null;
         private array $constraints = [];
         private array $errors = [];
+        private array $attr = [];
 
         public function setName($name): self
         {
@@ -156,6 +157,18 @@ if (!class_exists('FormField', false)) {
             return $this->errors;
         }
 
+        public function setAttr(array $attr): self
+        {
+            $this->attr = $attr;
+
+            return $this;
+        }
+
+        public function getAttr(): array
+        {
+            return $this->attr;
+        }
+
         public function toArray(): array
         {
             return [
@@ -169,6 +182,7 @@ if (!class_exists('FormField', false)) {
                 'maxLength' => $this->maxLength,
                 'constraints' => $this->constraints,
                 'errors' => $this->errors,
+                'attr' => $this->attr,
             ];
         }
     }
