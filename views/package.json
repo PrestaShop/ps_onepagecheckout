@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "NODE_ENV=production webpack --mode=production",
+    "test": "node --test ../tests/js/*.test.mjs",
     "watch": "webpack --mode=development --watch"
   },
   "devDependencies": {
