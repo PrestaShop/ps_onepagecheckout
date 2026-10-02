@@ -154,6 +154,96 @@ class OpcSubmitProcessorTest extends TestCase
         self::assertArrayHasKey('shipping', $response['validation_errors']);
     }
 
+    public function testProcessReturnsCarrierModuleValidationMessages(): void
+    {
+        $this->paymentOptionsFinder->method('present')->willReturn([]);
+        $this->conditionsToApproveFinder->method('getConditionsToApproveForTemplate')->willReturn([]);
+        $this->checkoutSession->method('getDeliveryOptions')->willReturn([
+            '1,' => [
+                'is_module' => true,
+                'external_module_name' => 'pickupcarrier',
+            ],
+        ]);
+        $this->opcForm->method('validate')->willReturn(true);
+        $this->opcForm->method('getErrors')->willReturn([]);
+
+        $controller = new class {
+            public array $errors = ['An unrelated earlier error.'];
+        };
+        $this->context->controller = $controller;
+
+        $processor = new OnePageCheckoutSubmitProcessor(
+            $this->context,
+            $this->createMock(TranslatorInterface::class),
+            $this->opcForm,
+            $this->paymentOptionsFinder,
+            $this->conditionsToApproveFinder,
+            null,
+            static function (string $moduleName, array &$parameters) use ($controller): void {
+                self::assertSame('pickupcarrier', $moduleName);
+                self::assertSame('delivery', $parameters['step_name']);
+                $controller->errors[] = 'Please select a pickup point.';
+                $parameters['completed'] = false;
+            }
+        );
+
+        $response = $processor->process($this->checkoutSession, [
+            'email' => 'connected@example.com',
+            'delivery_option' => '1,',
+        ]);
+
+        self::assertFalse($response['success']);
+        self::assertSame([
+            'shipping' => [
+                'delivery_option' => ['Please select a pickup point.'],
+            ],
+        ], $response['validation_errors']);
+    }
+
+    public function testProcessReturnsGenericShippingMessageWhenCarrierModuleAddsNoError(): void
+    {
+        $this->paymentOptionsFinder->method('present')->willReturn([]);
+        $this->conditionsToApproveFinder->method('getConditionsToApproveForTemplate')->willReturn([]);
+        $this->checkoutSession->method('getDeliveryOptions')->willReturn([
+            '1,' => [
+                'is_module' => true,
+                'external_module_name' => 'pickupcarrier',
+            ],
+        ]);
+        $this->opcForm->method('validate')->willReturn(true);
+        $this->opcForm->method('getErrors')->willReturn([]);
+
+        $this->context->controller = new class {
+            public array $errors = [];
+        };
+
+        $translator = $this->createMock(TranslatorInterface::class);
+        $translator->method('trans')->willReturnArgument(0);
+        $processor = new OnePageCheckoutSubmitProcessor(
+            $this->context,
+            $translator,
+            $this->opcForm,
+            $this->paymentOptionsFinder,
+            $this->conditionsToApproveFinder,
+            null,
+            static function (string $moduleName, array &$parameters): void {
+                $parameters['completed'] = false;
+            }
+        );
+
+        $response = $processor->process($this->checkoutSession, [
+            'email' => 'connected@example.com',
+            'delivery_option' => '1,',
+        ]);
+
+        self::assertFalse($response['success']);
+        self::assertSame([
+            'shipping' => [
+                'delivery_option' => ['Please complete the selected shipping method.'],
+            ],
+        ], $response['validation_errors']);
+    }
+
     public function testProcessRequiresPaymentSelectionWhenPaymentOptionsExist(): void
     {
         $this->checkoutSession->method('getDeliveryOptions')->willReturn([
