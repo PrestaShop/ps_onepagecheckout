@@ -140,6 +140,38 @@ class OpcSubmitHandlerTest extends TestCase
         ], $response['validation_errors']);
     }
 
+    public function testHandlePersistsCarrierValidationMessageForReload(): void
+    {
+        $validationErrors = [
+            'shipping' => [
+                'delivery_option' => ['Please select a pickup point.'],
+            ],
+        ];
+        $this->submitProcessor->expects($this->once())
+            ->method('process')
+            ->willReturn([
+                'success' => false,
+                'validation_errors' => $validationErrors,
+                'form_errors' => [],
+                'submitted_values' => [],
+            ]);
+        $this->submitValidationStateStorage->expects($this->once())
+            ->method('save')
+            ->with([
+                'cart_id' => 42,
+                'validation_errors' => $validationErrors,
+                'form_errors' => [],
+                'submitted_values' => [],
+            ]);
+        $this->addressDraftStorage->expects($this->once())->method('clear');
+
+        $response = $this->handler->handle([]);
+
+        self::assertFalse($response['success']);
+        self::assertTrue($response['reload']);
+        self::assertSame($validationErrors, $response['validation_errors']);
+    }
+
     public function testHandleReturnsInlineFieldErrorsWithoutPersistingReloadState(): void
     {
         $this->submitProcessor->expects($this->once())
