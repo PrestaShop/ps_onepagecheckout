@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "segmentio/analytics-php",
-            "version": "3.8.2",
+            "version": "3.9.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/segmentio/analytics-php.git",
-                "reference": "6199b9887e53e11dfdfb590beba79577c120efed"
+                "reference": "cce17d95571b2a3a28259ad3e906142182424f84"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/segmentio/analytics-php/zipball/6199b9887e53e11dfdfb590beba79577c120efed",
-                "reference": "6199b9887e53e11dfdfb590beba79577c120efed",
+                "url": "https://api.github.com/repos/segmentio/analytics-php/zipball/cce17d95571b2a3a28259ad3e906142182424f84",
+                "reference": "cce17d95571b2a3a28259ad3e906142182424f84",
                 "shasum": ""
             },
             "require": {
@@ -66,9 +66,9 @@
             ],
             "support": {
                 "issues": "https://github.com/segmentio/analytics-php/issues",
-                "source": "https://github.com/segmentio/analytics-php/tree/3.8.2"
+                "source": "https://github.com/segmentio/analytics-php/tree/3.9.0"
             },
-            "time": "2026-03-11T18:19:46+00:00"
+            "time": "2026-09-28T21:54:56+00:00"
         }
     ],
     "packages-dev": [
@@ -3020,5 +3020,5 @@
         "php": ">=8.1"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
