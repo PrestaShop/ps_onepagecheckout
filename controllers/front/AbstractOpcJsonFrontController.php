@@ -99,6 +99,29 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
      */
     abstract protected function handleAvailableOpcRequest(): array;
 
+    /**
+     * Reject non-POST or invalid-token requests before a mutation handler runs.
+     *
+     * @return array<string,mixed>|null
+     */
+    protected function validatePostAndToken(): ?array
+    {
+        if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            http_response_code(405);
+            header('Allow: POST');
+
+            return ['success' => false];
+        }
+
+        if (!$this->isTokenValid()) {
+            http_response_code(403);
+
+            return ['success' => false];
+        }
+
+        return null;
+    }
+
     protected function isOpcAvailable(): bool
     {
         assert($this->module instanceof Ps_Onepagecheckout);

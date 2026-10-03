@@ -62,6 +62,15 @@ const SERVER_MANAGED_FIELDS = new Set([
 ]);
 const NON_PRESERVABLE_FIELD_TYPES = new Set(['hidden', 'file', 'submit', 'button', 'image', 'reset']);
 
+function getSecurityToken() {
+  const modalToken = String($(MODAL_SELECTOR).find('input[name="token"]').first().val() || '');
+  if (modalToken !== '') {
+    return modalToken;
+  }
+
+  return String(prestashop.static_token || prestashop.token || '');
+}
+
 const ADDRESS_FIELDS = [
   'id_address',
   'alias',
@@ -1559,6 +1568,7 @@ $(document).on('click', '.js-delete-address', (event) => {
 
     $.post(deleteAddressUrl, {
       id_address: String($button.attr('data-id-address') || ''),
+      token: getSecurityToken(),
     })
       .done((response) => {
         if (!response || response.success === false) {
