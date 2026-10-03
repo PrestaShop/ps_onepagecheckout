@@ -17,6 +17,11 @@ class Ps_OnepagecheckoutSaveAddressModuleFrontController extends Ps_Onepagecheck
      */
     protected function handleAvailableOpcRequest(): array
     {
+        $invalidRequest = $this->validatePostAndToken();
+        if ($invalidRequest !== null) {
+            return $invalidRequest;
+        }
+
         $handler = new OnePageCheckoutSaveAddressHandler(
             $this->context,
             $this->module->getTranslator(),
