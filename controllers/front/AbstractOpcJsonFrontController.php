@@ -84,7 +84,7 @@ abstract class Ps_OnepagecheckoutAbstractOpcJsonFrontController extends ModuleFr
         } catch (Throwable $exception) {
             return $this->handleRuntimeException($exception);
         } finally {
-            if ($lockTaken && $lockName !== null) {
+            if ($lockTaken) {
                 try {
                     Db::getInstance()->getValue("SELECT RELEASE_LOCK('" . pSQL($lockName) . "')");
                 } catch (Throwable $releaseException) {
