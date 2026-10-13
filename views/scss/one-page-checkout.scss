@@ -14,11 +14,17 @@ $component-name: one-page-checkout;
 
 @import "opc-form-fields-row";
 
-.#{$component-name} {
+// The payment section and the footer are rendered after #opc-form (no nested payment forms),
+// so they need the form's right gutter too, or they come out wider than the blocks above.
+.#{$component-name},
+.js-opc-payment-section,
+.#{$component-name}__footer {
   @include media-breakpoint-up(lg) {
     padding-right: 2em;
   }
+}
 
+.#{$component-name} {
   &__section {
     padding-top: 1em;
     padding-bottom: 1em;
