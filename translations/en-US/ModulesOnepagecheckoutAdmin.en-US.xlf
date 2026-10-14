@@ -30,9 +30,17 @@
         <source>Checkout layout has been changed. Shop is now in maintenance mode.</source>
         <target>Checkout layout has been changed. Shop is now in maintenance mode.</target>
       </trans-unit>
+      <trans-unit id="85584a686d7d3ff801e2b77f8fe620ba">
+        <source>Edit order settings</source>
+        <target>Edit order settings</target>
+      </trans-unit>
       <trans-unit id="0cd8068aca1d887a9a644725aa222509">
         <source>Four-page checkout</source>
         <target>Four-page checkout</target>
+      </trans-unit>
+      <trans-unit id="389c74bc790f2650e6f7b9447e22f8ee">
+        <source>Guest checkout is disabled: visitors who are not logged in are redirected to the login page before the one-page checkout.</source>
+        <target>Guest checkout is disabled: visitors who are not logged in are redirected to the login page before the one-page checkout.</target>
       </trans-unit>
       <trans-unit id="ada026618947a599e34290bda4b398b7">
         <source>Increased conversion with a seamless and frictionless experience</source>

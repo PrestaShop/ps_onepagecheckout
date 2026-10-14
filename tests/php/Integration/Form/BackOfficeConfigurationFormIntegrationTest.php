@@ -163,6 +163,47 @@ class BackOfficeConfigurationFormIntegrationTest extends TestCase
         self::assertSame([], $form->persistedValues);
         self::assertCount(1, $form->redirectedUrls);
     }
+
+    public function testItShowsGuestCheckoutNoticeWhenOnePageCheckoutIsEnabledAndGuestCheckoutIsDisabled(): void
+    {
+        $form = $this->createGuestCheckoutNoticeForm(1, false);
+
+        $content = $form->renderBackOfficeConfiguration();
+
+        self::assertStringContainsString('notice[Guest checkout is disabled', $content);
+        self::assertStringContainsString('controller=AdminOrderPreferences', $content);
+    }
+
+    public function testItHidesGuestCheckoutNoticeWhenGuestCheckoutIsEnabled(): void
+    {
+        $form = $this->createGuestCheckoutNoticeForm(1, true);
+
+        $content = $form->renderBackOfficeConfiguration();
+
+        self::assertStringContainsString('notice[]', $content);
+    }
+
+    public function testItHidesGuestCheckoutNoticeWhenFourPageCheckoutIsSelected(): void
+    {
+        $form = $this->createGuestCheckoutNoticeForm(0, false);
+
+        $content = $form->renderBackOfficeConfiguration();
+
+        self::assertStringContainsString('notice[]', $content);
+    }
+
+    private function createGuestCheckoutNoticeForm(int $onePageCheckoutValue, bool $guestCheckoutEnabled): IntegrationBackOfficeConfigurationFormSpy
+    {
+        $twig = new Environment(new ArrayLoader([
+            '@Modules/ps_onepagecheckout/views/templates/admin/checkout_layout_configuration.html.twig' => 'notice[{{ guest_checkout_notice }}] url[{{ guest_checkout_settings_url }}]',
+        ]));
+        $module = new IntegrationBackOfficeModuleStub($twig, new ContainerBuilder());
+        $form = new IntegrationBackOfficeConfigurationFormSpy($module, 'PS_ONE_PAGE_CHECKOUT_ENABLED');
+        $form->setCurrentConfigurationValue($onePageCheckoutValue);
+        $form->setGuestCheckoutEnabled($guestCheckoutEnabled);
+
+        return $form;
+    }
 }
 
 class IntegrationBackOfficeConfigurationFormSpy extends BackOfficeConfigurationForm
@@ -178,10 +219,21 @@ class IntegrationBackOfficeConfigurationFormSpy extends BackOfficeConfigurationF
     public array $redirectedUrls = [];
 
     private int $currentConfigurationValue = 0;
+    private bool $guestCheckoutEnabled = true;
 
     public function setCurrentConfigurationValue(int $value): void
     {
         $this->currentConfigurationValue = $value;
+    }
+
+    public function setGuestCheckoutEnabled(bool $enabled): void
+    {
+        $this->guestCheckoutEnabled = $enabled;
+    }
+
+    protected function isGuestCheckoutEnabled(): bool
+    {
+        return $this->guestCheckoutEnabled;
     }
 
     protected function updateConfigurationValue(int $value): void
