@@ -27,6 +27,7 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
             'customer_group',
             'address',
             'cart',
+            'orders',
         ]);
         \Configuration::loadConfiguration();
     }
@@ -231,6 +232,142 @@ class OpcSaveAddressHandlerIntegrationTest extends TestCase
     /**
      * @param array<string, mixed> $overrides
      */
+    /**
+     * The autosave posts the whole checkout form, so it reaches this handler on changes that touch
+     * no address field - the "use this address for invoice too" toggle among them. Once an address
+     * has been used in an order it cannot be updated in place, so persisting anyway replaces it with
+     * a copy and soft-deletes the original, leaving the page holding an id that no longer resolves.
+     */
+    public function testItLeavesAnOrderedAddressUntouchedWhenTheSubmissionChangesNothing(): void
+    {
+        $customer = $this->createCustomer();
+        $countryId = (int) \Configuration::get('PS_COUNTRY_DEFAULT');
+        $address = $this->createAddress($customer, [
+            'alias' => 'Home',
+            'firstname' => 'Integration',
+            'lastname' => 'Customer',
+            'address1' => '1 rue Inchangee',
+            'city' => 'Paris',
+            'postcode' => '75001',
+            'id_country' => $countryId,
+            'id_state' => $this->getFirstStateIdForCountry($countryId),
+        ]);
+        $originalId = (int) $address->id;
+        $cart = $this->createCartForCustomer($customer, [
+            'id_address_delivery' => $originalId,
+            'id_address_invoice' => $originalId,
+        ]);
+        $this->markAddressAsUsedInAnOrder($customer, $cart, $address);
+        self::assertNotFalse($address->isUsed(), 'the fixture must make the address ordered, or the copy-on-write path is never reached');
+
+        $context = $this->createCheckoutContext($customer, $cart);
+        $handler = $this->createHandler($context, $this->createTranslator());
+
+        $response = $handler->handle($this->submissionFor($address, $countryId, ['use_same_address' => '0']));
+
+        self::assertSame(true, $response['success'] ?? null, var_export($response, true));
+        self::assertSame($originalId, (int) ($response['id_address'] ?? 0), var_export($response, true));
+
+        $reloaded = new \Address($originalId);
+        self::assertSame($originalId, (int) $reloaded->id);
+        self::assertSame(0, (int) $reloaded->deleted, 'the customer saved address must not be soft-deleted');
+        self::assertSame(1, $this->countAddressesOf($customer), 'no copy of the address may be inserted');
+    }
+
+    /**
+     * The control for the guard above: a submission that DOES change a field must still go through
+     * the persister, which copies an ordered address on purpose so the order keeps its own snapshot.
+     * Without this, a fix that simply stopped saving would pass the test above.
+     */
+    public function testItStillReplacesAnOrderedAddressWhenAFieldActuallyChanges(): void
+    {
+        $customer = $this->createCustomer();
+        $countryId = (int) \Configuration::get('PS_COUNTRY_DEFAULT');
+        $address = $this->createAddress($customer, [
+            'alias' => 'Home',
+            'firstname' => 'Integration',
+            'lastname' => 'Customer',
+            'address1' => '1 rue Initiale',
+            'city' => 'Paris',
+            'postcode' => '75001',
+            'id_country' => $countryId,
+            'id_state' => $this->getFirstStateIdForCountry($countryId),
+        ]);
+        $originalId = (int) $address->id;
+        $cart = $this->createCartForCustomer($customer, [
+            'id_address_delivery' => $originalId,
+            'id_address_invoice' => $originalId,
+        ]);
+        $this->markAddressAsUsedInAnOrder($customer, $cart, $address);
+
+        $context = $this->createCheckoutContext($customer, $cart);
+        $handler = $this->createHandler($context, $this->createTranslator());
+
+        $response = $handler->handle($this->submissionFor($address, $countryId, ['city' => 'Lyon']));
+
+        self::assertSame(true, $response['success'] ?? null, var_export($response, true));
+        self::assertNotSame($originalId, (int) ($response['id_address'] ?? 0), var_export($response, true));
+
+        $replaced = new \Address($originalId);
+        self::assertSame(1, (int) $replaced->deleted, 'the ordered address must still be superseded by a copy');
+        self::assertSame('Lyon', (new \Address((int) $response['id_address']))->city);
+    }
+
+    /**
+     * The request the checkout form posts for an address, as the form itself would send it.
+     *
+     * @param array<string,string> $overrides
+     *
+     * @return array<string,string>
+     */
+    private function submissionFor(\Address $address, int $countryId, array $overrides = []): array
+    {
+        return $overrides + [
+            'address_type' => 'delivery',
+            'id_address' => (string) (int) $address->id,
+            'firstname' => (string) $address->firstname,
+            'lastname' => (string) $address->lastname,
+            'address1' => (string) $address->address1,
+            'city' => (string) $address->city,
+            'postcode' => (string) $address->postcode,
+            'id_country' => (string) $countryId,
+            'id_state' => (string) ((int) $address->id_state ?: ''),
+            'alias' => (string) $address->alias,
+            'use_same_address' => '1',
+        ];
+    }
+
+    /**
+     * Address::isUsed() counts orders pointing at the address, so one row is enough to put the
+     * fixture on the copy-on-write path.
+     */
+    private function markAddressAsUsedInAnOrder(\Customer $customer, \Cart $cart, \Address $address): void
+    {
+        $now = date('Y-m-d H:i:s');
+        \Db::getInstance()->insert('orders', [
+            'id_carrier' => 0,
+            'id_lang' => (int) \Configuration::get('PS_LANG_DEFAULT'),
+            'id_customer' => (int) $customer->id,
+            'id_cart' => (int) $cart->id,
+            'id_currency' => (int) \Configuration::get('PS_CURRENCY_DEFAULT'),
+            'id_address_delivery' => (int) $address->id,
+            'id_address_invoice' => (int) $address->id,
+            'current_state' => 1,
+            'payment' => 'Test',
+            'invoice_date' => $now,
+            'delivery_date' => $now,
+            'date_add' => $now,
+            'date_upd' => $now,
+        ]);
+    }
+
+    private function countAddressesOf(\Customer $customer): int
+    {
+        return (int) \Db::getInstance()->getValue(
+            'SELECT COUNT(*) FROM ' . _DB_PREFIX_ . 'address WHERE id_customer = ' . (int) $customer->id . ' AND deleted = 0'
+        );
+    }
+
     private function createAddress(\Customer $customer, array $overrides): \Address
     {
         $address = new \Address();
