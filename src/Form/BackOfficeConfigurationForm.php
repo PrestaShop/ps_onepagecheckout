@@ -133,6 +133,14 @@ class BackOfficeConfigurationForm
                 'Note that this page is available in a single shop context only. Switch context to work on it.',
                 'Admin.Notifications.Info'
             ),
+            'guest_checkout_notice' => $isEnabled && !$this->isGuestCheckoutEnabled()
+                ? $this->trans(
+                    'Guest checkout is disabled: visitors who are not logged in are redirected to the login page before the one-page checkout.',
+                    'Modules.Onepagecheckout.Admin'
+                )
+                : '',
+            'guest_checkout_settings_url' => $this->getOrderPreferencesUrl(),
+            'guest_checkout_settings_label' => $this->trans('Edit order settings', 'Modules.Onepagecheckout.Admin'),
             'checkout_layout_title' => $this->trans('Checkout layout', 'Modules.Onepagecheckout.Admin'),
             'checkout_layout_description' => $this->trans(
                 'Allow faster checkout for higher conversion and spontaneous purchases.',
@@ -214,6 +222,16 @@ class BackOfficeConfigurationForm
         }
 
         return $link->getAdminLink('AdminModules', true, [], ['configure' => $this->module->name]);
+    }
+
+    private function getOrderPreferencesUrl(): string
+    {
+        $link = \Context::getContext()->link;
+        if (null === $link) {
+            return '';
+        }
+
+        return $link->getAdminLink('AdminOrderPreferences');
     }
 
     private function registerBackOfficeAssets(): void
@@ -337,6 +355,11 @@ class BackOfficeConfigurationForm
         $context->cookie->write();
 
         return true;
+    }
+
+    protected function isGuestCheckoutEnabled(): bool
+    {
+        return (bool) \Configuration::get('PS_GUEST_CHECKOUT_ENABLED');
     }
 
     protected function enableMaintenanceMode(): bool

@@ -22,6 +22,17 @@
               <p class="checkout-layout-description">{{ checkout_layout_description }}</p>
             </div>
 
+            {% if guest_checkout_notice is not empty %}
+              <div class="alert alert-info" role="alert">
+                <p class="alert-text">
+                  {{ guest_checkout_notice }}
+                  {% if guest_checkout_settings_url is not empty %}
+                    <a href="{{ guest_checkout_settings_url }}">{{ guest_checkout_settings_label }}</a>
+                  {% endif %}
+                </p>
+              </div>
+            {% endif %}
+
             <div class="form-wrapper">
               <div id="{{ configuration_key }}" class="d-flex flex-row enriched-choice">
                   {% for choice in choices %}
