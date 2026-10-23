@@ -270,6 +270,10 @@
         <source>Please select a shipping method.</source>
         <target>Please select a shipping method.</target>
       </trans-unit>
+      <trans-unit id="ee57645f4682aabedfee4c1d4292197e">
+        <source>Please complete the selected shipping method.</source>
+        <target>Please complete the selected shipping method.</target>
+      </trans-unit>
       <trans-unit id="6327b4e59f58137083214a1fec358855">
         <source>Retry</source>
         <target>Retry</target>
