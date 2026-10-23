@@ -282,6 +282,19 @@ class OnePageCheckoutSubmitProcessor
             return false;
         }
 
+        // Must run BEFORE the cart address pointers are set: Context::updateCustomer() resets both
+        // cart pointers to the customer's first address, which would discard a separate invoice address.
+        $customer = $checkoutSession->getCustomer();
+        if ($customer->isGuest() || empty($customer->firstname) || empty($customer->lastname)) {
+            $address = new \Address($addressIds['id_address_delivery'], (int) $this->context->language->id);
+            if ($address->id && (!empty($address->firstname) || !empty($address->lastname))) {
+                $customer->firstname = $address->firstname;
+                $customer->lastname = $address->lastname;
+                $customer->save();
+                $this->context->updateCustomer($customer);
+            }
+        }
+
         $checkoutSession->setIdAddressDelivery($addressIds['id_address_delivery']);
         $checkoutSession->setIdAddressInvoice($addressIds['id_address_invoice']);
 
@@ -310,17 +323,6 @@ class OnePageCheckoutSubmitProcessor
                 $useGift,
                 $useGift ? ($requestParameters['gift_message'] ?? '') : ''
             );
-        }
-
-        $customer = $checkoutSession->getCustomer();
-        if ($customer->isGuest() || empty($customer->firstname) || empty($customer->lastname)) {
-            $address = new \Address($addressIds['id_address_delivery'], (int) $this->context->language->id);
-            if ($address->id && (!empty($address->firstname) || !empty($address->lastname))) {
-                $customer->firstname = $address->firstname;
-                $customer->lastname = $address->lastname;
-                $customer->save();
-                $this->context->updateCustomer($customer);
-            }
         }
 
         \Hook::exec('actionCarrierProcess', ['cart' => $checkoutSession->getCart()]);
