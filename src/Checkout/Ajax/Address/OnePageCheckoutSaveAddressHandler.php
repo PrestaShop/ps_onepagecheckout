@@ -56,12 +56,23 @@ class OnePageCheckoutSaveAddressHandler
             return CheckoutAjaxResponse::validation($addressForm->getErrors());
         }
 
+        $storedFields = $addressId > 0 ? $this->persistedFieldValues($address) : null;
+
         $this->hydrateAddressFromForm($address, $addressForm, $addressType, $customerId);
 
-        if (!$this->buildAddressPersister($customerId)->save($address, \Tools::getToken(true, $this->context))) {
-            return CheckoutAjaxResponse::error(
-                $this->translator->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop')
-            );
+        // WHY: this endpoint is also the autosave target, so it is reached on every change to the
+        // checkout form - including ones that touch no address field at all, such as the "use this
+        // address for invoice too" toggle. Persisting anyway is not harmless: once an address has
+        // been used in a placed order, CustomerAddressPersister::save() cannot update it in place,
+        // so it inserts a copy and soft-deletes the original. The customer's saved address then has
+        // a new id while the page still holds the old one, and every later ajax call sends an id
+        // that no longer resolves. A save that would change nothing is therefore skipped outright.
+        if ($storedFields === null || $this->persistedFieldValues($address) !== $storedFields) {
+            if (!$this->buildAddressPersister($customerId)->save($address, \Tools::getToken(true, $this->context))) {
+                return CheckoutAjaxResponse::error(
+                    $this->translator->trans('Unable to save address.', [], 'Modules.Onepagecheckout.Shop')
+                );
+            }
         }
 
         if (\Validate::isLoadedObject($this->context->cart)) {
@@ -86,6 +97,26 @@ class OnePageCheckoutSaveAddressHandler
             'id_address' => (int) $address->id,
             'address_type' => $addressType,
         ];
+    }
+
+    /**
+     * The address values as they are stored, so an unchanged submission can be told apart from an
+     * edit. Timestamps are excluded: they move on every write and never carry a customer's change.
+     *
+     * @return array<string,string>
+     */
+    private function persistedFieldValues(\Address $address): array
+    {
+        $values = [];
+        foreach (array_keys(\Address::$definition['fields']) as $field) {
+            if ($field === 'date_add' || $field === 'date_upd') {
+                continue;
+            }
+
+            $values[$field] = (string) ($address->{$field} ?? '');
+        }
+
+        return $values;
     }
 
     private function createAddressForm(): OnePageCheckoutAddressForm
