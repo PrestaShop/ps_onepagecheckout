@@ -76,6 +76,13 @@ trait AddressFieldsFormatTrait
                     if ($this->country->need_zip_code) {
                         $formField->setRequired(true);
                     }
+                    // WHY: a digits-only zip format (core tokens: N=digit, L=letter, C=iso code)
+                    // means the buyer only ever types digits — surfacing the numeric keyboard
+                    // on touch devices removes a keyboard switch per checkout. Formats with
+                    // letters or separators keep the default keyboard.
+                    if (preg_match('/^N+$/', (string) $this->country->zip_code_format)) {
+                        $formField->setAttr(['inputmode' => 'numeric']);
+                    }
                     $formField->setMinLength(
                         strlen($this->country->zip_code_format)
                     );
