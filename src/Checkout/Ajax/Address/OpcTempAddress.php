@@ -28,14 +28,22 @@ class OpcTempAddress
         }
 
         if ($idCountry > 0) {
-            $tempAddressId = $this->insert(
-                $idCountry,
-                (int) ($requestParameters['id_state'] ?? $requestParameters['delivery_id_state'] ?? 0),
-                (string) ($requestParameters['postcode'] ?? $requestParameters['delivery_postcode'] ?? '00000'),
-                (string) ($requestParameters['city'] ?? $requestParameters['delivery_city'] ?? '-')
-            );
+            $postcode = (string) ($requestParameters['postcode'] ?? $requestParameters['delivery_postcode'] ?? '00000');
 
-            $this->context->cart->id_address_delivery = $tempAddressId;
+            // The preview address must satisfy the same per-country postcode rule as the real
+            // saved-address paths (SaveAddressHandler / OnePageCheckoutForm::validate). Otherwise an
+            // invalid postcode is attached to the cart just to compute carriers and payment options,
+            // letting the buyer reach payment with an address the checkout would never actually save.
+            if ($this->isPostcodeAcceptable($idCountry, $postcode)) {
+                $tempAddressId = $this->insert(
+                    $idCountry,
+                    (int) ($requestParameters['id_state'] ?? $requestParameters['delivery_id_state'] ?? 0),
+                    $postcode,
+                    (string) ($requestParameters['city'] ?? $requestParameters['delivery_city'] ?? '-')
+                );
+
+                $this->context->cart->id_address_delivery = $tempAddressId;
+            }
         }
 
         $tempInvoiceAddressId = $this->createInvoiceFromRequest($requestParameters, $idCountry);
@@ -69,11 +77,16 @@ class OpcTempAddress
             return 0;
         }
 
+        $invoicePostcode = (string) ($requestParameters['invoice_postcode'] ?? $requestParameters['postcode'] ?? $requestParameters['delivery_postcode'] ?? '00000');
+        if (!$this->isPostcodeAcceptable($invoiceIdCountry, $invoicePostcode)) {
+            return 0;
+        }
+
         $this->originalInvoiceAddressId = (int) $this->context->cart->id_address_invoice;
         $this->tempInvoiceAddressId = $this->insert(
             $invoiceIdCountry,
             (int) ($requestParameters['invoice_id_state'] ?? $requestParameters['id_state'] ?? $requestParameters['delivery_id_state'] ?? 0),
-            (string) ($requestParameters['invoice_postcode'] ?? $requestParameters['postcode'] ?? $requestParameters['delivery_postcode'] ?? '00000'),
+            $invoicePostcode,
             (string) ($requestParameters['invoice_city'] ?? $requestParameters['city'] ?? $requestParameters['delivery_city'] ?? '-')
         );
         $this->context->cart->id_address_invoice = $this->tempInvoiceAddressId;
@@ -110,6 +123,25 @@ class OpcTempAddress
             $this->tempInvoiceAddressId = 0;
             $this->originalInvoiceAddressId = 0;
         }
+    }
+
+    /**
+     * Whether the postcode satisfies the destination country's format. Mirrors the real saved-address
+     * validation (Country::checkZipCode, enforced only when the country requires a postcode), so the
+     * preview address obeys the same contract; countries with no postcode requirement are unaffected.
+     */
+    private function isPostcodeAcceptable(int $idCountry, string $postcode): bool
+    {
+        if ($idCountry <= 0) {
+            return false;
+        }
+
+        $country = new \Country($idCountry);
+        if (!\Validate::isLoadedObject($country) || !$country->need_zip_code) {
+            return true;
+        }
+
+        return $country->checkZipCode($postcode);
     }
 
     private function insert(int $idCountry, int $idState, string $postcode, string $city): int
