@@ -26,6 +26,19 @@ function getErrorMessages(fieldErrors) {
     .filter(Boolean);
 }
 
+// The optional address fields can sit in a closed <details>, which gives them no layout: open it so
+// the field is found below and its error shows next to it.
+function revealCollapsedField(root, fieldName) {
+  root.querySelectorAll('details:not([open])').forEach((details) => {
+    const holdsField = Array.from(details.querySelectorAll('input, select, textarea'))
+      .some((field) => field.name === fieldName);
+
+    if (holdsField) {
+      details.open = true;
+    }
+  });
+}
+
 function findVisibleField(root, fieldName) {
   return Array.from(root.querySelectorAll('input, select, textarea')).find((field) => (
     isVisibleFormControl(field) && field.name === fieldName
@@ -132,6 +145,9 @@ export function renderFieldErrors(root, errors, {focusFirstInvalid = true} = {})
 
   Object.entries(errors).forEach(([fieldName, fieldErrors]) => {
     const messages = getErrorMessages(fieldErrors);
+    if (fieldName && messages.length > 0) {
+      revealCollapsedField(root, fieldName);
+    }
     const field = fieldName ? findVisibleField(root, fieldName) : null;
 
     if (!field || messages.length === 0) {
