@@ -20,6 +20,6 @@
 
 <div class="opc-form-fields-row opc-form-fields-row--{$fields|count}">
     {foreach from=$fields item="field"}
-        {form_field field=$field}
+        {form_field field=$field id_prefix=$id_prefix|default:''}
     {/foreach}
 </div>

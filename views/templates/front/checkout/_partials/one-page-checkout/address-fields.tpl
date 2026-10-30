@@ -19,8 +19,8 @@
  * @param array  $fieldRows         Rows of field arrays; a row of one renders as a single field
  * @param array  $formFields        The same fields keyed by form-field name, for theme overrides
  * @param string $prefix            Field-name prefix for this section ('' or 'invoice_')
- * @param string $id_prefix         Element-id prefix for the inert state placeholder only, so the
- *                                  modals do not collide with each other
+ * @param string $id_prefix         Element-id prefix, so the modals do not repeat the ids of the inline
+ *                                  form or of each other ('' for the inline form)
  * @param bool   $state_placeholder Emit an inert state select when the format has no state field
  *}
 
@@ -32,9 +32,10 @@
   {if ($_row|count) > 1}
     {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
       fields=$_row
+      id_prefix=$_id_prefix
     }
   {else}
-    {form_field field=$_row[0]}
+    {form_field field=$_row[0] id_prefix=$_id_prefix}
   {/if}
 {/foreach}
 
