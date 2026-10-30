@@ -83,6 +83,7 @@ prefix='invoice_'
         {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-fields.tpl'
           formFields=$deliveryFields
           fieldRows=$deliveryFieldRows
+          fieldSections=$deliveryFieldSections
           prefix=''
         }
       </div>
@@ -122,6 +123,7 @@ prefix='invoice_'
         {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/address-fields.tpl'
           formFields=$invoiceFields
           fieldRows=$invoiceFieldRows
+          fieldSections=$invoiceFieldSections
           prefix='invoice_'
         }
       </div>

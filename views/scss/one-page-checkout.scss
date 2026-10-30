@@ -116,3 +116,15 @@ $component-name: one-page-checkout;
   pointer-events: none;
   opacity: 0.5;
 }
+
+.opc-optional-fields {
+  margin-bottom: 1rem;
+
+  &__toggle {
+    width: fit-content;
+    margin-bottom: 0.5rem;
+    color: var(--bs-link-color);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}

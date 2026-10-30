@@ -39,6 +39,8 @@ class AddressFieldRowsTemplateContractTest extends TestCase
 
         self::assertStringContainsString('fieldRows=$deliveryFieldRows', $delivery);
         self::assertStringContainsString('fieldRows=$invoiceFieldRows', $invoice);
+        self::assertStringContainsString('fieldSections=$deliveryFieldSections', $delivery);
+        self::assertStringContainsString('fieldSections=$invoiceFieldSections', $invoice);
     }
 
     public function testAddressModalForwardsFieldRowsToItsFieldsPartial(): void
@@ -57,6 +59,8 @@ class AddressFieldRowsTemplateContractTest extends TestCase
 
         self::assertCount(1, $includes);
         self::assertStringContainsString('fieldRows=$fieldRows', $includes[0]);
+        // The modals keep every field visible, so they never pass the inline sections
+        self::assertStringNotContainsString('fieldSections', $includes[0]);
     }
 
     private function templateSource(string $name): string

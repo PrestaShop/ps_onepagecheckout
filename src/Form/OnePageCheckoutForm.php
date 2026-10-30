@@ -684,6 +684,8 @@ class OnePageCheckoutForm extends \AbstractForm
         $formFields = $this->convertFieldsToTemplateArray($this->formFields);
         $deliveryFields = $this->convertFieldsToTemplateArray($fieldsByGroup['deliveryFields']);
         $invoiceFields = $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceFields']);
+        $deliveryFieldRows = AddressFieldRows::build($deliveryFields);
+        $invoiceFieldRows = AddressFieldRows::build($invoiceFields, 'invoice_');
 
         return [
             'action' => $this->action,
@@ -697,8 +699,11 @@ class OnePageCheckoutForm extends \AbstractForm
             'invoiceFields' => $invoiceFields,
             // The address sections split into rows here rather than in the template, so the layout
             // is unit tested and the modals go through the same code (see AddressFieldRows).
-            'deliveryFieldRows' => AddressFieldRows::build($deliveryFields),
-            'invoiceFieldRows' => AddressFieldRows::build($invoiceFields, 'invoice_'),
+            'deliveryFieldRows' => $deliveryFieldRows,
+            'invoiceFieldRows' => $invoiceFieldRows,
+            // The inline forms only: the modals keep every field visible (see AddressFieldSections).
+            'deliveryFieldSections' => AddressFieldSections::build($deliveryFieldRows),
+            'invoiceFieldSections' => AddressFieldSections::build($invoiceFieldRows, 'invoice_'),
             'invoiceMetaFields' => $this->convertFieldsToTemplateArray($fieldsByGroup['invoiceMetaFields']),
             'token' => \Tools::getToken(true, $this->context),
         ];

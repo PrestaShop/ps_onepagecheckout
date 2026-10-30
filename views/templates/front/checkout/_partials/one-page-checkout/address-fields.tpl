@@ -18,6 +18,9 @@
  *
  * @param array  $fieldRows         Rows of field arrays; a row of one renders as a single field
  * @param array  $formFields        The same fields keyed by form-field name, for theme overrides
+ * @param array  $fieldSections     Optional: the rows split into sections by AddressFieldSections, some
+ *                                  of them behind a disclosure. The inline forms pass it, the modals
+ *                                  do not and render every row
  * @param string $prefix            Field-name prefix for this section ('' or 'invoice_')
  * @param string $id_prefix         Element-id prefix for the inert state placeholder only, so the
  *                                  modals do not collide with each other
@@ -28,13 +31,34 @@
 {assign var="_id_prefix" value=$id_prefix|default:''}
 {assign var="_state_placeholder" value=$state_placeholder|default:false}
 
-{foreach from=$fieldRows|default:[] item="_row"}
-  {if ($_row|count) > 1}
-    {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
-      fields=$_row
-    }
-  {else}
-    {form_field field=$_row[0]}
+{if isset($fieldSections)}
+  {assign var="_sections" value=$fieldSections}
+{else}
+  {assign var="_sections" value=[['disclosure' => null, 'open' => true, 'rows' => $fieldRows|default:[]]]}
+{/if}
+
+{foreach from=$_sections item="_section"}
+  {if $_section.disclosure}
+    <details class="opc-optional-fields"{if $_section.open} open{/if}>
+      <summary class="opc-optional-fields__toggle">
+        {if $_section.disclosure === 'company'}
+          {l s='Add company details' d='Modules.Onepagecheckout.Shop'}
+        {else}
+          {l s='Add an address complement' d='Modules.Onepagecheckout.Shop'}
+        {/if}
+      </summary>
+  {/if}
+  {foreach from=$_section.rows item="_row"}
+    {if ($_row|count) > 1}
+      {include file='module:ps_onepagecheckout/views/templates/front/_partials/form-fields-row.tpl'
+        fields=$_row
+      }
+    {else}
+      {form_field field=$_row[0]}
+    {/if}
+  {/foreach}
+  {if $_section.disclosure}
+    </details>
   {/if}
 {/foreach}
 
