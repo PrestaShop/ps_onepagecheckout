@@ -459,12 +459,6 @@ class OnePageCheckoutGuestInitHandler
             return $this->successResponse($existingCustomerId);
         }
 
-        $existingCustomerForEmailId = $this->findCustomerByEmail($submittedEmail);
-        // Email already used by another account: keep current guest.
-        if ($existingCustomerForEmailId > 0 && $existingCustomerForEmailId !== $existingCustomerId) {
-            return $this->successResponse($existingCustomerId);
-        }
-
         // Align context with target guest so the email update is saved on the right account.
         $this->ensureContextCustomerMatches($existingCustomer);
 
