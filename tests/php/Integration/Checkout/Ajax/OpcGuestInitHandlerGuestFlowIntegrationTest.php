@@ -98,6 +98,11 @@ class OpcGuestInitHandlerGuestFlowIntegrationTest extends AbstractOpcGuestInitHa
         $this->scenarioItKeepsCurrentGuestWhenSubmittedEmailBelongsToAnotherCustomer();
     }
 
+    public function testItCorrectsCurrentGuestEmailToAnEmailUsedByAnEarlierGuest(): void
+    {
+        $this->scenarioItCorrectsCurrentGuestEmailToAnEmailUsedByAnEarlierGuest();
+    }
+
     public function testItReturnsCurrentOwnerWhenCartWasAlreadyClaimedBeforeGuestCreation(): void
     {
         $this->scenarioItReturnsCurrentOwnerWhenCartWasAlreadyClaimedBeforeGuestCreation();

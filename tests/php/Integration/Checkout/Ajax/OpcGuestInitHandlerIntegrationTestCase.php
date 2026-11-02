@@ -717,6 +717,32 @@ abstract class AbstractOpcGuestInitHandlerIntegrationTest extends TestCase
         self::assertTrue($response['success']);
         self::assertFalse($response['customer_created']);
         self::assertSame((int) $guest->id, $response['id_customer']);
+        self::assertSame((string) $registered->email, (string) (new \Customer((int) $guest->id))->email);
+    }
+
+    protected function scenarioItCorrectsCurrentGuestEmailToAnEmailUsedByAnEarlierGuest(): void
+    {
+        $earlierGuest = $this->createCustomer($this->uniqueEmail('returning-buyer'), true);
+        $guest = $this->createCustomer(substr((string) $earlierGuest->email, 0, -1), true);
+        $this->prepareEligibleCartContext((int) $guest->id);
+        self::getContext()->customer = $guest;
+
+        $opcForm = $this->buildOpcFormMock();
+        $opcForm
+            ->expects($this->never())
+            ->method('submitGuestInit')
+        ;
+
+        $response = $this->buildHandler($opcForm)->handle([
+            'email' => (string) $earlierGuest->email,
+            'token' => self::EXPECTED_TOKEN,
+        ]);
+
+        self::assertTrue($response['success']);
+        self::assertFalse($response['customer_created']);
+        self::assertSame((int) $guest->id, $response['id_customer']);
+        self::assertSame((string) $earlierGuest->email, (string) (new \Customer((int) $guest->id))->email);
+        self::assertSame((string) $earlierGuest->email, (string) (new \Customer((int) $earlierGuest->id))->email);
     }
 
     protected function scenarioItReturnsCurrentOwnerWhenCartWasAlreadyClaimedBeforeGuestCreation(): void
