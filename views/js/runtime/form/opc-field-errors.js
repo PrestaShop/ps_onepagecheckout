@@ -93,6 +93,36 @@ export function clearFieldError(field) {
   }
 }
 
+/**
+ * Render a single, caller-managed field error with the same accessible treatment as the
+ * server-verdict renderer below (is-invalid + aria-invalid + role="alert"). Used for errors whose
+ * lifecycle is owned by another runtime (guest email, address modal): no value snapshot is taken,
+ * so clearEditedFieldErrors leaves them alone and the owner clears them (see clearFieldError).
+ */
+export function showFieldError(field, message) {
+  if (!isFormControl(field)) {
+    return;
+  }
+
+  clearFieldError(field);
+
+  if (!message) {
+    return;
+  }
+
+  const target = getErrorTarget(field);
+  field.classList.add('is-invalid');
+  field.setAttribute('aria-invalid', 'true');
+  field.dataset.opcFieldError = '1';
+
+  const error = document.createElement('div');
+  error.className = `invalid-feedback d-block ${FIELD_ERROR_CLASS}`;
+  error.setAttribute('role', 'alert');
+  error.textContent = message;
+  target.classList.add('has-error');
+  target.appendChild(error);
+}
+
 // The buyer edited a field after its error rendered (its value moved from the snapshot taken at
 // render time): that fix is unverifiable on an inconclusive response, so give it the benefit of
 // the doubt — the next conclusive verdict re-renders the truth if the fix was wrong. Untouched
