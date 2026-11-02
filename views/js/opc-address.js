@@ -7,6 +7,7 @@ import {getOpcRuntimeConfiguration} from './runtime/opc-runtime';
 import {normalizeErrorEventResponse} from './runtime/opc-runtime';
 import {AJAX_STATUS_ABORT} from './runtime/opc-runtime';
 import {setOpcRuntimePersistAddressDraft} from './runtime/opc-runtime';
+import {getCookieWriteGate} from './runtime/opc-runtime';
 import {emitWithContext} from './runtime/opc-context-sync';
 import {areRenderedRequiredFieldsComplete, clearAddressPersistFailed, hasDeliveryMethodsSection, isInlineAutosaveActive, markAddressPersistFailed} from './runtime/address/opc-address-context';
 import {
@@ -844,6 +845,10 @@ function bindAddressDraftAutosave(selectors) {
     if (!useBeacon && draftRequestInFlight) {
       return;
     }
+    // Same while guestinit is in flight (see getCookieWriteGate): sent on opcGuestInitSettled.
+    if (!useBeacon && getCookieWriteGate().guestInit > 0) {
+      return;
+    }
 
     const addressContainer = pendingContainer;
     const payload = buildDraftPayload(pendingContainer);
@@ -862,16 +867,25 @@ function bindAddressDraftAutosave(selectors) {
     // address id(s) so later edits update the same address and the final submit reuses it instead of
     // creating a duplicate. The saved-address list appears naturally on the next full page load.
     draftRequestInFlight = true;
+    getCookieWriteGate().drafts += 1;
     $.post(draftUrl, payload)
       .done((response) => handleDraftResponse(response, addressContainer))
       .fail(handleDraftFailure)
       .always(() => {
         draftRequestInFlight = false;
+        getCookieWriteGate().drafts -= 1;
+        prestashop.emit(OPC_EVENTS.opcDraftSettled, {});
         if (pendingContainer) {
           flushPendingDraft(false);
         }
       });
   };
+
+  prestashop.on(OPC_EVENTS.opcGuestInitSettled, () => {
+    if (pendingContainer) {
+      flushPendingDraft(false);
+    }
+  });
 
   const scheduleAutosave = (event) => {
     // Checked per event (not once at bind time) so autosave starts working the moment the
