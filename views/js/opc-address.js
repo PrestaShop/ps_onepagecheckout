@@ -13,7 +13,7 @@ import {
   refreshAfterBillingAddressChange,
   refreshAfterVirtualDeliveryAddressChange,
 } from './runtime/address/opc-address-request';
-import {clearEditedFieldErrors, getFieldErrors, renderFieldErrors} from './runtime/form/opc-field-errors';
+import {clearEditedFieldErrors, clearFieldError, getFieldErrors, renderFieldErrors, showFieldError} from './runtime/form/opc-field-errors';
 
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
@@ -945,6 +945,47 @@ function bindAddressDraftAutosave(selectors) {
   $(window).on('pagehide', () => flushPendingDraft(true));
 }
 
+/**
+ * The autosave answers an incomplete address inconclusively, and once the address is saved the
+ * delivery and payment sections stay shown (the saved address is still on the cart), so a required
+ * inline field the buyer empties is flagged at the field itself. Only a field the buyer edited:
+ * tabbing through an untouched empty field stays silent.
+ */
+function bindRequiredAddressFieldFeedback() {
+  const requiredFieldsSelector = `${DELIVERY_FIELDS_SELECTOR} [required], ${BILLING_FIELDS_SELECTOR} [required]`;
+  const editedFields = new WeakSet();
+
+  $('body').on('input change', requiredFieldsSelector, (event) => {
+    const field = event.target;
+
+    editedFields.add(field);
+    if (field.dataset.opcRequiredFieldError !== '1') {
+      return;
+    }
+
+    delete field.dataset.opcRequiredFieldError;
+    // A server verdict rendered since then (it snapshots the value) keeps its own lifecycle.
+    if (field.dataset.opcFieldErrorValue === undefined) {
+      clearFieldError(field);
+    }
+  });
+
+  $('body').on('focusout', requiredFieldsSelector, (event) => {
+    const field = event.target;
+
+    if (!editedFields.has(field) || field.disabled || String(field.value || '').trim() !== '') {
+      return;
+    }
+
+    if (field.dataset.opcFieldError === '1') {
+      return;
+    }
+
+    showFieldError(field, getConfiguredOpcMessage('requiredField', 'Required field'));
+    field.dataset.opcRequiredFieldError = '1';
+  });
+}
+
 function handleOpcCountryChange(selectors) {
   $('body').on('change', `${OPC_SELECTORS.opc.deliveryFields} select[name="id_country"], ${OPC_SELECTORS.opc.billingFields} select[name="invoice_id_country"]`, (event) => {
     refreshOpcAddressFormForCountryChange($(event.target), selectors);
@@ -960,6 +1001,7 @@ $(() => {
   bindBillingToggleListener(selectors);
   initializeBillingSectionConstraints(selectors);
   bindAddressDraftAutosave(selectors);
+  bindRequiredAddressFieldFeedback();
 });
 
 // VIRTUAL-cart STRICT persist-before-refresh parity (physical carts have their own carrier-driven
