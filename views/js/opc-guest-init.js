@@ -3,6 +3,7 @@ import OPC_SELECTORS from './selectors';
 import {AJAX_STATUS_ABORT} from './runtime/opc-runtime';
 import {getConfiguredOpcMessage} from './runtime/opc-runtime';
 import {getConfiguredOpcUrl} from './runtime/opc-runtime';
+import {getCookieWriteGate} from './runtime/opc-runtime';
 import {normalizeErrorEventResponse} from './runtime/opc-runtime';
 import {markAddressPersistFailed, markBuyerIdentified} from './runtime/address/opc-address-context';
 import {isRequiredConsentMissing} from './runtime/address/opc-contact-consent';
@@ -322,6 +323,14 @@ function abortPendingGuestInit() {
 }
 
 function tryGuestInit() {
+  // A savedraft in flight would bring back the cookie without the guest: start once it settled (opcDraftSettled)
+  const cookieWriteGate = getCookieWriteGate();
+  if (cookieWriteGate.drafts > 0) {
+    cookieWriteGate.deferredGuestInit = true;
+
+    return;
+  }
+
   if (isFinalSubmitInProgress) {
     return;
   }
@@ -365,6 +374,7 @@ function tryGuestInit() {
 
   const guestInitUrl = getConfiguredOpcUrl(MODULE_GUEST_INIT_URL_KEY);
 
+  cookieWriteGate.guestInit += 1;
   inFlightRequest = $.post(
     guestInitUrl,
     payload,
@@ -431,6 +441,8 @@ function tryGuestInit() {
     })
     .always(() => {
       pendingFingerprint = '';
+      cookieWriteGate.guestInit -= 1;
+      prestashop.emit(OPC_EVENTS.opcGuestInitSettled, {});
     });
 }
 
@@ -513,6 +525,14 @@ $(() => {
 
   prestashop.on(OPC_EVENTS.opcFinalSubmitStarted, () => {
     stopGuestInitForFinalSubmit();
+  });
+
+  prestashop.on(OPC_EVENTS.opcDraftSettled, () => {
+    const cookieWriteGate = getCookieWriteGate();
+    if (cookieWriteGate.deferredGuestInit) {
+      cookieWriteGate.deferredGuestInit = false;
+      tryGuestInit();
+    }
   });
 
   scheduleGuestInit();

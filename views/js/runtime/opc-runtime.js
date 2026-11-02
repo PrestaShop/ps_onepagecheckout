@@ -105,6 +105,22 @@ export function setOpcRuntimePersistAddressDraft(shouldPersist) {
   }
 }
 
+/**
+ * guestinit logs the guest in and every response carries the whole PrestaShop cookie. A request that started before
+ * guestinit and ends after it brings back the cookie WITHOUT the guest, while the page already holds the guest's
+ * token: every following token check fails (403) until a reload. So guestinit and savedraft never overlap.
+ * Shared through window: each bundle has its own copy of this runtime.
+ *
+ * @returns {{guestInit: number, drafts: number, deferredGuestInit: boolean}}
+ */
+export function getCookieWriteGate() {
+  if (!window.psOpcCookieGate) {
+    window.psOpcCookieGate = {guestInit: 0, drafts: 0, deferredGuestInit: false};
+  }
+
+  return window.psOpcCookieGate;
+}
+
 export function getConfiguredOpcUrl(urlKey) {
   const runtimeConfiguration = getOpcRuntimeConfiguration();
 

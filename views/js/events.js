@@ -50,6 +50,9 @@ export const OPC_EVENTS = {
   // lets a section deferring on a pending country-change persist clear its loader without showing a
   // misleading "couldn't save" hint.
   opcAddressPersistInconclusive: 'opcAddressPersistInconclusive',
+  // guestinit and savedraft never overlap (see getCookieWriteGate): each one tells the other when it settled.
+  opcGuestInitSettled: 'opcGuestInitSettled',
+  opcDraftSettled: 'opcDraftSettled',
   opcCarriersRetry: 'opcCarriersRetry',
   opcPaymentMethodsRetry: 'opcPaymentMethodsRetry',
   opcGiftWrapping: 'opcGiftWrapping',
