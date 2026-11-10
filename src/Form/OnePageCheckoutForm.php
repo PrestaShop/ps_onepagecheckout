@@ -135,6 +135,16 @@ class OnePageCheckoutForm extends \AbstractForm
         return $this;
     }
 
+    /**
+     * Make validated address IDs available to address-field hooks before the first
+     * call to getFormat() (which may happen when customer fields are hydrated).
+     * This method deliberately does not build or populate the form.
+     */
+    public function prepareAddressContext(?\Address $deliveryAddress, ?\Address $invoiceAddress = null): void
+    {
+        $this->formatter->setAddressContext($deliveryAddress, $invoiceAddress);
+    }
+
     public function fillFromCustomer(\Customer $customer)
     {
         $params = get_object_vars($customer);
@@ -158,7 +168,11 @@ class OnePageCheckoutForm extends \AbstractForm
         $params = get_object_vars($address);
         $params['id_address_delivery'] = $address->id;
 
-        return $this->fillWith($params);
+        $this->formatter->setAddressContext($address);
+        $this->fillWith($params);
+        $this->fillAddressExtraProperties($address);
+
+        return $this;
     }
 
     /**
@@ -194,7 +208,44 @@ class OnePageCheckoutForm extends \AbstractForm
             $params['use_same_address'] = true;
         }
 
-        return $this->fillWith($params);
+        $this->formatter->setAddressContext($deliveryAddress, $invoiceAddress);
+        $this->fillWith($params);
+        if ($deliveryAddress) {
+            $this->fillAddressExtraProperties($deliveryAddress);
+        }
+        if ($invoiceAddress && (int) $invoiceAddress->id !== (int) $deliveryAddressId) {
+            $this->fillAddressExtraProperties($invoiceAddress, 'invoice_');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Populate existing hook fields from their own module's Address Extra Properties.
+     * Only fields actually exposed by the module are populated; unregistered properties
+     * are never sent to the browser. This also works with an unchanged legacy hook.
+     */
+    public function fillAddressExtraProperties(\Address $address, string $prefix = ''): void
+    {
+        $propertiesByModule = $address->extra_properties;
+
+        foreach ($propertiesByModule as $moduleName => $properties) {
+            if (!is_string($moduleName)) {
+                continue;
+            }
+
+            foreach ($properties as $propertyName => $value) {
+                if (!is_string($propertyName) || !is_scalar($value)) {
+                    continue;
+                }
+
+                $fieldKey = $prefix . $moduleName . '_' . $propertyName;
+                $field = $this->formFields[$fieldKey] ?? null;
+                if ($field instanceof \FormField) {
+                    $field->setValue($value);
+                }
+            }
+        }
     }
 
     /**

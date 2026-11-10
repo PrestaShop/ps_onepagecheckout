@@ -205,14 +205,25 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         $session = $this->getCheckoutSession();
 
         $customer = $session->getCustomer();
+        $deliveryAddressId = (int) $session->getIdAddressDelivery();
+        $invoiceAddressId = (int) $session->getIdAddressInvoice();
+
+        // Customer prefill may invoke getFormat() before address prefill happens.
+        // Resolve the address context first so module hooks see the correct IDs.
+        $languageId = (int) $this->context->language->id;
+        $customerId = $customer && (int) $customer->id > 0 ? (int) $customer->id : 0;
+        $deliveryAddress = $this->resolveAddressForHydration($deliveryAddressId, $languageId, $customerId);
+        $invoiceAddress = $invoiceAddressId > 0 && $invoiceAddressId !== $deliveryAddressId
+            ? $this->resolveAddressForHydration($invoiceAddressId, $languageId, $customerId)
+            : null;
+        $this->opcForm->prepareAddressContext($deliveryAddress, $invoiceAddress);
+
         if ($customer && $customer->id) {
             $this->opcForm->fillFromCustomer($customer);
         }
-
-        $this->fillOpcFormFromResolvedAddresses(
-            (int) $session->getIdAddressDelivery(),
-            (int) $session->getIdAddressInvoice()
-        );
+        if ($deliveryAddress || $invoiceAddress) {
+            $this->opcForm->fillFromAddresses($deliveryAddress, $invoiceAddress);
+        }
     }
 
     /**
@@ -463,25 +474,6 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
         return array_values(array_unique($messages));
     }
 
-    private function fillOpcFormFromResolvedAddresses(int $deliveryAddressId, int $invoiceAddressId, ?int $customerId = null): void
-    {
-        if ($deliveryAddressId <= 0 && $invoiceAddressId <= 0) {
-            return;
-        }
-
-        $languageId = (int) $this->context->language->id;
-        $deliveryAddress = $this->resolveAddressForHydration($deliveryAddressId, $languageId, $customerId);
-        $invoiceAddress = null;
-
-        if ($invoiceAddressId > 0 && $invoiceAddressId !== $deliveryAddressId) {
-            $invoiceAddress = $this->resolveAddressForHydration($invoiceAddressId, $languageId, $customerId);
-        }
-
-        if ($deliveryAddress || $invoiceAddress) {
-            $this->opcForm->fillFromAddresses($deliveryAddress, $invoiceAddress);
-        }
-    }
-
     private function resolveAddressForHydration(int $addressId, int $languageId, ?int $customerId = null): ?\Address
     {
         if (
@@ -493,7 +485,15 @@ class CheckoutOnePageStep extends \AbstractCheckoutStep
 
         $address = new \Address($addressId, $languageId);
 
-        return \Validate::isLoadedObject($address) ? $address : null;
+        if (!\Validate::isLoadedObject($address) || (bool) $address->deleted) {
+            return null;
+        }
+
+        if ($customerId !== null && (int) $address->id_customer !== $customerId) {
+            return null;
+        }
+
+        return $address;
     }
 
     /**
