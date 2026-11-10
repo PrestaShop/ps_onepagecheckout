@@ -139,6 +139,23 @@ class IntegrationOpcAddressModalFormSpy extends OnePageCheckoutForm
     {
     }
 
+    /**
+     * The form spy has no formatter: record context preparation without invoking
+     * the real OnePageCheckoutForm implementation.
+     */
+    public function prepareAddressContext(?\Address $deliveryAddress, ?\Address $invoiceAddress = null): void
+    {
+        // No-op: these tests exercise modal rendering, not form initialization.
+    }
+
+    /**
+     * Avoid accessing uninitialized form fields in modal tests.
+     */
+    public function fillAddressExtraProperties(\Address $address, string $prefix = ''): void
+    {
+        // No-op: Extra Property hydration is covered by dedicated tests.
+    }
+
     public function fillWith(array $params = [])
     {
         $this->fillWithPayloads[] = $params;
