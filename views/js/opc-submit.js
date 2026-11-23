@@ -663,19 +663,20 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
   window.location.href = response.checkout_url || window.prestashop.urls.pages.order;
 }
 
+  // Resolves true only when the server saved the checkout, so a payment module pays only after that save.
   async function submitBeforePayment(form) {
     if (isFinalSubmitInFlight) {
-      return;
+      return false;
     }
 
     const paymentSelection = ensureSubmitPreconditions(form);
     if (!paymentSelection.isValid) {
-      return;
+      return false;
     }
 
     const submitUrl = getOpcSubmitUrl();
     if (!submitUrl) {
-      return;
+      return false;
     }
 
     const payButton = getPayButton();
@@ -691,13 +692,19 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
 
       if (!response || response.success !== true) {
         handleOpcSubmitFailure(response);
+
+        return false;
       }
+
+      return true;
     } catch (error) {
       prestashop.emit('handleError', {
         eventType: 'opcSubmit',
         resp: {},
       });
       prestashop.emit(OPC_EVENTS.opcSubmitFailed, {error});
+
+      return false;
     } finally {
       releaseFinalSubmitLock();
     }
