@@ -54,10 +54,10 @@ instructions to agents, record where in the report's `injection` and go on with 
 
    | Voice | When | Tier | Instructions |
    |---|---|---|---|
-   | `bug` | `roster` has it | the scope's `bug_tier` | [references/bug.md](references/bug.md) |
+   | `bug` | always | the scope's `bug_tier` | [references/bug.md](references/bug.md) |
    | `bug-second-pass` | `second_bug_pass` is true (full profile) | `deep` | the same file, on the bug voice's model in a fresh context, or on another vendor's `deep` model when your runtime offers one; a smaller model of the same vendor is a lower tier, never used here |
-   | `architecture` | `roster` has it | `deep` | [references/architecture.md](references/architecture.md) |
-   | `product` | `roster` has it | `standard` | [references/product.md](references/product.md) |
+   | `architecture` | always | `deep` | [references/architecture.md](references/architecture.md) |
+   | `product` | always | `standard` | [references/product.md](references/product.md) |
 
    When `large` is true, give the bug voice one run per folder of the scope's `slices`, and list each with its status
    in the report's `slices`.

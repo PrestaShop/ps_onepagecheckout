@@ -5,17 +5,12 @@
  */
 declare(strict_types=1);
 
-// Module paths: the one place to update when the module's tree moves. Each voice's list mirrors the scope its
-// reference gives it; the self-test pins every entry of the path lists, and a cited rule must exist in the tree.
-// A file is documentation by what it is, never by the folder it sits in.
+// A change made only of documentation is not announced as reviewed, and a file is documentation by what it is, never by
+// its folder. Built bundles and lockfiles are not read by a reviewer, so their lines never make a diff large.
 const DOCS = ['*.md', 'LICENSE', 'LICENSE.txt'];
 const GENERATED = ['views/public/*', 'composer.lock', '*package-lock.json'];
-const ARCHITECTURE = ['ps_onepagecheckout.php', 'config.xml', 'upgrade/*', 'src/*', 'views/templates/*', 'views/js/*', 'controllers/front/*', 'composer.json'];
-const PRODUCT = ['views/*', 'translations/*', 'controllers/front/*', 'controllers/admin/*', 'src/Form/*'];
-// The checkout's riskiest flows, which get a second bug pass.
-const RISKY = ['views/js/opc-submit.js', 'views/js/opc-address*', 'views/js/address-events.js', 'views/js/runtime/address/*', 'controllers/front/*', 'src/Checkout/*'];
-// AGENTS.md and the documents it lists as the rules a review cites; matched one path segment at a time.
-const RULE_DOCS = ['AGENTS.md', 'README.md', 'docs/RULES.md', 'docs/DECISIONS.md', 'docs/CORE_PORTING_PLAYBOOK.md', 'docs/TRANSLATIONS.md', 'docs/RELEASING.md', 'docs/E2E_RUNBOOK.md', 'docs/E2E_JOURNEY_*.md'];
+// The documents a finding may cite as the rule it breaks; matched one path segment at a time.
+const RULE_DOCS = ['AGENTS.md', 'README.md', 'docs/*.md'];
 
 // Above this many changed source lines one bug voice cannot hold the diff: the skill splits it by folder.
 const LARGE_DIFF = 2000;
@@ -38,7 +33,7 @@ function matches(string $path, array $globs): bool
     return false;
 }
 
-/** Which reviewer voices a set of changed paths calls for, under the light or the full profile. */
+/** The voices a set of changed paths calls for: every voice on any code, none on documentation alone. */
 function roster(array $paths, bool $full = false): array
 {
     $profile = ['profile' => $full ? 'full' : 'light'] + PROFILES[$full ? 'full' : 'light'];
@@ -54,19 +49,8 @@ function roster(array $paths, bool $full = false): array
         return $stop("NOT REVIEWED — documentation only, $count: " . implode(', ', array_map('pathText', $paths))
             . '. No voice reads documentation; a maintainer does.');
     }
-    $source = array_filter($code, fn (string $p) => !matches($p, GENERATED));
-    $roster = ['bug'];
-    foreach (['architecture' => ARCHITECTURE, 'product' => PRODUCT] as $voice => $globs) {
-        if (array_filter($source, fn (string $p) => matches($p, $globs))) {
-            $roster[] = $voice;
-        }
-    }
 
-    return [
-        'roster' => $roster,
-        'second_bug_pass' => $profile['second_bug_pass'] && array_filter($source, fn (string $p) => matches($p, RISKY)),
-        'verdict' => null,
-    ] + $profile;
+    return ['roster' => VOICES] + $profile + ['verdict' => null];
 }
 
 /** The repository documents a finding may cite as the rule it breaks, present in the tree under review. */

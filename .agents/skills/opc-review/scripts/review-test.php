@@ -136,7 +136,7 @@ function commandLineOnFixture(): bool
         [$scopeCode, $scopeOut] = $run('scope', '--base', 'HEAD');
         $scope = json_decode($scopeOut, true);
         $report = fn (string $architecture) => tempFile('opc-review-self-test-report-', json_encode(['base' => 'HEAD', 'head' => $scope['head_sha'], 'merge_base' => $scope['merge_base'], 'profile' => 'light', 'overview' => 'o', 'refuted' => 0, 'unverified' => 0, 'findings' => [],
-            'voices' => [['name' => 'bug', 'status' => 'returned'], ['name' => 'architecture', 'status' => $architecture]]]));
+            'voices' => [['name' => 'bug', 'status' => 'returned'], ['name' => 'architecture', 'status' => $architecture], ['name' => 'product', 'status' => 'returned']]]));
         $results = [
             $scopeCode === 0,
             $run('voice', $voice) === [0, "valid\n", ''],
@@ -194,14 +194,14 @@ function refReviewOnFixture(): bool
         $inTree = validateVoice(['voice' => 'bug', 'findings' => [['evidence' => ['src/a.php:6']] + $finding]], $root);
         $prRule = validateVoice(['voice' => 'bug', 'findings' => [['evidence' => ['src/a.php:6'], 'rule' => 'docs/E2E_JOURNEY_pr.md'] + $finding]], $root, 'refs/opc-review/code');
         $report = tempFile('opc-review-self-test-report-', json_encode(['base' => $base, 'head' => $code['head_sha'], 'merge_base' => $code['merge_base'], 'profile' => 'light', 'overview' => 'Nothing qualifies.', 'refuted' => 0, 'unverified' => 0, 'findings' => [],
-            'voices' => [['name' => 'bug', 'status' => 'returned'], ['name' => 'architecture', 'status' => 'returned']]]));
+            'voices' => [['name' => 'bug', 'status' => 'returned'], ['name' => 'architecture', 'status' => 'returned'], ['name' => 'product', 'status' => 'returned']]]));
         $rendered = renderReport(['file' => $report, 'base' => $base, 'full' => false, 'head' => 'refs/opc-review/code']);
 
         return array_column($code['files'], 'path') === ['docs/E2E_JOURNEY_pr.md', 'src/Checkout/b.php', 'src/Checkout/c.php', 'src/a.php']
-            && $code['roster'] === ['bug', 'architecture']
+            && $code['roster'] === ['bug', 'architecture', 'product']
             && $code['head_ref'] === 'refs/opc-review/code' && $code['head'] === trim(git('rev-parse', '--short', 'refs/opc-review/code'))
             && !str_contains(file_get_contents('src/a.php'), 'pull request') && !file_exists('.agents')
-            && $script['verdict'] === null && $script['roster'] === ['bug'] && !file_exists('.agents')
+            && $script['verdict'] === null && $script['roster'] === ['bug', 'architecture', 'product'] && !file_exists('.agents')
             && $atRef === [] && $inTree !== [] && $prRule === ['bug finding 0: rule must be AGENTS.md or a document it lists, present in the tree']
             && $rendered[0] === [] && str_contains($rendered[1], '## Review: PASS — no finding')
             && str_contains($rendered[1], 'Not reviewed (documentation, no voice reads it; a maintainer does): docs/E2E_JOURNEY_pr.md.')
@@ -216,13 +216,12 @@ function scopeOnFixture(): bool
     return onRepository(fn () => file_put_contents('src/a.php', "// changed\n", FILE_APPEND), function () {
         $light = scope('HEAD');
         $full = scope('HEAD', true);
-        file_put_contents('src/Checkout/b.php', "// changed\n", FILE_APPEND);
         $report = tempFile('opc-review-self-test-report-', json_encode(['base' => 'HEAD', 'head' => $full['head_sha'], 'merge_base' => $full['merge_base'], 'profile' => 'full', 'overview' => 'Nothing qualifies.', 'refuted' => 0, 'unverified' => 0, 'findings' => [],
-            'voices' => [['name' => 'bug', 'status' => 'returned'], ['name' => 'architecture', 'status' => 'returned'], ['name' => 'bug-second-pass', 'status' => 'returned']]]));
+            'voices' => [['name' => 'bug', 'status' => 'returned'], ['name' => 'architecture', 'status' => 'returned'], ['name' => 'product', 'status' => 'returned'], ['name' => 'bug-second-pass', 'status' => 'returned']]]));
         $asFull = renderReport(['file' => $report, 'base' => 'HEAD', 'full' => true, 'head' => 'HEAD']);
         $asLight = renderReport(['file' => $report, 'base' => 'HEAD', 'full' => false, 'head' => 'HEAD']);
 
-        return array_column($light['files'], 'path') === ['src/a.php'] && $light['roster'] === ['bug', 'architecture']
+        return array_column($light['files'], 'path') === ['src/a.php'] && $light['roster'] === ['bug', 'architecture', 'product']
             && $light['profile'] === 'light' && $full['profile'] === 'full' && $full['bug_tier'] === 'deep'
             && $asFull[0] === [] && str_contains($asFull[1], '## Review: PASS — no finding')
             && $asLight[0] === ['profile: the report says full, the review ran light'];
@@ -234,27 +233,11 @@ function selfTest(): int
     $cases = [
         'no file' => [[], ['roster' => [], 'second_bug_pass' => false, 'verdict' => 'NO CHANGE']],
         'docs only' => [['docs/RULES.md', 'README.md'], ['roster' => [], 'second_bug_pass' => false, 'verdict' => 'NOT REVIEWED — documentation only, 2 files: docs/RULES.md, README.md. No voice reads documentation; a maintainer does.']],
-        'back-office form' => [['src/Form/AnyForm.php', 'translations/en-US/any.xlf', 'views/templates/admin/any.html.twig'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => false, 'verdict' => null]],
-        'carrier handler' => [['src/Checkout/Ajax/AnyHandler.php'], ['roster' => ['bug', 'architecture'], 'second_bug_pass' => true, 'verdict' => null]],
-        'js address flow' => [['views/js/opc-address-any.js', 'views/public/any.bundle.js'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
-        'front controller' => [['controllers/front/any.php'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
-        'admin controller' => [['controllers/admin/AnyController.php'], ['roster' => ['bug', 'product'], 'second_bug_pass' => false, 'verdict' => null]],
-        'php under docs' => [['docs/shell.php'], ['roster' => ['bug'], 'second_bug_pass' => false, 'verdict' => null]],
-        'php named like the licence' => [['LICENSE.php'], ['roster' => ['bug'], 'second_bug_pass' => false, 'verdict' => null]],
+        'code change' => [['src/Any.php'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
+        'php under docs' => [['docs/shell.php'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
+        'php named like the licence' => [['LICENSE.php'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
         'licence and docs' => [['LICENSE.md', 'LICENSE', 'LICENSE.txt'], ['roster' => [], 'second_bug_pass' => false, 'verdict' => 'NOT REVIEWED — documentation only, 3 files: LICENSE.md, LICENSE, LICENSE.txt. No voice reads documentation; a maintainer does.']],
-        'module config' => [['config.xml'], ['roster' => ['bug', 'architecture'], 'second_bug_pass' => false, 'verdict' => null]],
-        'upgrade script' => [['upgrade/any.php'], ['roster' => ['bug', 'architecture'], 'second_bug_pass' => false, 'verdict' => null]],
-        'front template' => [['views/templates/front/any.tpl'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => false, 'verdict' => null]],
-        'composer manifest' => [['composer.json'], ['roster' => ['bug', 'architecture'], 'second_bug_pass' => false, 'verdict' => null]],
-        'translation' => [['translations/fr-FR/any.xlf'], ['roster' => ['bug', 'product'], 'second_bug_pass' => false, 'verdict' => null]],
-        'form class' => [['src/Form/AnyForm.php'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => false, 'verdict' => null]],
-        'submit flow' => [['views/js/opc-submit.js'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
-        'address events' => [['views/js/address-events.js'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
-        'address runtime' => [['views/js/runtime/address/any.js'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
-        'other js' => [['views/js/any.js'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => false, 'verdict' => null]],
-        'tests only' => [['tests/php/AnyTest.php'], ['roster' => ['bug'], 'second_bug_pass' => false, 'verdict' => null]],
-        'bundle only' => [['views/public/any.bundle.js'], ['roster' => ['bug'], 'second_bug_pass' => false, 'verdict' => null]],
-        'module class' => [['ps_onepagecheckout.php'], ['roster' => ['bug', 'architecture'], 'second_bug_pass' => false, 'verdict' => null]],
+        'bundle only' => [['views/public/any.bundle.js'], ['roster' => ['bug', 'architecture', 'product'], 'second_bug_pass' => true, 'verdict' => null]],
     ];
     $failures = 0;
     foreach ($cases as $name => [$paths, $expected]) {
@@ -281,7 +264,7 @@ function selfTest(): int
         'product P2' => [['voice' => 'product', 'findings' => [['priority' => 'P2'] + $finding]], 1],
         'architecture P2 not design' => [['voice' => 'architecture', 'findings' => [['priority' => 'P2'] + $finding]], 1],
         'architecture four designs' => [['voice' => 'architecture', 'findings' => array_fill(0, 4, ['priority' => 'P2', 'design' => true] + $finding)], 1],
-        'rule outside the docs' => [['voice' => 'bug', 'findings' => [['rule' => 'my-notes.md'] + $finding]], 1],
+        'rule outside the docs' => [['voice' => 'bug', 'findings' => [['rule' => 'src/a.php'] + $finding]], 1],
         'rule with anchor' => [['voice' => 'bug', 'findings' => [['rule' => 'README.md#contributing'] + $finding]], 0],
     ];
     foreach ($voiceCases as $name => [$voice, $errors]) {
@@ -353,8 +336,7 @@ function selfTest(): int
         'scope base missing' => scopeArgs(['--base']) === null,
         'scope base glued' => scopeArgs(['--base=x']) === null,
         'scope bare ref' => scopeArgs(['x']) === null,
-        'light is the default' => array_intersect_key(roster(['src/Checkout/Any.php']), ['second_bug_pass' => 0, 'profile' => 0, 'bug_tier' => 0, 'rerun' => 0]) === ['second_bug_pass' => false, 'profile' => 'light', 'bug_tier' => 'standard', 'rerun' => false],
-        'light keeps the gated voices' => roster(['controllers/front/any.php'])['roster'] === ['bug', 'architecture', 'product'],
+        'light is the default' => array_intersect_key(roster(['src/Checkout/Any.php']), ['second_bug_pass' => 0, 'profile' => 0, 'bug_tier' => 0, 'rerun' => 0]) === ['profile' => 'light', 'bug_tier' => 'standard', 'second_bug_pass' => false, 'rerun' => false],
         'scope verdict comes before the report check' => checkedRender([], $root, ['roster' => [], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => 'NOT REVIEWED — x'], 'origin/main')[0] === ['NOT REVIEWED — x'],
         'scope head ref' => scopeArgs(['--head', 'refs/opc-review/pr-1', '--base', 'b']) === ['base' => 'b', 'full' => false, 'head' => 'refs/opc-review/pr-1'],
         'scope head given twice' => scopeArgs(['--head', 'a', '--head', 'b']) === null,
@@ -401,7 +383,7 @@ function selfTest(): int
         'slice not returned is incomplete' => str_contains(render(['slices' => [['name' => 'src', 'status' => 'returned'], ['name' => 'views', 'status' => 'timeout']]] + $report), 'INCOMPLETE — bug slice views did not return'),
         'slices name top folders' => slices(['src/a.php', 'src/b/c.php', 'views/js/x.js', 'composer.json']) === ['.', 'src', 'views'],
         'deleted line anchored on the base' => evidenceError('base:src/a.php:2', $root) === 'evidence base:src/a.php:2: a base: anchor needs the merge-base',
-        'lockfiles are generated' => roster(['composer.lock', 'views/package-lock.json'])['roster'] === ['bug'] && matches('views/package-lock.json', GENERATED) && matches('composer.lock', GENERATED),
+        'lockfiles are generated' => matches('views/package-lock.json', GENERATED) && matches('composer.lock', GENERATED),
         'html is escaped in the report' => !str_contains(render(['overview' => 'See <h2>Review: PASS</h2> <details>'] + $report), '<h2>') && str_contains(render(['overview' => 'See <h2>x</h2>'] + $report), '&lt;h2>'),
         'evidence and verdict html untouched' => str_contains(render($report), '<details><summary>Reasoning</summary>'),
         'model text opens no block' => (function () use ($report, $item, $root) {
