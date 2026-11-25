@@ -128,7 +128,10 @@ makes every journey `not walked` with its reason:
    ```
 
    A `differs:` line: `not walked — the shop does not serve this head`. `compared: 0`: `not walked — the front-file
-   check compared nothing`.
+   check compared nothing`. When the checkout page loads its scripts from the theme's combined cache
+   (`themes/<theme>/assets/cache/`), this match does not show what the buyer runs: ask the runner to clear the shop's
+   cache in their back office before the walk. Anything but a yes: `not walked — the shop's combined cache was not
+   cleared`.
 4. When a changed file that feeds a journey lies outside `views/js`, `views/scss`, `views/public`,
    `views/package.json`, `views/package-lock.json` and `views/webpack.config.js` (PHP, templates, translations,
    `views/css`, `views/img`), check 3 proves nothing about it: ask the runner whether the shop runs this checkout.
