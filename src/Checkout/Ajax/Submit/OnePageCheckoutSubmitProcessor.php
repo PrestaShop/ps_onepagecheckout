@@ -14,6 +14,8 @@ class OnePageCheckoutSubmitProcessor
     private \PaymentOptionsFinder $paymentOptionsFinder;
     private \ConditionsToApproveFinder $conditionsToApproveFinder;
     private PaymentSelectionKeyBuilder $paymentSelectionKeyBuilder;
+    private \Closure $moduleStepHookRunner;
+
     /**
      * @var array<string,mixed>
      */
@@ -26,6 +28,7 @@ class OnePageCheckoutSubmitProcessor
         \PaymentOptionsFinder $paymentOptionsFinder,
         \ConditionsToApproveFinder $conditionsToApproveFinder,
         ?PaymentSelectionKeyBuilder $paymentSelectionKeyBuilder = null,
+        ?\Closure $moduleStepHookRunner = null,
     ) {
         $this->context = $context;
         $this->translator = $translator;
@@ -33,6 +36,13 @@ class OnePageCheckoutSubmitProcessor
         $this->paymentOptionsFinder = $paymentOptionsFinder;
         $this->conditionsToApproveFinder = $conditionsToApproveFinder;
         $this->paymentSelectionKeyBuilder = $paymentSelectionKeyBuilder ?? new PaymentSelectionKeyBuilder();
+        $this->moduleStepHookRunner = $moduleStepHookRunner ?? static function (string $moduleName, array &$parameters): void {
+            \Hook::exec(
+                'actionValidateStepComplete',
+                $parameters,
+                \Module::getModuleIdByName($moduleName)
+            );
+        };
     }
 
     /**
@@ -180,18 +190,61 @@ class OnePageCheckoutSubmitProcessor
         $isComplete = true;
 
         if (!empty($currentDeliveryOption['is_module']) && !empty($currentDeliveryOption['external_module_name'])) {
-            \Hook::exec(
-                'actionValidateStepComplete',
-                [
-                    'step_name' => 'delivery',
-                    'request_params' => $requestParameters,
-                    'completed' => &$isComplete,
-                ],
-                \Module::getModuleIdByName($currentDeliveryOption['external_module_name'])
-            );
+            $controllerErrorsBeforeHook = $this->getControllerErrors();
+            $hookParameters = [
+                'step_name' => 'delivery',
+                'request_params' => $requestParameters,
+                'completed' => &$isComplete,
+            ];
+            ($this->moduleStepHookRunner)($currentDeliveryOption['external_module_name'], $hookParameters);
+
+            if (!$isComplete) {
+                $this->validationErrors['shipping'] = [
+                    'delivery_option' => $this->getModuleShippingErrors($controllerErrorsBeforeHook),
+                ];
+            }
         }
 
         return $isComplete;
+    }
+
+    /**
+     * @return array<int,mixed>
+     */
+    private function getControllerErrors(): array
+    {
+        $errors = $this->context->controller->errors ?? [];
+
+        return is_array($errors) ? $errors : [];
+    }
+
+    /**
+     * @param array<int,mixed> $controllerErrorsBeforeHook
+     *
+     * @return array<int,string>
+     */
+    private function getModuleShippingErrors(array $controllerErrorsBeforeHook): array
+    {
+        $newErrors = array_slice($this->getControllerErrors(), count($controllerErrorsBeforeHook));
+        $messages = [];
+
+        foreach ($newErrors as $error) {
+            if (!is_string($error) || trim($error) === '' || in_array($error, $messages, true)) {
+                continue;
+            }
+
+            $messages[] = $error;
+        }
+
+        if ($messages === []) {
+            $messages[] = $this->translator->trans(
+                'Please complete the selected shipping method.',
+                [],
+                'Modules.Onepagecheckout.Shop'
+            );
+        }
+
+        return $messages;
     }
 
     /**
