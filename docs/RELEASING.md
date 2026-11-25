@@ -46,6 +46,9 @@ The asset zip is checked by the workflow against what the BO upload actually req
 - `ps_onepagecheckout/ps_onepagecheckout.php` present (module-name resolution);
 - `ps_onepagecheckout/vendor/autoload.php` present (built module).
 
+The workflow also fails if `AGENTS.md`, `.agents/` or `.claude/` sits at the root of the
+`ps_onepagecheckout/` folder in the zip: files for contributors' AI tools never ship to merchants.
+
 Both the fresh-install upload and the re-upload of the same zip over an installed module
 (upgrade path) were verified working with the 0.6.3 artifact on a vanilla 9.2 shop.
 

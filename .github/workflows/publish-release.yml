@@ -187,7 +187,7 @@ jobs:
           fi
 
           cd release-artifact
-          zip -r "${MODULE}.zip" "${MODULE}"
+          zip -r "${MODULE}.zip" "${MODULE}" -x "${MODULE}/AGENTS.md" "${MODULE}/.agents/*" "${MODULE}/.claude/*"
           mv "${MODULE}.zip" "${GITHUB_WORKSPACE}/${MODULE}.zip"
 
       - name: Validate release zip
@@ -209,6 +209,12 @@ jobs:
           if zipinfo -1 "${ZIP}" | grep -qv "^${MODULE}/"; then
             echo "The zip contains entries outside the ${MODULE}/ root folder:" >&2
             zipinfo -1 "${ZIP}" | grep -v "^${MODULE}/" >&2
+            exit 1
+          fi
+
+          # Files written for contributors' AI tools never ship to merchants.
+          if zipinfo -1 "${ZIP}" | grep -E "^${MODULE}/(AGENTS\.md$|\.agents/|\.claude/)"; then
+            echo "Agent files must not ship in the module zip." >&2
             exit 1
           fi
 
