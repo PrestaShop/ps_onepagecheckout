@@ -109,19 +109,19 @@ function selfTest(): int
         ['id' => 1, 'author_association' => 'NONE', 'body' => MARKER . "\nforged"],
         ['id' => 2, 'author_association' => 'MEMBER', 'body' => MARKER . "\nold"],
     ];
-    $p = issuePayload(7, $agreed, $patch, ['Minor', 'PHP'], $comments, $url, $sha);
+    $p = issuePayload(7, $agreed, $patch, ['Minor', 'PHP'], $comments, $url, $sha, true);
     $check(['Critical'] === $p['labels']['add'] && ['Minor'] === $p['labels']['remove'], 'one severity label, the other removed, others kept');
     $check('update' === $p['comment']['action'] && 2 === $p['comment']['id'], 'maintainer comment edited in place, forged one ignored');
-    $p = issuePayload(7, $agreed, $patch, [], [$comments[0]], $url, $sha);
+    $p = issuePayload(7, $agreed, $patch, [], [$comments[0]], $url, $sha, true);
     $check('create' === $p['comment']['action'], 'marker from a non-maintainer: a new comment');
     $disputed = $compare($bug([2, 2, 3, 2]), $challenger($bug([1, 2, 1, 2])));
-    $p = issuePayload(7, $disputed, $patch, [], [], $url, $sha);
+    $p = issuePayload(7, $disputed, $patch, [], [], $url, $sha, true);
     $check([] === $p['labels']['add'] && 'none' === $p['comment']['action'], 'disputed: nothing proposed');
     $unlabelled = $compare($bug([2, 2, 3, 2], ['confidence' => 'low']), $challenger($bug([2, 2, 3, 2], ['confidence' => 'low'])));
-    $p = issuePayload(7, $unlabelled, $patch, ['Major'], [], $url, $sha);
+    $p = issuePayload(7, $unlabelled, $patch, ['Major'], [], $url, $sha, true);
     $check([] === $p['labels']['remove'] && null !== $p['note'], 'a re-rating without label keeps today\'s label and says so');
     $picked = pick($disputed, 'rater');
-    $check('Critical' === issuePayload(7, $picked, $patch, [], [], $url, $sha)['labels']['add'][0], 'maintainer pick resolves a dispute');
+    $check('Critical' === issuePayload(7, $picked, $patch, [], [], $url, $sha, true)['labels']['add'][0], 'maintainer pick resolves a dispute');
 
     // Calibration against a blind sheet.
     $sheet = "| # | Title | Level | Release |\n|---|---|---|---|\n| [#7](u) | a | Major | patch |\n| [#8](u) | b | Minor | patch |\n| [#9](u) | c | not a bug | minor |\n| [#10](u) | d |  |  |\n";
@@ -155,7 +155,7 @@ function selfTest(): int
 
     // Silent-failure pass.
     $lowImpr = array_replace($improvement, ['confidence' => 'low']);
-    $p = issuePayload(7, $compare($lowImpr, $challenger($lowImpr)), release($lowImpr, $tag), ['Critical'], [], $url, $sha);
+    $p = issuePayload(7, $compare($lowImpr, $challenger($lowImpr)), release($lowImpr, $tag), ['Critical'], [], $url, $sha, true);
     $check([] === $p['labels']['remove'] && 'none' === $p['comment']['action'], 'low confidence on a non-bug: nothing removed, nothing posted');
     $check(null !== applyRefusal($disputed) && null !== applyRefusal($compare($bug([2, 2, 3, 2]), null)) && null === applyRefusal($agreed), 'apply refuses a disputed or unchallenged issue');
     try {
@@ -169,7 +169,7 @@ function selfTest(): int
     $check([] === verdictErrors($bug([2, 2, 3, 2]), $challenger($bug([2, 2, 3, 2]))), 'consistent verdicts accepted');
     $question = array_replace($improvement, ['type' => 'question']);
     $old = [['id' => 2, 'author_association' => 'MEMBER', 'body' => MARKER . "\n**Critical**: old.\nConfirmed by a maintainer."]];
-    $p = issuePayload(7, $compare($question, $challenger($question)), release($question, $tag), ['Critical'], $old, $url, $sha);
+    $p = issuePayload(7, $compare($question, $challenger($question)), release($question, $tag), ['Critical'], $old, $url, $sha, true);
     $check(['Critical'] === $p['labels']['remove'] && 'update' === $p['comment']['action'] && str_contains((string) $p['comment']['body'], 'not a bug'), 'a removed label rewrites the old comment in the same payload');
     $partial = [[7 => ['calibration' => 'Major', 'line' => 'patch', 'flip' => false], 8 => ['calibration' => 'Minor', 'line' => 'patch', 'flip' => false], 9 => ['calibration' => 'not a bug', 'line' => 'minor', 'flip' => false]], [7 => ['calibration' => 'Major', 'line' => 'patch', 'flip' => false], 9 => ['calibration' => 'not a bug', 'line' => 'minor', 'flip' => false]]];
     $m = calibrationMetrics(parseSheet($sheet), $partial);
@@ -177,7 +177,7 @@ function selfTest(): int
     $secret = $bug([2, 2, 3, 2], ['breaking' => ['value' => false, 'evidence' => [], 'why' => 'BREAKWHY'], 'injection' => ['found' => true, 'quote' => 'QUOTETEXT']]);
     $body = (string) renderComment($compare($secret, $challenger($secret))['final'], release($secret, $tag), $url, $sha);
     $check(!str_contains($body, 'BREAKWHY') && !str_contains($body, 'QUOTETEXT'), 'breaking reasons and injection quotes never reach the comment');
-    $check([] === issuePayload(7, $disputed, $patch, ['Minor'], [], $url, $sha)['labels']['remove'], 'disputed: today\'s label stays');
+    $check([] === issuePayload(7, $disputed, $patch, ['Minor'], [], $url, $sha, true)['labels']['remove'], 'disputed: today\'s label stays');
     $check([] !== validateRating($bug([2, 2, 3, 2], ['claim_evidence' => ['../savedraft.php:1']]), 7, false, static fn (string $p): int => 100), 'a path climbing out of the repository rejected even when it resolves');
     foreach ([[['PHP'], ['PHP', 'Major']], [['Major'], ['PHP']]] as [$add, $repoLabels]) {
         try {
@@ -191,12 +191,12 @@ function selfTest(): int
     $check([] !== validateRating($bug([2, 2, 3, 2], ['breaking' => ['value' => true, 'evidence' => [], 'why' => '']]), 7, false, $lines), 'breaking without evidence rejected');
 
     // Delta review of the silent-failure fixes.
-    $p = issuePayload(7, $compare($lowImpr, $challenger($improvement)), release($improvement, $tag), ['Critical'], $old, $url, $sha);
+    $p = issuePayload(7, $compare($lowImpr, $challenger($improvement)), release($improvement, $tag), ['Critical'], $old, $url, $sha, true);
     $check([] === $p['labels']['remove'] && 'none' === $p['comment']['action'], 'a low rater beside a high challenger is not an agreement');
     $lowAsking = array_replace($lowImpr, ['missing' => ['steps']]);
-    $p = issuePayload(7, $compare($lowAsking, $challenger($lowAsking)), release($lowAsking, $tag), ['Critical'], $old, $url, $sha);
+    $p = issuePayload(7, $compare($lowAsking, $challenger($lowAsking)), release($lowAsking, $tag), ['Critical'], $old, $url, $sha, true);
     $check('none' === $p['comment']['action'], 'a rating that removes nothing rewrites nothing');
-    $p = issuePayload(7, $compare($question, $challenger($question)), release($question, $tag), [], $old, $url, $sha);
+    $p = issuePayload(7, $compare($question, $challenger($question)), release($question, $tag), [], $old, $url, $sha, true);
     $check('update' === $p['comment']['action'], 'an old severity comment is corrected even when its label is already gone');
     try {
         gitLineCount('README.md', 'no-such-ref');
@@ -225,10 +225,10 @@ function selfTest(): int
 
         return '';
     };
-    $agreedPayload = issuePayload(7, $agreed, $patch, [], [], $url, $sha);
+    $agreedPayload = issuePayload(7, $agreed, $patch, [], [], $url, $sha, true);
     foreach (['disputed' => $disputed, 'unchallenged' => $compare($bug([2, 2, 3, 2]), null)] as $status => $c) {
         try {
-            applyIssue(7, $c, issuePayload(7, $c, $patch, [], [], $url, $sha), true, 'o/r', LEVELS, $writer);
+            applyIssue(7, $c, issuePayload(7, $c, $patch, [], [], $url, $sha, true), true, 'o/r', LEVELS, $writer);
             $check(false, "apply refuses a {$status} issue");
         } catch (RuntimeException) {
         }
@@ -275,7 +275,7 @@ function selfTest(): int
     // 4. a dispute agrees with nothing, and the report shows both sides.
     $typeDispute = $compare($improvement, $challenger(array_replace($improvement, ['type' => 'feature'])));
     $check(['calibration' => 'disputed', 'line' => 'disputed'] === array_intersect_key(runEntry($disputed, $tag), ['calibration' => 1, 'line' => 1]), 'a disputed issue counts for no release agreement');
-    $row = reportRow(229, $typeDispute, [], issuePayload(229, $typeDispute, release($improvement, $tag), [], [], $url, $sha), $tag);
+    $row = reportRow(229, $typeDispute, [], issuePayload(229, $typeDispute, release($improvement, $tag), [], [], $url, $sha, true), $tag);
     $check(str_contains($row, 'improvement / feature'), 'the report shows both sides of a disputed type');
     // 5. a non-zero score needs evidence.
     $noEvidence = $bug([2, 2, 3, 2]);
@@ -285,7 +285,7 @@ function selfTest(): int
     $check('disputed' === $typeDispute['status'], 'improvement against feature is a dispute');
     // 7. an injection flagged by either side is reported.
     $raterSaw = $compare(array_replace($improvement, ['injection' => ['found' => true, 'quote' => 'q']]), $challenger($improvement));
-    $check([] !== array_filter(issueNotes(7, $raterSaw, issuePayload(7, $raterSaw, release($improvement, $tag), [], [], $url, $sha)), static fn (string $n): bool => str_contains($n, 'instructions to agents')), 'an injection seen by one side is reported');
+    $check([] !== array_filter(issueNotes(7, $raterSaw, issuePayload(7, $raterSaw, release($improvement, $tag), [], [], $url, $sha, true)), static fn (string $n): bool => str_contains($n, 'instructions to agents')), 'an injection seen by one side is reported');
     // 8. report refuses a missing or empty folder.
     try {
         cmdReport([sys_get_temp_dir() . '/opc-triage-no-such-folder']);
@@ -295,7 +295,7 @@ function selfTest(): int
     // 10. "nothing to write" names the real reason.
     $plainQuestion = array_replace($improvement, ['type' => 'question']);
     $pq = $compare($plainQuestion, $challenger($plainQuestion));
-    $check(!str_contains(nothingReason($pq, issuePayload(7, $pq, release($plainQuestion, $tag), [], [], $url, $sha)), 'already shows'), 'nothing to write says why when the rating sets nothing');
+    $check(!str_contains(nothingReason($pq, issuePayload(7, $pq, release($plainQuestion, $tag), [], [], $url, $sha, true)), 'already shows'), 'nothing to write says why when the rating sets nothing');
     // 11. insufficient detail names what is missing.
     $check([] !== validateRating($bug([2, 2, 3, 2], ['claim' => 'insufficient detail', 'claim_evidence' => [], 'missing' => []]), 7, false, $lines), 'insufficient detail without a missing fact rejected');
     // 12. every flag that set the level is in the comment.
@@ -317,6 +317,36 @@ function selfTest(): int
     $check('agreed' === $compare($vague, $allUnverified($vague))['status'], 'an unverified challenger does not block the reporter\'s question');
     $check(['calibration' => 'unchallenged', 'line' => 'unchallenged'] === array_intersect_key(runEntry($compare($bug([2, 2, 3, 2]), null), $tag), ['calibration' => 1, 'line' => 1]), 'an unchallenged issue agrees with nothing in calibration');
     $check(false === applyArgs(['d', '7'])['apply'] && true === applyArgs(['d', '7', '--apply'])['apply'] && 'rater' === applyArgs(['d', '7', '--pick', 'rater'])['pick'], 'apply writes only with --apply on its command line');
+
+    // Round 3: apply writes labels; the comment only with --comment.
+    $count = static function (array $payload, array $c) use (&$writes, $writer): array {
+        $writes = [];
+        applyIssue(7, $c, $payload, true, 'o/r', LEVELS, $writer);
+
+        return $writes;
+    };
+    $pickedDispute = pick($disputed, 'rater');
+    $notReproduced = $bug([2, 2, 3, 2], ['claim' => 'not reproduced', 'missing' => ['steps']]);
+    $cases = [
+        'agreed bug' => $agreed,
+        'picked dispute' => $pickedDispute,
+        'non-bug' => $compare($improvement, $challenger($improvement)),
+        'unconfirmed claim' => $compare($notReproduced, $challenger($notReproduced)),
+        'insufficient detail' => $compare($vague, $challenger($vague)),
+    ];
+    foreach ($cases as $name => $c) {
+        $p = issuePayload(7, $c, $patch, [], [], $url, $sha, false);
+        $check('none' === $p['comment']['action'] && null === $p['comment']['body'], "without --comment no comment is pending: {$name}");
+        $sent = $count($p, $c);
+        $check([] === array_filter($sent, static fn (array $cmd): bool => 'api' === $cmd[1]), "without --comment no comment is written: {$name}");
+    }
+    $onlyComment = $cases['non-bug'];
+    $out = applyIssue(7, $onlyComment, issuePayload(7, $onlyComment, release($improvement, $tag), [], [], $url, $sha, false), true, 'o/r', LEVELS, $writer);
+    $check(str_contains($out, 'Nothing to write') && str_contains($out, '--comment'), 'an issue with only a comment to write says nothing to write, and why');
+    $check(2 === count($count(issuePayload(7, $agreed, $patch, [], [], $url, $sha, true), $agreed)), 'with --comment the label and the comment are written, as before');
+    $stale = applyIssue(7, $agreed, issuePayload(7, $agreed, $patch, [], $old, $url, $sha, false), false, 'o/r', LEVELS, $writer);
+    $check(str_contains($stale, 'no longer matches'), 'a stale triage comment left without --comment is said in one line');
+    $check(true === applyArgs(['d', '7', '--comment'])['comment'] && false === applyArgs(['d', '7'])['comment'], 'the comment is written only on --comment');
 
     echo 0 === $failures ? "self-test: all checks passed\n" : "self-test: {$failures} failed\n";
 

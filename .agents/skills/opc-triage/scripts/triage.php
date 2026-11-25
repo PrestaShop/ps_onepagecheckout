@@ -42,8 +42,9 @@ const USAGE = <<<'TXT'
       fetch --unrated                open issues without a severity label
       score <dir> <issue> [--last-tag <tag>]
                                      level and release from <dir>/<issue>.rater.json and <issue>.challenger.json
-      report <dir>                   one row per rated issue, today's labels, and every payload
-      apply <dir> <issue> [--pick rater|challenger] [--apply]
+      report <dir> [--comment]       one row per rated issue, today's labels, and every payload
+      apply <dir> <issue> [--pick rater|challenger] [--comment] [--apply]
+                                     writes the severity label; the triage comment only with --comment
       calibrate <sheet> <dir>...     agreement with a filled calibration sheet, one <dir> per run
       --self-test
     TXT;
@@ -370,12 +371,12 @@ function renderComment(array $final, array $release, string $repoUrl, string $sh
 }
 
 /**
- * Writes for one issue: a severity label from the allowlist and the one triage comment.
+ * Writes for one issue: a severity label from the allowlist, and the one triage comment when the maintainer asks for it.
  *
  * @param list<string> $labels the issue's labels today
  * @param list<array{id: int, author_association: string, body: string}> $comments
  */
-function issuePayload(int $issue, array $comparison, array $release, array $labels, array $comments, string $repoUrl, string $sha): array
+function issuePayload(int $issue, array $comparison, array $release, array $labels, array $comments, string $repoUrl, string $sha, bool $withComment): array
 {
     $final = in_array($comparison['status'], ['agreed', 'picked'], true) ? $comparison['final'] : null;
     $add = null !== $final && null !== $final['label'] ? [$final['label']] : [];
@@ -404,7 +405,10 @@ function issuePayload(int $issue, array $comparison, array $release, array $labe
         'verdicts' => $comparison['challenger']['rating']['verdicts'] ?? null,
         'note' => null === $final || [] === $kept ? null : 'today\'s ' . implode(', ', $kept) . ' stays: this rating sets no severity; a maintainer removes it by hand if it is wrong',
         'labels' => ['add' => array_values(array_diff($add, $labels)), 'remove' => $remove],
-        'comment' => ['action' => $action, 'id' => $mine['id'] ?? null, 'body' => 'none' === $action ? null : $body],
+        // Without --comment the comment is not written; `held` says what --comment would do.
+        'comment' => $withComment || 'none' === $action
+            ? ['action' => $action, 'id' => $mine['id'] ?? null, 'body' => 'none' === $action ? null : $body]
+            : ['action' => 'none', 'id' => $mine['id'] ?? null, 'body' => null, 'held' => $action],
     ];
 }
 
@@ -651,7 +655,7 @@ function cmdScore(array $args): int
     return 0;
 }
 
-function issueContext(string $dir, int $n, ?string $pick): array
+function issueContext(string $dir, int $n, ?string $pick, bool $withComment): array
 {
     $repo = repo();
     if (isset(gh('api', "repos/{$repo}/issues/{$n}")['pull_request'])) {
@@ -664,7 +668,7 @@ function issueContext(string $dir, int $n, ?string $pick): array
     $comments = array_map(static fn (array $c) => ['id' => $c['id'], 'author_association' => $c['author_association'], 'body' => $c['body']], ghList("repos/{$repo}/issues/{$n}/comments"));
     $sha = trim(run(['git', '-C', repoRoot(), 'rev-parse', EVIDENCE_REF]));
 
-    return [$comparison, $release, $labels, issuePayload($n, $comparison, $release, $labels, $comments, repoUrl(), $sha)];
+    return [$comparison, $release, $labels, issuePayload($n, $comparison, $release, $labels, $comments, repoUrl(), $sha, $withComment)];
 }
 
 /**
@@ -728,7 +732,7 @@ function cmdReport(array $args): int
     $rows = $payloads = $critical = $notes = $stale = [];
     foreach (ratedIssues($dir) as $n) {
         try {
-            [$comparison, , $labels, $payload] = issueContext($dir, $n, null);
+            [$comparison, , $labels, $payload] = issueContext($dir, $n, null, in_array('--comment', $args, true));
         } catch (RejectedRating $e) {
             $rows[] = "| #{$n} | not rated | | | | | |";
             $notes[] = "#{$n}: " . $e->getMessage();
@@ -776,6 +780,9 @@ function assertWritable(array $labels, array $repoLabels): void
 /** Why a payload writes nothing, in the words the maintainer needs. */
 function nothingReason(array $comparison, array $payload): string
 {
+    if (isset($payload['comment']['held'])) {
+        return 'only the triage comment would change, and it is written with --comment';
+    }
     if (null !== $payload['note']) {
         return $payload['note'];
     }
@@ -803,6 +810,9 @@ function applyIssue(int $n, array $comparison, array $payload, bool $apply, stri
         throw new RuntimeException("#{$n} {$refusal}");
     }
     $out = json($payload);
+    if ('update' === ($payload['comment']['held'] ?? null)) {
+        $out .= "The triage comment on this issue no longer matches the rating; --comment updates it.\n";
+    }
     $labels = $payload['labels'];
     $comment = $payload['comment'];
     if ([] === $labels['add'] && [] === $labels['remove'] && 'none' === $comment['action']) {
@@ -838,7 +848,7 @@ function applyIssue(int $n, array $comparison, array $payload, bool $apply, stri
     return $out;
 }
 
-/** @return array{dir: string, n: int, pick: ?string, apply: bool} */
+/** @return array{dir: string, n: int, pick: ?string, apply: bool, comment: bool} */
 function applyArgs(array $args): array
 {
     return [
@@ -846,13 +856,14 @@ function applyArgs(array $args): array
         'n' => issueNumber($args[1] ?? null),
         'pick' => option($args, '--pick'),
         'apply' => in_array('--apply', $args, true),
+        'comment' => in_array('--comment', $args, true),
     ];
 }
 
 function cmdApply(array $args): int
 {
-    ['dir' => $dir, 'n' => $n, 'pick' => $pick, 'apply' => $apply] = applyArgs($args);
-    [$comparison, , , $payload] = issueContext($dir, $n, $pick);
+    ['dir' => $dir, 'n' => $n, 'pick' => $pick, 'apply' => $apply, 'comment' => $comment] = applyArgs($args);
+    [$comparison, , , $payload] = issueContext($dir, $n, $pick, $comment);
     echo applyIssue($n, $comparison, $payload, $apply, repo(), $apply ? repoLabels() : [], 'run');
 
     return 0;

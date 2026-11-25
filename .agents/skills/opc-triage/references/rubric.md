@@ -24,7 +24,7 @@ Check the claim on `origin/main` before scoring:
 
 ## Factors
 
-The phrase column is the text of the comment posted on the issue.
+The phrase column is the text of the triage comment, when the maintainer asks for it.
 
 | Factor | Score | Meaning | Phrase |
 |---|---|---|---|
