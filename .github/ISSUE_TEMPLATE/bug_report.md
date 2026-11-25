@@ -31,8 +31,8 @@ Versions: PrestaShop and the module; PHP, the theme or another module only when 
 
 ## Workaround
 
-<!-- One sentence: how to complete the order anyway. Write "None needed" when the order goes through anyway, "None"
-when nothing gets past the defect. -->
+<!-- One sentence: how to get past the defect anyway, and who can (the buyer, or only the merchant). Write "None
+needed" when the order goes through anyway, "None" when nothing gets past the defect. -->
 
 ## Cause
 
