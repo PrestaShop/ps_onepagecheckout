@@ -36,7 +36,7 @@ const USAGE = <<<'TXT'
     usage: php triage.php <command>
       fetch <issue>                  issue data for the rater, labels held back
       fetch --unrated                open issues without a severity label
-      score <dir> <issue>     
+      score <dir> <issue>
                                      level and release from <dir>/<issue>.rater.json and <issue>.challenger.json
       report <dir> [--comment]       one row per rated issue, today's labels, and every payload
       apply <dir> <issue> [--pick rater|challenger] [--comment] [--apply]
@@ -291,6 +291,13 @@ function verdictErrors(array $rater, array $challenger): array
             $pairs[$f] = [$rater['factors'][$f]['score'], $challenger['factors'][$f]['score']];
         }
     }
+    if (null === $rater['factors'] && null !== $challenger['factors']) {
+        foreach (FACTORS as $f) {
+            if ('CONFIRMED' === ($challenger['verdicts'][$f] ?? null)) {
+                $errors[] = "verdicts.{$f}: CONFIRMED but the rater scored no factors";
+            }
+        }
+    }
     foreach ($pairs as $key => [$before, $after]) {
         $verdict = $challenger['verdicts'][$key] ?? null;
         if (('REFUTED' === $verdict && $before === $after) || ('CONFIRMED' === $verdict && $before !== $after)) {
@@ -497,9 +504,8 @@ function cmdFetch(array $args): int
 
 function cmdScore(array $args): int
 {
-    $tag = null;
-    $comparison = loadRatings($args[0] ?? throw new InvalidArgumentException('score <dir> <issue>'), issueNumber($args[1] ?? null), $tag);
-    echo json(['status' => $comparison['status'], 'rater' => summary($comparison['rater'], $tag), 'challenger' => summary($comparison['challenger'], $tag)]);
+    $comparison = loadRatings($args[0] ?? throw new InvalidArgumentException('score <dir> <issue>'), issueNumber($args[1] ?? null), null);
+    echo json(['status' => $comparison['status'], 'rater' => summary($comparison['rater'], null), 'challenger' => summary($comparison['challenger'], null)]);
 
     return 0;
 }
@@ -669,12 +675,26 @@ function applyIssue(int $n, array $comparison, array $payload, bool $apply, stri
     return $out;
 }
 
+/**
+ * The write gates as the command line sets them: nothing is written without --apply, no comment without --comment.
+ *
+ * @return array{dir: string, n: int, pick: ?string, apply: bool, comment: bool}
+ */
+function applyArgs(array $args): array
+{
+    return [
+        'dir' => $args[0] ?? throw new InvalidArgumentException('apply <dir> <issue>'),
+        'n' => issueNumber($args[1] ?? null),
+        'pick' => option($args, '--pick'),
+        'apply' => in_array('--apply', $args, true),
+        'comment' => in_array('--comment', $args, true),
+    ];
+}
+
 function cmdApply(array $args): int
 {
-    $dir = $args[0] ?? throw new InvalidArgumentException('apply <dir> <issue>');
-    $n = issueNumber($args[1] ?? null);
-    $apply = in_array('--apply', $args, true);
-    [$comparison, , , $payload] = issueContext($dir, $n, option($args, '--pick'), in_array('--comment', $args, true));
+    ['dir' => $dir, 'n' => $n, 'pick' => $pick, 'apply' => $apply, 'comment' => $comment] = applyArgs($args);
+    [$comparison, , , $payload] = issueContext($dir, $n, $pick, $comment);
     echo applyIssue($n, $comparison, $payload, $apply, repo(), $apply ? repoLabels() : [], 'run');
 
     return 0;

@@ -284,6 +284,10 @@ function selfTest(): int
 
     $check('disputed' === $compare($improvement, $challenger($bug([2, 2, 3, 2])))['status'], 'a challenger that turns a non-bug into a bug is a dispute, so nothing is written');
 
+    $check(false === applyArgs(['d', '7'])['apply'] && true === applyArgs(['d', '7', '--apply'])['apply'] && 'rater' === applyArgs(['d', '7', '--pick', 'rater'])['pick'], 'apply writes only with --apply on its command line');
+    $check(true === applyArgs(['d', '7', '--comment'])['comment'] && false === applyArgs(['d', '7'])['comment'], 'the comment is written only on --comment');
+    $check([] !== verdictErrors($improvement, $challenger($bug([2, 2, 3, 2]))), 'CONFIRMED on factors the rater never scored is a contradiction');
+
     // A removed command answers with the usage and exit 2.
     try {
         run([PHP_BINARY, __DIR__ . '/triage.php', 'calibrate']);
