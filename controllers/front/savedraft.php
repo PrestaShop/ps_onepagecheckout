@@ -23,17 +23,9 @@ class Ps_OnepagecheckoutSaveDraftModuleFrontController extends Ps_Onepagecheckou
      */
     protected function handleAvailableOpcRequest(): array
     {
-        if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            header('HTTP/1.1 405 Method Not Allowed');
-            header('Allow: POST');
-
-            return ['success' => false];
-        }
-
-        if (!$this->isTokenValid()) {
-            header('HTTP/1.1 403 Forbidden');
-
-            return ['success' => false];
+        $invalidRequest = $this->validatePostAndToken();
+        if ($invalidRequest !== null) {
+            return $invalidRequest;
         }
 
         // Non-scalar values (e.g. `address1[]=x`) are never legitimate address form input.

@@ -16,6 +16,11 @@ class Ps_OnepagecheckoutDeleteAddressModuleFrontController extends Ps_Onepageche
      */
     protected function handleAvailableOpcRequest(): array
     {
+        $invalidRequest = $this->validatePostAndToken();
+        if ($invalidRequest !== null) {
+            return $invalidRequest;
+        }
+
         $handler = new OnePageCheckoutDeleteAddressHandler(
             $this->context,
             $this->module->getTranslator(),

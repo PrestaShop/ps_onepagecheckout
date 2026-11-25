@@ -39,6 +39,7 @@ $loader->addPsr4('PrestaShop\\Module\\PsOnePageCheckout\\', _PS_ROOT_DIR_ . '/mo
 $loader->addClassMap([
     'Ps_Onepagecheckout' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/ps_onepagecheckout.php',
     'AdminPsOnePageCheckoutController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/admin/AdminPsOnePageCheckoutController.php',
+    'Ps_OnepagecheckoutAbstractOpcJsonFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/AbstractOpcJsonFrontController.php',
     'Ps_OnepagecheckoutGuestInitModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/guestinit.php',
     'Ps_OnepagecheckoutAddressFormModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/addressform.php',
     'Ps_OnepagecheckoutAddressModalModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/addressmodal.php',
@@ -47,6 +48,7 @@ $loader->addClassMap([
     'Ps_OnepagecheckoutStatesModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/states.php',
     'Ps_OnepagecheckoutSaveAddressModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/saveaddress.php',
     'Ps_OnepagecheckoutDeleteAddressModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/deleteaddress.php',
+    'Ps_OnepagecheckoutSaveDraftModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/savedraft.php',
     'Ps_OnepagecheckoutCarriersModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/carriers.php',
     'Ps_OnepagecheckoutSelectCarrierModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/selectcarrier.php',
     'Ps_OnepagecheckoutPaymentMethodsModuleFrontController' => _PS_ROOT_DIR_ . '/modules/ps_onepagecheckout/controllers/front/paymentmethods.php',
