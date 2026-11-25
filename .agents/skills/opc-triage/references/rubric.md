@@ -76,7 +76,7 @@ When facts are missing, the comment is the first matching question, in this orde
 | Missing | Question |
 |---|---|
 | steps | Could you list the steps that lead to the problem, starting from an empty cart? |
-| versions | Which versions of PrestaShop, PHP and this module does the shop run? |
+| versions | Which versions of PrestaShop and of this module does the shop run? |
 | impact | What does the buyer or the merchant see when it happens: an error, a wrong value, a blocked order? |
 | workaround | Is there a way to complete the order anyway, and if so which one? |
 | stage | At which step of the checkout does it happen: contact, address, carrier, payment or final submit? |
