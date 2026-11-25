@@ -22,8 +22,8 @@ function selfTest(): int
     $check(null === nextRelease('question', false, 'v0.9.4')['target'], 'question: none');
     $check('0.9.5 (bug, not breaking)' === nextRelease('bug', false, 'v0.9.4')['text'], 'release text');
     $check('v2.3.10' === latestTag(['v2.3.9', 'latest', 'v2.3.10', 'v2.4.0-rc1', 'v2.3.2']), 'latest tag by version, odd tags ignored');
-    $check(['milestone' => '0.9.5', 'note' => null, 'stale' => ['0.9.4']] === milestoneFor('0.9.5', ['0.9.4', '0.9.5'], 'v0.9.4'), 'open milestone found, tagged one reported');
-    $check('milestone 0.10.0 missing' === milestoneFor('0.10.0', ['0.9.5'], 'v0.9.4')['note'], 'missing milestone reported');
+    $check(['milestone' => '0.9.5', 'note' => null] === milestoneFor('0.9.5', ['0.9.4', '0.9.5']), 'open milestone found');
+    $check('milestone 0.10.0 missing' === milestoneFor('0.10.0', ['0.9.5'])['note'], 'missing milestone reported');
 
     // Pull request: one milestone, plus core's BC break label when breaking; missing ones stop before any write.
     $check(['milestone' => '0.9.5', 'labels' => ['add' => [], 'remove' => []]] === prPayload(nextRelease('bug fix', false, 'v0.9.4'), ['0.9.5'], ['BC break'], []), 'non-breaking PR: milestone alone');

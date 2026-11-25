@@ -222,7 +222,7 @@ function assess(array $r): array
  * The release target from the rule in .agents/bin/release.php, which every skill shares. A null tag lets that script
  * read the last tag and the open milestones on GitHub.
  *
- * @return array{target: ?string, line: string, text: string, breaking: bool, note?: ?string, stale?: list<string>}
+ * @return array{target: ?string, line: string, text: string, breaking: bool, note?: ?string}
  */
 function release(array $r, ?string $tag): array
 {
@@ -486,18 +486,10 @@ function cmdFetch(array $args): int
     if (isset($issue['pull_request'])) {
         throw new RuntimeException("#{$n} is a pull request");
     }
-    $prs = [];
-    foreach (ghList("repos/{$repo}/issues/{$n}/timeline") as $event) {
-        $source = $event['source']['issue'] ?? null;
-        if ('cross-referenced' === ($event['event'] ?? null) && isset($source['pull_request'])) {
-            $prs[$source['number']] = ['number' => $source['number'], 'state' => null !== ($source['pull_request']['merged_at'] ?? null) ? 'merged' : $source['state']];
-        }
-    }
     echo json([
         'number' => $n, 'title' => $issue['title'], 'state' => $issue['state'], 'author_association' => $issue['author_association'],
         'body' => $issue['body'] ?? '',
         'comments' => array_map(static fn (array $c) => ['author_association' => $c['author_association'], 'body' => $c['body']], ghList("repos/{$repo}/issues/{$n}/comments")),
-        'linked_pull_requests' => array_values($prs),
     ]);
 
     return 0;
@@ -586,7 +578,7 @@ function cmdReport(array $args): int
     if ([] === ratedIssues($dir)) {
         throw new RuntimeException("{$dir} is missing or holds no rating");
     }
-    $rows = $payloads = $critical = $notes = $stale = [];
+    $rows = $payloads = $notes = [];
     foreach (ratedIssues($dir) as $n) {
         try {
             [$comparison, , $labels, $payload] = issueContext($dir, $n, null, in_array('--comment', $args, true));
@@ -597,22 +589,13 @@ function cmdReport(array $args): int
         }
         $rows[] = reportRow($n, $comparison, $labels, $payload, null);
         array_push($notes, ...issueNotes($n, $comparison, $payload));
-        $a = shown($comparison);
-        if ('Critical' === $a['level']) {
-            $critical[$n] = $a['points'];
-        }
-        $stale = array_values(array_unique([...$stale, ...release($a['rating'], null)['stale']]));
         $payloads[] = $payload;
     }
     echo "| issue | type | claim | severity (why) | release (why) | confidence | today → gap |\n|---|---|---|---|---|---|---|\n", implode("\n", $rows), "\n";
     foreach ($notes as $note) {
         echo "\n{$note}";
     }
-    if (count($critical) * 3 > count($payloads)) {
-        arsort($critical);
-        echo "\nMore than a third of this batch is Critical. Ranked by points: #" . implode(', #', array_keys($critical)) . '.';
-    }
-    echo [] === $stale ? '' : "\nOpen milestones already tagged: " . implode(', ', $stale) . '. Not used.', "\n\nPayloads (nothing written):\n", json($payloads);
+    echo "\n\nPayloads (nothing written):\n", json($payloads);
 
     return 0;
 }
@@ -632,25 +615,6 @@ function assertWritable(array $labels, array $repoLabels): void
     if ([] !== $absent) {
         throw new RuntimeException('label ' . implode(', ', $absent) . ' missing: a maintainer creates it first. Nothing written.');
     }
-}
-
-/** Why a payload writes nothing, in the words the maintainer needs. */
-function nothingReason(array $comparison, array $payload): string
-{
-    if (isset($payload['comment']['held'])) {
-        return (null === $payload['note'] ? '' : "{$payload['note']}; ") . 'only the triage comment would change, and it is written with --comment';
-    }
-    if (null !== $payload['note']) {
-        return $payload['note'];
-    }
-    $final = $comparison['final'];
-    $r = $final['rating'];
-    if (null !== $final['label'] || (in_array($r['type'], ['improvement', 'feature'], true) && 'low' !== $r['confidence'])) {
-        return 'the issue already shows this rating';
-    }
-    $why = 'bug' !== $r['type'] ? "a {$r['type']} gets no severity" : ('low' === $r['confidence'] ? 'the confidence is low' : "the claim is {$r['claim']}");
-
-    return [] === $r['missing'] ? "{$why}, and the rating asks the reporter nothing" : "{$why}, and the issue already has its triage comment";
 }
 
 /**
@@ -673,7 +637,7 @@ function applyIssue(int $n, array $comparison, array $payload, bool $apply, stri
     $labels = $payload['labels'];
     $comment = $payload['comment'];
     if ([] === $labels['add'] && [] === $labels['remove'] && 'none' === $comment['action']) {
-        return $out . 'Nothing to write: ' . nothingReason($comparison, $payload) . ".\n";
+        return $out . 'Nothing to write' . (null === $payload['note'] ? '' : ": {$payload['note']}") . ".\n";
     }
     if (!$apply) {
         return $out . "Dry run: nothing written. Rerun with --apply to write exactly this.\n";

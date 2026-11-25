@@ -233,7 +233,7 @@ function selfTest(): int
     // 10. "nothing to write" names the real reason.
     $plainQuestion = array_replace($improvement, ['type' => 'question']);
     $pq = $compare($plainQuestion, $challenger($plainQuestion));
-    $check(!str_contains(nothingReason($pq, issuePayload(7, $pq, release($plainQuestion, $tag), [], [], $url, $sha, true)), 'already shows'), 'nothing to write says why when the rating sets nothing');
+    $check(str_ends_with(applyIssue(7, $pq, issuePayload(7, $pq, release($plainQuestion, $tag), [], [], $url, $sha, true), true, 'o/r', LEVELS, $writer), "Nothing to write.\n"), 'nothing to write, with no note, is said in three words');
     // 11. insufficient detail names what is missing.
     $check([] !== validateRating($bug([2, 2, 3, 2], ['claim' => 'insufficient detail', 'claim_evidence' => [], 'missing' => []]), 7, false, $lines), 'insufficient detail without a missing fact rejected');
     // 12. every flag that set the level is in the comment.
@@ -274,14 +274,13 @@ function selfTest(): int
     }
     $onlyComment = $cases['non-bug'];
     $out = applyIssue(7, $onlyComment, issuePayload(7, $onlyComment, release($improvement, $tag), [], [], $url, $sha, false), true, 'o/r', LEVELS, $writer);
-    $check(str_contains($out, 'Nothing to write') && str_contains($out, '--comment'), 'an issue with only a comment to write says nothing to write, and why');
+    $check(str_contains($out, 'Nothing to write') && str_contains($out, '"held": "create"'), 'an issue with only a comment to write says nothing to write, and the payload shows the held comment');
     $check(2 === count($count(issuePayload(7, $agreed, $patch, [], [], $url, $sha, true), $agreed)), 'with --comment the label and the comment are written, as before');
     $stale = applyIssue(7, $agreed, issuePayload(7, $agreed, $patch, [], $old, $url, $sha, false), false, 'o/r', LEVELS, $writer);
     $check(str_contains($stale, 'differs from what --comment would write'), 'a stale triage comment left without --comment is said in one line');
 
-    $keptAndHeld = ['note' => 'today\'s Major stays', 'comment' => ['action' => 'none', 'id' => null, 'body' => null, 'held' => 'create']];
-    $reason = nothingReason($agreed, $keptAndHeld);
-    $check(str_contains($reason, 'Major stays') && str_contains($reason, '--comment'), 'nothing to write keeps the label note and names the held comment');
+    $kept = applyIssue(7, $unlabelled, issuePayload(7, $unlabelled, $patch, ['Major'], [], $url, $sha, false), true, 'o/r', LEVELS, $writer);
+    $check(str_contains($kept, "Nothing to write: today's Major stays"), 'nothing to write carries the payload note');
 
     $check('disputed' === $compare($improvement, $challenger($bug([2, 2, 3, 2])))['status'], 'a challenger that turns a non-bug into a bug is a dispute, so nothing is written');
 

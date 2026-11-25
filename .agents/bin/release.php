@@ -77,24 +77,17 @@ function openMilestone(string $target, array $open): ?string
 }
 
 /**
- * The open milestone named after the target, and the open milestones whose version is already tagged.
+ * The open milestone named after the target, or a note that it is missing.
  *
  * @param list<string> $open
  *
- * @return array{milestone: ?string, note: ?string, stale: list<string>}
+ * @return array{milestone: ?string, note: ?string}
  */
-function milestoneFor(?string $target, array $open, string $lastTag): array
+function milestoneFor(?string $target, array $open): array
 {
     $found = null === $target ? null : openMilestone($target, $open);
-    $stale = [];
-    foreach ($open as $title) {
-        if (null !== parseVersion($title) && version_compare(ltrim($title, 'v'), ltrim($lastTag, 'v'), '<=')) {
-            $stale[] = $title;
-        }
-    }
-    $note = null !== $target && null === $found ? "milestone {$target} missing" : null;
 
-    return ['milestone' => $found, 'note' => $note, 'stale' => $stale];
+    return ['milestone' => $found, 'note' => null !== $target && null === $found ? "milestone {$target} missing" : null];
 }
 
 /**
@@ -144,7 +137,7 @@ function cmdRelease(array $args): int
     $release = nextRelease(option($args, '--type') ?? throw new InvalidArgumentException('--type is required'), 'yes' === $breaking, $tag);
     $pr = option($args, '--pr');
     if (null === $pr) {
-        echo json(null === option($args, '--last-tag') ? $release + milestoneFor($release['target'], openMilestones(), $tag) : $release);
+        echo json(null === option($args, '--last-tag') ? $release + milestoneFor($release['target'], openMilestones()) : $release);
 
         return 0;
     }
