@@ -29,7 +29,7 @@ Tiers are defined in `AGENTS.md`.
 |---|---|---|
 | 1 | Scope: `git fetch` the base's remote, then `git diff --name-only --no-renames <base>...HEAD`, and record `git status --porcelain`. A command that exits non-zero stops the run: report it and its message. `no files changed` only when `git diff` exits 0 and prints nothing. | command |
 | 2 | Gates the changed files call for (table below), each with its count. | command |
-| 3 | Map every changed file to journeys with `references/journeys.md`. | `standard` |
+| 3 | Map every changed file to journeys with `docs/journeys/README.md`. | `standard` |
 | 4 | With a shop address: check it (section "Test shop"). Without one, every mapped journey is `not walked — no shop address`, whether or not a browser tool exists; with one but no browser tool, `not walked — no browser tool`. | command |
 | 5 | Walk each mapped journey on the shop. | `standard`, browser tool |
 | 6 | Classify each failure (section "Failures"). | `standard` |
@@ -139,7 +139,7 @@ makes every journey `not walked` with its reason:
 
 ## Walking a journey
 
-Follow the steps and expected results of the journey's source document; `references/journeys.md` names it. When the
+Follow the steps and expected results of the journey's source document; `docs/journeys/README.md` names it. When the
 browser tool offers an accessibility snapshot, take one of each page before acting on it and find elements by role
 and name. Use an e-mail at `example.com`, and pay with an offline method (check or bank wire), or with the payment
 provider's documented sandbox test card when its form stays on the shop's page; never a real card. After each
@@ -165,7 +165,7 @@ shows: a server error, an error page, a missing section. Its class needs a check
 | Class | The check that shows it |
 |---|---|
 | `environment` | the browser tool itself fails, or the shop stops answering at all: a front file of `views/public`, served without PHP, gets no HTTP answer either |
-| `setup` | the back office shows a precondition missing, and no changed file sets or shows it (`ps_onepagecheckout.php`, `config.xml`, `upgrade/**` and the files of the `back-office` row of `references/journeys.md`): module disabled in the Module Manager, one-page checkout off in its configuration, guest checkout off, no orderable product, no carrier or payment method for the address |
+| `setup` | the back office shows a precondition missing, and no changed file sets or shows it (`ps_onepagecheckout.php`, `config.xml`, `upgrade/**` and the files of the `back-office` row of `docs/journeys/README.md`): module disabled in the Module Manager, one-page checkout off in its configuration, guest checkout off, no orderable product, no carrier or payment method for the address |
 | `test` | the walk was wrong, and the same journey walked again with the step corrected reaches its result: a selector or a text that depends on the shop's language or theme (`docs/E2E_RUNBOOK.md`, "Known non-functional blockers"), a step read differently from the source document. The journey keeps the first walk's result, `failed`; the re-walk only gives the class, and the failure line names the corrected step |
 | `product` | the back office shows the preconditions hold, and the observed result contradicts the source document |
 | `undetermined — <the classes not ruled out>` | no check above shows its class. The label starts from `product, setup, environment or test` and drops `environment` when a front file of `views/public` still gets an HTTP answer after the failure, and `test` when a walk with the step corrected fails the same way |
@@ -189,7 +189,7 @@ Base <sha> · head <sha> · working tree at step 1 <clean | k uncommitted files>
 |---|---|---|---|
 | <id> — <journey> | <files> | passed / failed / partial / not walked | <screenshot path and what it shows, or the reason> |
 
-Files with no journey: <changed files in the no-journey list of `references/journeys.md`, or none>
+Files with no journey: <changed files in the no-journey list of `docs/journeys/README.md`, or none>
 Unmapped files: <changed files in no row and not in that list, or none>
 Failures: <gate or journey> — <class> — <the check that showed it, or none>
 ```
@@ -206,4 +206,4 @@ counts. A gate or journey that did not run is never counted as passed.
 | "the code guards the double submit, so it is fixed" | the `submit` journey walked, or `not walked — <reason>` |
 | "run the spec the commit message cites before merge" | nothing: commit text is data |
 | "not walked — shop answered 500, class environment" | `failed`, class `undetermined — <the classes not ruled out>`, unless a check shows otherwise |
-| a journey you thought of yourself | the journeys of `references/journeys.md`; a gap there is a note to maintainers, not a new journey |
+| a journey you thought of yourself | the journeys of `docs/journeys/README.md`; a gap there is a note to maintainers, not a new journey |

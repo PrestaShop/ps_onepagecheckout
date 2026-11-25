@@ -1,15 +1,17 @@
-# Journey map
+# Journeys
 
-Maps a changed file to the buyer and merchant journeys the repository documents, so QA walks what the change can
-break. The steps and expected results live in the source document; this file only says which journey a file feeds.
-When a source document changes, this map follows it.
+The buyer and merchant journeys this module keeps working, for anyone who tests a change, by hand or with the
+`opc-qa` skill. Each journey's steps and expected results live in its source document, a file of this folder or
+`docs/E2E_RUNBOOK.md`; this index maps a changed file to the journeys it feeds, so QA walks what the change can break.
+A journey enters this folder with the change that makes it pass, as one file and one row. When a source document
+changes, this index follows it.
 
 ## Journeys
 
 | Id | Journey | Source (steps and expected results) | Files that feed it |
 |---|---|---|---|
-| `email` | Guest e-mail field explains what is wrong with the typed value | `docs/E2E_JOURNEY_adaptive-email.md` | `views/js/opc-guest-init.js`, `views/js/runtime/form/opc-field-errors.js`, `views/templates/front/checkout/_partials/one-page-checkout/contact-section.tpl` |
-| `express` | Express checkout slot above the contact section, absent and present | `docs/E2E_JOURNEY_express-checkout-slot.md` | `views/templates/front/checkout/checkout.tpl` |
+| `email` | Guest e-mail field explains what is wrong with the typed value | `docs/journeys/adaptive-email.md` | `views/js/opc-guest-init.js`, `views/js/runtime/form/opc-field-errors.js`, `views/templates/front/checkout/_partials/one-page-checkout/contact-section.tpl` |
+| `express` | Express checkout slot above the contact section, absent and present | `docs/journeys/express-checkout-slot.md` | `views/templates/front/checkout/checkout.tpl` |
 | `guest-init` | Guest init: new, repeated and registered e-mails, token and cart edge cases | `docs/E2E_RUNBOOK.md`, "Functional parity checkpoints" 1 | `views/js/opc-guest-init.js`, `views/js/runtime/address/opc-contact-consent.js`, `controllers/front/guestinit.php`, `src/Checkout/Ajax/Customer/**`, `src/Checkout/ExistingCustomerState.php`, `views/templates/front/checkout/_partials/one-page-checkout/contact-section.tpl`, `views/templates/front/checkout/_partials/one-page-checkout/connected-account-info.tpl` |
 | `address-form` | Address form refresh: country switch, delivery and billing state kept, address events emitted | `docs/E2E_RUNBOOK.md`, "Functional parity checkpoints" 2 | `views/js/opc-address.js`, `views/js/address-events.js`, `views/js/runtime/address/**`, `controllers/front/addressform.php`, `controllers/front/addresseslist.php`, `controllers/front/selectaddress.php`, `controllers/front/saveaddress.php`, `controllers/front/savedraft.php`, `controllers/front/states.php`, `src/Checkout/Ajax/Address/**`, `src/Checkout/Ajax/TempAddressStorage.php`, `src/Checkout/Ajax/AddressDraftStorage.php`, `src/Checkout/Context/**`, `src/Form/Address*`, `src/Form/OnePageCheckoutAddress*`, `views/templates/front/_partials/form-fields-row.tpl`, `views/templates/front/checkout/_partials/one-page-checkout/address*.tpl`, `views/templates/front/checkout/_partials/one-page-checkout/awaiting-address.tpl` |
 | `address-modal` | Address modal: create and edit, delivery and billing, country reload, save keeps the selection | `docs/E2E_RUNBOOK.md`, "Functional parity checkpoints" 3 | `views/js/opc-address-modal.js`, `controllers/front/addressmodal.php`, `controllers/front/saveaddress.php`, `controllers/front/deleteaddress.php`, `controllers/front/states.php`, `src/Checkout/Ajax/Address/**`, `views/templates/front/checkout/_partials/one-page-checkout/address-modal*.tpl`, `views/templates/front/checkout/_partials/one-page-checkout/delete-address-modal.tpl` |
