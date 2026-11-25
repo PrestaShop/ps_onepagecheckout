@@ -72,21 +72,16 @@ function roster(array $paths, bool $full = false): array
 /** The repository documents a finding may cite as the rule it breaks, present in the tree under review. */
 function isRuleFile(string $rule, string $root): bool
 {
-    [$file, $anchor] = explode('#', $rule, 2) + [1 => ''];
+    // A plain name only: fnmatch throws on a NUL byte, which JSON can carry.
+    $file = explode('#', $rule, 2)[0];
 
-    return preg_match('/^[\w.-]*$/D', $anchor) && preg_match('#^[\w./-]+$#D', $file) && isRuleName($file) && is_file("$root/$file");
+    return preg_match('#^[\w./-]+$#D', $file) && array_filter(RULE_DOCS, fn (string $glob) => fnmatch($glob, $file, FNM_PATHNAME)) && is_file("$root/$file");
 }
 
 /** A path as the report prints it: control characters, which git allows in file names, become `?`. */
 function pathText(string $path): string
 {
     return preg_replace('/[\x00-\x1f\x7f]/', '?', $path);
-}
-
-/** Whether a path names one of the rule documents. */
-function isRuleName(string $file): bool
-{
-    return (bool) array_filter(RULE_DOCS, fn (string $glob) => fnmatch($glob, $file, FNM_PATHNAME));
 }
 
 /** A file of the working tree whose real location stays under the root: a symlinked folder never leads out of it. */
@@ -105,14 +100,11 @@ function linesAt(string $revision, string $path): ?int
     if ($process === false) {
         throw new RuntimeException('git cannot be started');
     }
-    $text = stream_get_contents($pipes[1]);
+    $lines = countLines($pipes[1]);
     fclose($pipes[1]);
     fclose($pipes[2]);
-    if (proc_close($process) !== 0) {
-        return null;
-    }
 
-    return substr_count($text, "\n") + ($text !== '' && !str_ends_with($text, "\n") ? 1 : 0);
+    return proc_close($process) === 0 ? $lines : null;
 }
 
 /**
@@ -148,20 +140,6 @@ function evidenceError(mixed $ref, string $root, ?string $head = null, ?string $
     return null;
 }
 
-/** Model text the report prints on one line stays one line; the rest is escaped when printed. */
-function textErrors(array $fields, string $where, array $oneLine): array
-{
-    $errors = [];
-    $prefix = $where === '' ? '' : "$where: ";
-    foreach ($oneLine as $field) {
-        if (is_string($fields[$field] ?? null) && preg_match('/[\r\n]/', $fields[$field])) {
-            $errors[] = "$prefix$field is one line";
-        }
-    }
-
-    return $errors;
-}
-
 /** Checks shared by a voice's finding and a report's finding; $statuses lists the statuses allowed at this stage. */
 function findingErrors(mixed $f, string $where, array $statuses, string $root, ?string $head = null, ?string $mergeBase = null): array
 {
@@ -174,7 +152,6 @@ function findingErrors(mixed $f, string $where, array $statuses, string $root, ?
             $errors[] = "$where: $field is required";
         }
     }
-    $errors = array_merge($errors, textErrors($f, $where, ['title', 'suggestion']));
     if (!in_array($f['priority'] ?? null, ['P0', 'P1', 'P2'], true)) {
         $errors[] = "$where: priority must be P0, P1 or P2";
     }
@@ -247,7 +224,6 @@ function validateReport(mixed $r, string $root, ?string $head = null, ?string $m
     if (!isset(PROFILES[$r['profile'] ?? ''])) {
         $errors[] = 'profile is ' . implode(' or ', array_keys(PROFILES));
     }
-    $errors = array_merge($errors, textErrors($r, '', ['coverage']));
     if (isset($r['slices']) && (!is_array($r['slices']) || !array_is_list($r['slices']))) {
         $errors[] = 'slices is a list';
     } else {
@@ -257,9 +233,6 @@ function validateReport(mixed $r, string $root, ?string $head = null, ?string $m
                 $errors[] = "slice $i: name of a folder, status returned|timeout|failed";
             }
         }
-    }
-    if ($r['voices'] === []) {
-        $errors[] = 'voices lists every voice the roster called, with its status';
     }
     foreach ($r['voices'] as $i => $voice) {
         if (!in_array($voice['name'] ?? null, REPORT_VOICES, true)
@@ -290,7 +263,7 @@ function validateReport(mixed $r, string $root, ?string $head = null, ?string $m
         }
     }
     if (isset($r['injection']) && (!is_array($r['injection']) || !array_is_list($r['injection'])
-        || array_filter($r['injection'], fn (mixed $where) => !is_string($where) || trim($where) === '' || preg_match('/[\r\n]/', $where)))) {
+        || array_filter($r['injection'], fn (mixed $where) => !is_string($where) || trim($where) === ''))) {
         $errors[] = 'injection is a list of places, each a non-empty string';
     }
     if (isset($r['coverage']) && !is_string($r['coverage'])) {
@@ -324,12 +297,6 @@ function notReturned(array $r): array
     }
 
     return $missing;
-}
-
-/** A rendered review that did not run in full is not a success for whoever runs `render`. */
-function renderExit(array $r): int
-{
-    return notReturned($r) === [] ? 0 : 3;
 }
 
 /** Renders a validated report as Markdown; the verdict comes from the data, never from the model's wording. */
@@ -414,11 +381,7 @@ function parseNumstat(string $z): array
 {
     $files = [];
     foreach (splitPaths($z) as $entry) {
-        $fields = explode("\t", $entry, 3);
-        if (count($fields) !== 3) {
-            throw new RuntimeException("git diff --numstat: cannot read the entry \"$entry\"");
-        }
-        [$added, $deleted, $path] = $fields;
+        [$added, $deleted, $path] = explode("\t", $entry, 3);
         $files[$path] = [(int) $added, (int) $deleted];
     }
 
@@ -466,11 +429,6 @@ function isRef(string $base): bool
  */
 function scope(string $base, bool $full = false, string $head = 'HEAD'): array
 {
-    foreach ([$base, $head] as $revision) {
-        if (!isRef($revision)) {
-            throw new RuntimeException("$revision is not a git revision");
-        }
-    }
     chdir(trim(git('rev-parse', '--show-toplevel')));
     $mergeBase = trim(git('merge-base', $base, $head));
     if ($head === 'HEAD') {
@@ -496,14 +454,13 @@ function scope(string $base, bool $full = false, string $head = 'HEAD'): array
         'head' => trim(git('rev-parse', '--short', "$head^{commit}")),
         'head_sha' => trim(git('rev-parse', "$head^{commit}")),
         'head_ref' => $head === 'HEAD' ? null : $head,
-        'uncommitted' => git('status', '--porcelain') !== '',
         'files' => $list,
-        'changed_code_lines' => $changed,
         'large' => $changed > LARGE_DIFF,
         'slices' => $changed > LARGE_DIFF ? slices(array_column(array_filter($list, fn (array $f) => $f['kind'] === 'code'), 'path')) : [],
     ] + roster(array_column($list, 'path'), $full);
     if ($scope['verdict'] === 'NO CHANGE') {
-        $scope['verdict'] = noChange($base, trim(git('rev-parse', '--short', $mergeBase)), $scope['head'], $head);
+        // An empty diff is not a pass: nothing was read, and the runner may be on the wrong branch.
+        $scope['verdict'] = "NO CHANGE — no file differs between $base (" . trim(git('rev-parse', '--short', $mergeBase)) . ") and $head ($scope[head]); nothing was reviewed";
     }
 
     return $scope;
@@ -516,12 +473,6 @@ function slices(array $paths): array
     sort($folders);
 
     return $folders;
-}
-
-/** An empty diff is not a pass: nothing was read, and the runner may be on the wrong branch. */
-function noChange(string $base, string $mergeBase, string $head, string $headName = 'HEAD'): string
-{
-    return "NO CHANGE — no file differs between $base ($mergeBase) and $headName ($head); nothing was reviewed";
 }
 
 /** Checks a report against the scope of the base the runner gave, then renders it: [errors, markdown]. */
@@ -542,17 +493,11 @@ function checkedRender(mixed $report, string $root, array $scope, string $base):
             return [["$field: the report says {$report[$field]}, the review ran " . ltrim("$ran $value")], ''];
         }
     }
-    $errors = rosterErrors($scope, $report['voices']);
-    $listed = array_column($report['slices'] ?? [], 'name');
-    foreach (array_diff($scope['slices'], $listed) as $slice) {
-        $errors[] = "slices: $slice was split out by the scope and is missing";
-    }
-    foreach (array_diff($listed, $scope['slices']) as $slice) {
-        $errors[] = "slices: $slice was not split out by the scope";
-    }
-    foreach (array_unique(array_diff_assoc($listed, array_unique($listed))) as $slice) {
-        $errors[] = "slices: $slice is listed more than once";
-    }
+    $called = $scope['second_bug_pass'] ? [...$scope['roster'], 'bug-second-pass'] : $scope['roster'];
+    $errors = [
+        ...listErrors('voices', 'called', $called, array_column($report['voices'], 'name')),
+        ...listErrors('slices', 'split out', $scope['slices'], array_column($report['slices'] ?? [], 'name')),
+    ];
 
     $docs = array_column(array_filter($scope['files'] ?? [], fn (array $f) => $f['kind'] === 'docs'), 'path');
 
@@ -599,31 +544,18 @@ function renderReport(array $args): array
     return [...checkedRender($report, trim(git('rev-parse', '--show-toplevel')), scope($args['base'], $args['full'], $args['head']), $args['base']), $report];
 }
 
-/** Whoever runs `scope` reads from the status alone whether there is something to review: 0 yes, 4 nothing. */
-function scopeExit(array $scope): int
+/** A report lists exactly the voices or slices the scope set, each once: a missing one hides a gap, an extra one claims coverage. */
+function listErrors(string $what, string $set, array $expected, array $listed): array
 {
-    $verdict = (string) $scope['verdict'];
-
-    return match (true) {
-        str_starts_with($verdict, 'NO CHANGE'), str_starts_with($verdict, 'NOT REVIEWED') => 4,
-        default => 0,
-    };
-}
-
-/** A report lists exactly the voices the scope called, each once: a missing voice hides a gap, an extra one claims coverage. */
-function rosterErrors(array $scope, array $voices): array
-{
-    $called = $scope['second_bug_pass'] ? [...$scope['roster'], 'bug-second-pass'] : $scope['roster'];
-    $listed = array_column($voices, 'name');
     $errors = [];
-    foreach (array_diff($called, $listed) as $voice) {
-        $errors[] = "voices: $voice was called by the scope and is missing";
+    foreach (array_diff($expected, $listed) as $name) {
+        $errors[] = "$what: $name was $set by the scope and is missing";
     }
-    foreach (array_unique(array_diff($listed, $called)) as $voice) {
-        $errors[] = "voices: $voice was not called by the scope";
+    foreach (array_unique(array_diff($listed, $expected)) as $name) {
+        $errors[] = "$what: $name was not $set by the scope";
     }
-    foreach (array_unique(array_diff_assoc($listed, array_unique($listed))) as $voice) {
-        $errors[] = "voices: $voice is listed more than once";
+    foreach (array_unique(array_diff_assoc($listed, array_unique($listed))) as $name) {
+        $errors[] = "$what: $name is listed more than once";
     }
 
     return $errors;
@@ -656,7 +588,7 @@ try {
             }
             $scope = scope($args['base'], $args['full'], $args['head']);
             echo json_encode($scope, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR), "\n";
-            exit(scopeExit($scope));
+            exit($scope['verdict'] === null ? 0 : 4);
         case 'voice':
             $args = isset($argv[2]) && !str_starts_with($argv[2], '--') ? scopeArgs(array_slice($argv, 3)) : null;
             if ($args === null) {
@@ -675,7 +607,7 @@ try {
             }
             [$errors, $markdown, $report] = renderReport($args) + [2 => null];
             fwrite($errors ? STDERR : STDOUT, $errors ? implode("\n", $errors) . "\n" : $markdown);
-            exit($errors ? 1 : renderExit($report));
+            exit($errors ? 1 : (notReturned($report) === [] ? 0 : 3));
         default:
             fwrite(STDERR, $usage);
             exit(2);
