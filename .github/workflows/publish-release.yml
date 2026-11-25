@@ -206,9 +206,8 @@ jobs:
           # extracts the archive as-is into modules/: every entry must live under the exact
           # module folder (a version-suffixed root like `ps_onepagecheckout-1.2.3/` is rejected
           # by the core with "This file does not seem to be a valid module zip").
-          if zipinfo -1 "${ZIP}" | grep -qv "^${MODULE}/"; then
-            echo "The zip contains entries outside the ${MODULE}/ root folder:" >&2
-            zipinfo -1 "${ZIP}" | grep -v "^${MODULE}/" >&2
+          if zipinfo -1 "${ZIP}" | grep -v "^${MODULE}/" >&2; then
+            echo "The zip contains the entries above, outside the ${MODULE}/ root folder." >&2
             exit 1
           fi
 
