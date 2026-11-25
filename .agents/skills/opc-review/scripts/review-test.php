@@ -32,10 +32,10 @@ function tempFile(string $prefix, string $text): string
 function fixtureTree(): string
 {
     $root = sys_get_temp_dir() . '/opc-review-self-test-' . bin2hex(random_bytes(4));
-    if (!@mkdir($root, 0700) || !mkdir("$root/src") || !mkdir("$root/src/Checkout") || !mkdir("$root/docs") || !mkdir("$root/docs/E2E_JOURNEY_x")) {
+    if (!@mkdir($root, 0700) || !mkdir("$root/src") || !mkdir("$root/src/Checkout") || !mkdir("$root/docs") || !mkdir("$root/docs/journeys") || !mkdir("$root/docs/journeys/x")) {
         throw new RuntimeException('self-test: cannot create a fixture under ' . sys_get_temp_dir());
     }
-    foreach (['src/a.php' => "<?php\n\nline 3\nline 4\nline 5\n", 'README.md' => "# Read me\n", 'docs/E2E_JOURNEY_a.md' => "# Journey\n", 'src/Checkout/b.php' => "<?php\n", 'docs/E2E_JOURNEY_x/y.md' => "# x\n"] as $path => $text) {
+    foreach (['src/a.php' => "<?php\n\nline 3\nline 4\nline 5\n", 'README.md' => "# Read me\n", 'docs/journeys/a.md' => "# Journey\n", 'src/Checkout/b.php' => "<?php\n", 'docs/journeys/x/y.md' => "# x\n"] as $path => $text) {
         file_put_contents("$root/$path", $text);
     }
     @symlink('src/a.php', "$root/link");
@@ -170,7 +170,7 @@ function refReviewOnFixture(): bool
         $base = trim(git('rev-parse', '--abbrev-ref', 'HEAD'));
         git('checkout', '--quiet', '-b', 'code-change');
         file_put_contents('src/a.php', "// changed by the pull request\n", FILE_APPEND);
-        file_put_contents('docs/E2E_JOURNEY_pr.md', "# A journey only the pull request has\n");
+        file_put_contents('docs/journeys/pr.md', "# A journey only the pull request has\n");
         git('mv', 'src/Checkout/b.php', 'src/Checkout/c.php');
         git('add', '--all');
         $commit('code');
@@ -192,19 +192,19 @@ function refReviewOnFixture(): bool
         $finding = ['title' => 't', 'description' => 'd', 'priority' => 'P1', 'status' => 'CONFIRMED', 'reasoning' => 'r'];
         $atRef = validateVoice(['voice' => 'bug', 'findings' => [['evidence' => ['src/a.php:6']] + $finding]], $root, 'refs/opc-review/code');
         $inTree = validateVoice(['voice' => 'bug', 'findings' => [['evidence' => ['src/a.php:6']] + $finding]], $root);
-        $prRule = validateVoice(['voice' => 'bug', 'findings' => [['evidence' => ['src/a.php:6'], 'rule' => 'docs/E2E_JOURNEY_pr.md'] + $finding]], $root, 'refs/opc-review/code');
+        $prRule = validateVoice(['voice' => 'bug', 'findings' => [['evidence' => ['src/a.php:6'], 'rule' => 'docs/journeys/pr.md'] + $finding]], $root, 'refs/opc-review/code');
         $report = tempFile('opc-review-self-test-report-', json_encode(['base' => $base, 'head' => $code['head_sha'], 'merge_base' => $code['merge_base'], 'profile' => 'light', 'overview' => 'Nothing qualifies.', 'refuted' => 0, 'unverified' => 0, 'findings' => [],
             'voices' => [['name' => 'bug', 'status' => 'returned'], ['name' => 'architecture', 'status' => 'returned'], ['name' => 'product', 'status' => 'returned']]]));
         $rendered = renderReport(['file' => $report, 'base' => $base, 'full' => false, 'head' => 'refs/opc-review/code']);
 
-        return array_column($code['files'], 'path') === ['docs/E2E_JOURNEY_pr.md', 'src/Checkout/b.php', 'src/Checkout/c.php', 'src/a.php']
+        return array_column($code['files'], 'path') === ['docs/journeys/pr.md', 'src/Checkout/b.php', 'src/Checkout/c.php', 'src/a.php']
             && $code['roster'] === ['bug', 'architecture', 'product']
             && $code['head_ref'] === 'refs/opc-review/code' && $code['head'] === trim(git('rev-parse', '--short', 'refs/opc-review/code'))
             && !str_contains(file_get_contents('src/a.php'), 'pull request') && !file_exists('.agents')
             && $script['verdict'] === null && $script['roster'] === ['bug', 'architecture', 'product'] && !file_exists('.agents')
             && $atRef === [] && $inTree !== [] && $prRule === ['bug finding 0: rule must be AGENTS.md or a document it lists, present in the tree']
             && $rendered[0] === [] && str_contains($rendered[1], '## Review: PASS — no finding')
-            && str_contains($rendered[1], 'Not reviewed (documentation, no voice reads it; a maintainer does): docs/E2E_JOURNEY_pr.md.')
+            && str_contains($rendered[1], 'Not reviewed (documentation, no voice reads it; a maintainer does): docs/journeys/pr.md.')
             && $tagged['head_sha'] === trim(git('rev-parse', 'refs/opc-review/code'))
             && str_contains((string) $same['verdict'], "and $base (") && !str_contains((string) $same['verdict'], 'HEAD (');
     });
@@ -357,10 +357,10 @@ function selfTest(): int
             return $ran && !file_exists($decoy);
         })(),
         'voice never called' => listErrors('voices', 'called', ['bug'], ['bug', 'product']) === ['voices: product was not called by the scope'],
-        'rule file missing from the tree' => count(validateVoice(['voice' => 'bug', 'findings' => [['rule' => 'docs/E2E_JOURNEY_missing.md'] + $finding]], $root)) === 1,
-        'rule file climbing out' => isRuleFile('docs/E2E_JOURNEY_x/../../README.md', $root) === false,
-        'journey rule in a subfolder' => isRuleFile('docs/E2E_JOURNEY_x/y.md', $root) === false,
-        'rule with a NUL byte refused, never thrown' => count(validateVoice(['voice' => 'bug', 'findings' => [['rule' => "docs/E2E_JOURNEY_\0.md"] + $finding]], $root)) === 1,
+        'rule file missing from the tree' => count(validateVoice(['voice' => 'bug', 'findings' => [['rule' => 'docs/journeys/missing.md'] + $finding]], $root)) === 1,
+        'rule file climbing out' => isRuleFile('docs/journeys/x/../../../README.md', $root) === false,
+        'journey rule in a subfolder' => isRuleFile('docs/journeys/x/y.md', $root) === false,
+        'rule with a NUL byte refused, never thrown' => count(validateVoice(['voice' => 'bug', 'findings' => [['rule' => "docs/journeys/\0.md"] + $finding]], $root)) === 1,
         'git failure stops' => (function () {
             try {
                 git('rev-parse', '--verify', '--quiet', 'refs/opc-review/none');
@@ -373,7 +373,7 @@ function selfTest(): int
         'render checks the roster' => checkedRender($report, $root, ['roster' => ['bug', 'architecture'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null], 'origin/main')[0] !== [],
         'render takes the runner base' => checkedRender(['base' => 'HEAD'] + $report, $root, ['roster' => ['bug'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null], 'origin/main')[0] !== [],
         'render prints a checked report' => checkedRender($report, $root, ['roster' => ['bug'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null], 'origin/main') === [[], render($report)],
-        'mixed diff lists the documentation' => str_contains(checkedRender($report, $root, ['roster' => ['bug'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null, 'files' => [['path' => 'src/a.php', 'kind' => 'code'], ['path' => 'README.md', 'kind' => 'docs'], ['path' => 'docs/E2E_JOURNEY_a.md', 'kind' => 'docs']]], 'origin/main')[1], 'Not reviewed (documentation, no voice reads it; a maintainer does): README.md, docs/E2E_JOURNEY_a.md.'),
+        'mixed diff lists the documentation' => str_contains(checkedRender($report, $root, ['roster' => ['bug'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null, 'files' => [['path' => 'src/a.php', 'kind' => 'code'], ['path' => 'README.md', 'kind' => 'docs'], ['path' => 'docs/journeys/a.md', 'kind' => 'docs']]], 'origin/main')[1], 'Not reviewed (documentation, no voice reads it; a maintainer does): README.md, docs/journeys/a.md.'),
         'documentation only is never a pass' => !str_contains((string) roster(['README.md'])['verdict'], 'PASS') && roster(['README.md'])['roster'] === [],
         'render pins the merge-base' => checkedRender(['merge_base' => 'other'] + $report, $root, ['roster' => ['bug'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null], 'origin/main')[0] === ['merge_base: the report says other, the review ran on def5678'],
         'render pins the profile' => checkedRender(['profile' => 'full'] + $report, $root, ['roster' => ['bug'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null], 'origin/main')[0] === ['profile: the report says full, the review ran light'],
@@ -434,7 +434,7 @@ function selfTest(): int
         'command line' => commandLineOnFixture(),
         'render checks the head' => checkedRender(['head' => 'h'] + $report, $root, ['roster' => ['bug'], 'second_bug_pass' => false, 'head_sha' => 'abc1234', 'merge_base' => 'def5678', 'profile' => 'light', 'large' => false, 'slices' => [], 'verdict' => null], 'origin/main')[0] === ['head: the report says h, the review ran on abc1234'],
         'count not a whole number' => validateReport(['refuted' => '1'] + $report, $root) === ['refuted is a whole number, 0 or more: the claims dropped as refuted'],
-        'journey rule present' => validateVoice(['voice' => 'bug', 'findings' => [['rule' => 'docs/E2E_JOURNEY_a.md'] + $finding]], $root) === [],
+        'journey rule present' => validateVoice(['voice' => 'bug', 'findings' => [['rule' => 'docs/journeys/a.md'] + $finding]], $root) === [],
     ];
     foreach (array_keys(array_filter($checks, fn (bool $ok) => !$ok)) as $name) {
         ++$failures;
