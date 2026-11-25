@@ -32,8 +32,34 @@ jobs:
       - name: Run PHP-CS-Fixer
         run: composer run cs-fixer:dry
 
+  prestashop:
+    name: Resolve latest PrestaShop release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      # Every run tests the release merchants install, resolved once so all jobs test
+      # the same version and no tag has to be maintained here.
+      - name: Resolve latest stable release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(gh api repos/PrestaShop/PrestaShop/releases/latest --jq .tag_name)
+          if ! [[ "${version}" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+            echo "::error::GitHub returned no usable latest PrestaShop release: '${version}'." >&2
+            exit 1
+          fi
+          if ! docker manifest inspect "prestashop/prestashop:${version}" >/dev/null; then
+            echo "::error::Image prestashop/prestashop:${version} is not on Docker Hub yet." >&2
+            exit 1
+          fi
+          echo "Latest PrestaShop release: ${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
   phpstan:
     name: PHPStan
+    needs: prestashop
     runs-on: ubuntu-latest
     steps:
       - name: Setup PHP
@@ -44,11 +70,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout PrestaShop core develop
+      - name: Checkout PrestaShop core ${{ needs.prestashop.outputs.version }}
         uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop
-          ref: develop
+          ref: ${{ needs.prestashop.outputs.version }}
           path: prestashop-core
 
       - name: Install PrestaShop core dependencies
@@ -58,23 +84,15 @@ jobs:
       - name: Install dependencies
         run: composer install
 
-      - name: Execute PHPStan on PrestaShop develop
+      - name: Execute PHPStan on PrestaShop ${{ needs.prestashop.outputs.version }}
         env:
           PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
         run: ./tests/php/phpstan.sh latest
 
   unit-tests:
     name: Unit tests
+    needs: prestashop
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        prestashop:
-          # Keep the checkout ref and nightly archive version aligned when adding more supported versions.
-          - label: 9.2.0-dev
-            image_tag: nightly
-            core_ref: develop
-            archive_version: develop
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -84,34 +102,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
+      - name: Checkout PrestaShop core ${{ needs.prestashop.outputs.version }}
         uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop
-          ref: ${{ matrix.prestashop.core_ref }}
+          ref: ${{ needs.prestashop.outputs.version }}
           path: prestashop-core
 
       - name: Install PrestaShop core dependencies
         working-directory: prestashop-core
         run: composer install --no-interaction --prefer-dist
 
-      - name: Execute unit tests on PrestaShop (Tag ${{ matrix.prestashop.image_tag }})
+      - name: Execute unit tests on PrestaShop ${{ needs.prestashop.outputs.version }}
         env:
           PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
-        run: ./scripts/run-tests.sh unit ${{ matrix.prestashop.image_tag }}
+        run: ./scripts/run-tests.sh unit ${{ needs.prestashop.outputs.version }}
 
   integration-tests:
     name: Integration tests
+    needs: prestashop
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        prestashop:
-          # Keep the checkout ref and nightly archive version aligned when adding more supported versions.
-          - label: 9.2.0-dev
-            image_tag: nightly
-            core_ref: develop
-            archive_version: develop
     steps:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -121,19 +131,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout PrestaShop core (${{ matrix.prestashop.core_ref }})
+      - name: Checkout PrestaShop core ${{ needs.prestashop.outputs.version }}
         uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop
-          ref: ${{ matrix.prestashop.core_ref }}
+          ref: ${{ needs.prestashop.outputs.version }}
           path: prestashop-core
 
       - name: Install PrestaShop core dependencies
         working-directory: prestashop-core
         run: composer install --no-interaction --prefer-dist
 
-      - name: Execute integration tests on PrestaShop (Tag ${{ matrix.prestashop.image_tag }})
+      - name: Execute integration tests on PrestaShop ${{ needs.prestashop.outputs.version }}
         env:
           PS_ROOT_DIR_HOST: ${{ github.workspace }}/prestashop-core
-          PS_IMAGE_VERSION: ${{ matrix.prestashop.archive_version }}
-        run: ./scripts/run-tests.sh integration ${{ matrix.prestashop.image_tag }}
+        run: ./scripts/run-tests.sh integration ${{ needs.prestashop.outputs.version }}
