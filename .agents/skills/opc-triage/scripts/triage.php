@@ -781,7 +781,7 @@ function assertWritable(array $labels, array $repoLabels): void
 function nothingReason(array $comparison, array $payload): string
 {
     if (isset($payload['comment']['held'])) {
-        return 'only the triage comment would change, and it is written with --comment';
+        return (null === $payload['note'] ? '' : "{$payload['note']}; ") . 'only the triage comment would change, and it is written with --comment';
     }
     if (null !== $payload['note']) {
         return $payload['note'];
@@ -811,7 +811,7 @@ function applyIssue(int $n, array $comparison, array $payload, bool $apply, stri
     }
     $out = json($payload);
     if ('update' === ($payload['comment']['held'] ?? null)) {
-        $out .= "The triage comment on this issue no longer matches the rating; --comment updates it.\n";
+        $out .= "The triage comment on this issue differs from what --comment would write.\n";
     }
     $labels = $payload['labels'];
     $comment = $payload['comment'];

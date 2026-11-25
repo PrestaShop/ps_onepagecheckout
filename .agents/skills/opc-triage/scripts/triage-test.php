@@ -345,8 +345,12 @@ function selfTest(): int
     $check(str_contains($out, 'Nothing to write') && str_contains($out, '--comment'), 'an issue with only a comment to write says nothing to write, and why');
     $check(2 === count($count(issuePayload(7, $agreed, $patch, [], [], $url, $sha, true), $agreed)), 'with --comment the label and the comment are written, as before');
     $stale = applyIssue(7, $agreed, issuePayload(7, $agreed, $patch, [], $old, $url, $sha, false), false, 'o/r', LEVELS, $writer);
-    $check(str_contains($stale, 'no longer matches'), 'a stale triage comment left without --comment is said in one line');
+    $check(str_contains($stale, 'differs from what --comment would write'), 'a stale triage comment left without --comment is said in one line');
     $check(true === applyArgs(['d', '7', '--comment'])['comment'] && false === applyArgs(['d', '7'])['comment'], 'the comment is written only on --comment');
+
+    $keptAndHeld = ['note' => 'today\'s Major stays', 'comment' => ['action' => 'none', 'id' => null, 'body' => null, 'held' => 'create']];
+    $reason = nothingReason($agreed, $keptAndHeld);
+    $check(str_contains($reason, 'Major stays') && str_contains($reason, '--comment'), 'nothing to write keeps the label note and names the held comment');
 
     echo 0 === $failures ? "self-test: all checks passed\n" : "self-test: {$failures} failed\n";
 

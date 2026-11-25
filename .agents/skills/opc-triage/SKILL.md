@@ -62,8 +62,8 @@ release, "Confirmed by a maintainer.") and factors and evidence folded below. An
 release lines; a question or a non-actionable issue gets no release line; an older triage comment that names a
 severity the rating drops is rewritten. When the claim is unconfirmed or the confidence low, no comment is rewritten,
 and the reporter gets the question for the first missing fact when one is missing and the issue has no triage comment
-yet. Without `--comment`, the payload says what `--comment` would write, and one line says when a triage comment on
-the issue no longer matches the rating.
+yet. Without `--comment`, the payload says whether `--comment` would create or update the comment, and one line says
+when the triage comment on the issue differs from what `--comment` would write.
 
 An issue never gets a milestone: the report's "milestone missing" note tells the maintainer to create it before pull
 requests target that release.
