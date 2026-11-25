@@ -10,7 +10,7 @@ declare(strict_types=1);
 const DOCS = ['*.md', 'LICENSE', 'LICENSE.txt'];
 const GENERATED = ['views/public/*', 'composer.lock', '*package-lock.json'];
 // The documents a finding may cite as the rule it breaks; matched one path segment at a time.
-const RULE_DOCS = ['AGENTS.md', 'README.md', 'docs/*.md'];
+const RULE_DOCS = ['AGENTS.md', 'README.md', 'docs/*.md', 'docs/journeys/*.md'];
 
 // Above this many changed source lines one bug voice cannot hold the diff: the skill splits it by folder.
 const LARGE_DIFF = 2000;

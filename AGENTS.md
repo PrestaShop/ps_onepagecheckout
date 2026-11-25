@@ -80,4 +80,4 @@ A finding that a rule is broken names the rule and its file:
 - [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md): wording and translations.
 - [`docs/RELEASING.md`](docs/RELEASING.md): how a release is published.
 - [`docs/E2E_RUNBOOK.md`](docs/E2E_RUNBOOK.md): end-to-end preflight and core-versus-module parity checkpoints.
-- `docs/E2E_JOURNEY_*.md`: the buyer journeys a change must keep working.
+- [`docs/journeys/`](docs/journeys/): the buyer journeys a change must keep working.
