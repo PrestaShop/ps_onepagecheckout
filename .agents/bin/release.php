@@ -23,7 +23,6 @@ const USAGE = <<<'TXT'
                                      the target release as JSON; without --last-tag, also the open milestone it matches
       --type <type> --breaking yes|no --pr <number> [--apply]
                                      the milestone for a pull request, and BC break when breaking; --apply writes them
-      surfaces [--check]             the public surfaces as JSON; --check finds every symbol under its path
       --self-test
     TXT;
 
@@ -124,18 +123,6 @@ function prPayload(array $release, array $openMilestones, array $repoLabels, arr
     return ['milestone' => $milestone, 'labels' => ['add' => $release['breaking'] && !$has ? [BC_LABEL] : [], 'remove' => !$release['breaking'] && $has ? [BC_LABEL] : []]];
 }
 
-/** @return list<array{surface: string, path: string, symbols: list<string>}> */
-function surfaces(): array
-{
-    $rows = [];
-    foreach (mdTable(__DIR__ . '/public-surfaces.md', 'Surface') as [$surface, $path, $symbols]) {
-        preg_match_all('/`([^`]+)`/', "`{$symbols}`", $m);
-        $rows[] = ['surface' => $surface, 'path' => $path, 'symbols' => $m[1]];
-    }
-
-    return $rows;
-}
-
 function lastTag(): string
 {
     return latestTag(array_column(ghList('repos/' . repo() . '/tags'), 'name'));
@@ -185,44 +172,6 @@ function cmdRelease(array $args): int
     return 0;
 }
 
-/** Whether a public symbol is still under its path; git grep answers 1 for no match, anything above is a failure that stops. */
-function symbolFound(string $root, string $path, string $symbol): bool
-{
-    try {
-        run(['git', '-C', $root, 'grep', '-q', '-F', '-e', $symbol, '--', $path]);
-
-        return true;
-    } catch (RuntimeException $e) {
-        if (1 === $e->getCode()) {
-            return false;
-        }
-        throw $e;
-    }
-}
-
-function cmdSurfaces(array $args): int
-{
-    if ('--check' !== ($args[0] ?? null)) {
-        echo json(surfaces());
-
-        return 0;
-    }
-    $missing = 0;
-    foreach (surfaces() as $s) {
-        $found = '' !== trim(run(['git', '-C', repoRoot(), 'ls-files', '--', $s['path']]));
-        $missing += $found ? 0 : 1;
-        echo ($found ? 'ok      ' : 'MISSING '), $s['path'], "\n";
-        foreach ($s['symbols'] as $symbol) {
-            $found = symbolFound(repoRoot(), $s['path'], $symbol);
-            $missing += $found ? 0 : 1;
-            echo $found ? "ok        {$symbol}\n" : "MISSING   {$symbol}\n";
-        }
-    }
-    echo 0 === $missing ? "every surface found\n" : "{$missing} not found\n";
-
-    return 0 === $missing ? 0 : 1;
-}
-
 function usage(): int
 {
     fwrite(STDERR, USAGE . "\n");
@@ -243,9 +192,8 @@ function main(array $args): int
     try {
         return match ($args[0] ?? null) {
             '--self-test' => runSelfTest(),
-            'surfaces' => cmdSurfaces(array_slice($args, 1)),
             null => usage(),
-            default => cmdRelease($args),
+            default => str_starts_with($args[0], '--') ? cmdRelease($args) : usage(),
         };
     } catch (Throwable $e) {
         fwrite(STDERR, 'release: ' . $e->getMessage() . "\n");

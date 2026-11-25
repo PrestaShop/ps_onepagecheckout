@@ -19,12 +19,8 @@ const TYPES = ['bug', 'improvement', 'feature', 'question', 'not actionable'];
 const FACTORS = ['impact', 'reach', 'workaround', 'stage'];
 // The stage is rated for the comment and scores nothing: a late defect's gravity is already its impact.
 const WEIGHTS = ['impact' => 3, 'reach' => 2, 'workaround' => 2];
-// Lowest points of each level above Trivial; tuned at calibration with the weights.
+// Lowest points of each level above Trivial; tuned with the weights.
 const CUTS = ['Critical' => 15, 'Major' => 10, 'Minor' => 5];
-// What calibration must reach before the ratings are trusted.
-const TRUST = ['agreement' => 0.8, 'release_agreement' => 0.8, 'stability' => 0.9];
-// Longest free text a rating may carry; it is shown to the maintainer, never posted.
-const TEXT_MAX = 300;
 const FLAGS = ['security', 'data_loss', 'wrong_amount', 'order_blocked'];
 const MISSING = ['steps', 'versions', 'impact', 'workaround', 'stage'];
 const VERDICTS = ['CONFIRMED', 'REFUTED', 'UNVERIFIED'];
@@ -40,22 +36,21 @@ const USAGE = <<<'TXT'
     usage: php triage.php <command>
       fetch <issue>                  issue data for the rater, labels held back
       fetch --unrated                open issues without a severity label
-      score <dir> <issue> [--last-tag <tag>]
+      score <dir> <issue>     
                                      level and release from <dir>/<issue>.rater.json and <issue>.challenger.json
       report <dir> [--comment]       one row per rated issue, today's labels, and every payload
       apply <dir> <issue> [--pick rater|challenger] [--comment] [--apply]
                                      writes the severity label; the triage comment only with --comment
-      calibrate <sheet> <dir>...     agreement with a filled calibration sheet, one <dir> per run
       --self-test
     TXT;
 
-/** @return array{phrases: array<string, array<int, string>>, flags: array<string, string>, questions: array<string, string>, examples: list<list<string>>} */
+/** @return array{phrases: array<string, array<int, string>>, flags: array<string, string>, questions: array<string, string>} */
 function rubric(): array
 {
     static $rubric = null;
     if (null === $rubric) {
         $file = SKILL_DIR . '/references/rubric.md';
-        $rubric = ['phrases' => [], 'flags' => [], 'questions' => [], 'examples' => mdTable($file, 'impact')];
+        $rubric = ['phrases' => [], 'flags' => [], 'questions' => []];
         foreach (mdTable($file, 'Factor') as [$factor, $score, , $phrase]) {
             $rubric['phrases'][$factor][(int) $score] = $phrase;
         }
@@ -117,11 +112,6 @@ function validateRating(mixed $r, int $issue, bool $challenger, callable $lineCo
             $errors[] = "{$field}: one of " . implode(', ', array_map(static fn ($a) => json_encode($a), $allowed));
         }
     };
-    $text = static function (string $field, mixed $value) use (&$errors): void {
-        if (!is_string($value) || mb_strlen($value) > TEXT_MAX) {
-            $errors[] = "{$field}: a text of at most " . TEXT_MAX . ' characters';
-        }
-    };
     $list = static fn (mixed $v): bool => is_array($v) && array_is_list($v);
     $evidence = static function (string $field, mixed $refs) use (&$errors, $lineCount, $list): void {
         if (!$list($refs)) {
@@ -130,7 +120,7 @@ function validateRating(mixed $r, int $issue, bool $challenger, callable $lineCo
             return;
         }
         foreach ($refs as $ref) {
-            if (!is_string($ref) || str_contains($ref, '..') || !preg_match('#^([\w.-]+(?:/[\w.-]+)*):([1-9]\d*)$#D', $ref, $m)) {
+            if (!is_string($ref) || !preg_match('#^([\w.-]+(?:/[\w.-]+)*):([1-9]\d*)$#D', $ref, $m)) {
                 $errors[] = "{$field}: " . json_encode($ref) . ' is not path:line';
             } elseif ((int) $m[2] > ($lineCount($m[1]) ?? 0)) {
                 $errors[] = "{$field}: {$ref} is not a line of a file on " . EVIDENCE_REF;
@@ -163,7 +153,6 @@ function validateRating(mixed $r, int $issue, bool $challenger, callable $lineCo
             $factor = $part($factors[$f] ?? null);
             $oneOf("factors.{$f}.score", $factor['score'] ?? null, [0, 1, 2, 3]);
             $evidence("factors.{$f}.evidence", $factor['evidence'] ?? null);
-            $text("factors.{$f}.why", $factor['why'] ?? null);
             if (is_int($factor['score'] ?? null) && $factor['score'] > 0 && [] === ($factor['evidence'] ?? null)) {
                 $errors[] = "factors.{$f}.evidence: a score above 0 cites at least one line";
             }
@@ -189,14 +178,12 @@ function validateRating(mixed $r, int $issue, bool $challenger, callable $lineCo
     $breaking = $part($r['breaking'] ?? null);
     $oneOf('breaking.value', $breaking['value'] ?? null, [true, false]);
     $evidence('breaking.evidence', $breaking['evidence'] ?? null);
-    $text('breaking.why', $breaking['why'] ?? null);
     if (true === ($breaking['value'] ?? null) && [] === ($breaking['evidence'] ?? [])) {
         $errors[] = 'breaking.evidence: a breaking change names the surface it changes';
     }
     $listOf('missing', $r['missing'] ?? null, MISSING);
     $injection = $part($r['injection'] ?? null);
     $oneOf('injection.found', $injection['found'] ?? null, [true, false]);
-    $text('injection.quote', $injection['quote'] ?? null);
     $oneOf('confidence', $r['confidence'] ?? null, ['high', 'medium', 'low']);
     if ($challenger) {
         $verdicts = $part($r['verdicts'] ?? null);
@@ -213,22 +200,22 @@ function validateRating(mixed $r, int $issue, bool $challenger, callable $lineCo
 }
 
 /**
- * What one valid rating amounts to. `calibration` is the value a maintainer writes in the calibration sheet.
+ * What one valid rating amounts to: its level, or `not a bug` or `insufficient detail` when it has none.
  *
- * @return array{rating: array, level: ?string, points: ?int, label: ?string, calibration: string}
+ * @return array{rating: array, level: ?string, points: ?int, label: ?string, outcome: string}
  */
 function assess(array $r): array
 {
     if ('bug' !== $r['type'] || 'insufficient detail' === $r['claim']) {
-        $calibration = 'bug' === $r['type'] ? 'insufficient detail' : 'not a bug';
+        $outcome = 'bug' === $r['type'] ? 'insufficient detail' : 'not a bug';
 
-        return ['rating' => $r, 'level' => null, 'points' => null, 'label' => null, 'calibration' => $calibration];
+        return ['rating' => $r, 'level' => null, 'points' => null, 'label' => null, 'outcome' => $outcome];
     }
     $scores = array_map(static fn (array $f): int => $f['score'], $r['factors']);
     $level = level($scores, $r['flags']);
     $label = 'confirmed' === $r['claim'] && 'low' !== $r['confidence'] ? $level : null;
 
-    return ['rating' => $r, 'level' => $level, 'points' => points($scores), 'label' => $label, 'calibration' => $level];
+    return ['rating' => $r, 'level' => $level, 'points' => points($scores), 'label' => $label, 'outcome' => $level];
 }
 
 /**
@@ -261,7 +248,7 @@ function compareRatings(array $rater, ?array $challenger, ?string $tag): array
         return ['status' => 'unchallenged', 'final' => null, 'rater' => $a, 'challenger' => null];
     }
     $b = assess($challenger);
-    $same = $rater['type'] === $challenger['type'] && $a['calibration'] === $b['calibration'] && $a['label'] === $b['label']
+    $same = $rater['type'] === $challenger['type'] && $a['outcome'] === $b['outcome'] && $a['label'] === $b['label']
         && release($rater, $tag)['line'] === release($challenger, $tag)['line'] && $rater['breaking']['value'] === $challenger['breaking']['value']
         && ('low' === $rater['confidence']) === ('low' === $challenger['confidence']);
 
@@ -276,7 +263,7 @@ function compareRatings(array $rater, ?array $challenger, ?string $tag): array
 /** One side of a dispute as the maintainer reads it: its outcome and how sure it is. */
 function side(array $assessed): string
 {
-    return "{$assessed['calibration']} ({$assessed['rating']['confidence']} confidence)";
+    return "{$assessed['outcome']} ({$assessed['rating']['confidence']} confidence)";
 }
 
 /** Why nothing may be written for this comparison, or null when the maintainer can confirm it. */
@@ -302,13 +289,6 @@ function verdictErrors(array $rater, array $challenger): array
     if (null !== $rater['factors'] && null !== $challenger['factors']) {
         foreach (FACTORS as $f) {
             $pairs[$f] = [$rater['factors'][$f]['score'], $challenger['factors'][$f]['score']];
-        }
-    }
-    if (null === $rater['factors'] && null !== $challenger['factors']) {
-        foreach (FACTORS as $f) {
-            if ('CONFIRMED' === ($challenger['verdicts'][$f] ?? null)) {
-                $errors[] = "verdicts.{$f}: CONFIRMED but the rater scored no factors";
-            }
         }
     }
     foreach ($pairs as $key => [$before, $after]) {
@@ -412,143 +392,20 @@ function issuePayload(int $issue, array $comparison, array $release, array $labe
     ];
 }
 
-/**
- * The filled calibration sheet, by issue number. Columns are found by their header (level or severity, release).
- *
- * @return array<int, array{level: ?string, release: ?string}>
- */
-function parseSheet(string $markdown): array
+/** Lines of a file on EVIDENCE_REF, null when the file is not there; a git failure stops the run. */
+function gitLineCount(string $path): ?int
 {
-    $levels = [...LEVELS, 'not a bug', 'insufficient detail'];
-    $levelCol = $releaseCol = null;
-    $rows = [];
-    foreach (explode("\n", $markdown) as $line) {
-        if (!str_starts_with(trim($line), '|')) {
-            continue;
-        }
-        $cells = array_map(static fn ($c) => trim($c, " `*\t"), explode('|', substr(trim($line), 1, -1)));
-        if (null === $levelCol) {
-            foreach ($cells as $i => $c) {
-                $levelCol ??= preg_match('/level|severity/i', $c) ? $i : null;
-                $releaseCol ??= preg_match('/release/i', $c) ? $i : null;
-            }
-            continue;
-        }
-        if (!preg_match('/^\[?#?(\d+)\b/', $cells[0], $m)) {
-            continue;
-        }
-        $read = static function (string $cell, array $allowed, string $column) use ($m): ?string {
-            $found = array_search(strtolower($cell), array_map('strtolower', $allowed), true);
-            if ('' !== $cell && false === $found) {
-                throw new RuntimeException("row #{$m[1]}: {$column} '{$cell}' is not one of " . implode(', ', $allowed));
-            }
-
-            return '' === $cell ? null : $allowed[$found];
-        };
-        $rows[(int) $m[1]] = [
-            'level' => $read($cells[$levelCol] ?? '', $levels, 'level'),
-            'release' => $read($cells[$releaseCol] ?? '', ['patch', 'minor', 'major', 'none'], 'release'),
-        ];
-    }
-    if (null === $levelCol || null === $releaseCol) {
-        throw new RuntimeException('the sheet needs a level column and a release column');
-    }
-
-    return $rows;
-}
-
-/** A value without severity sits with Trivial, so a Major on an issue the other side calls no bug is a two-level gap. */
-function severityRank(string $value): ?int
-{
-    $rank = array_search($value, LEVELS, true);
-
-    return false !== $rank ? $rank : (in_array($value, ['not a bug', 'insufficient detail'], true) ? 0 : null);
-}
-
-function ratio(int $part, int $whole): float
-{
-    return 0 === $whole ? 0.0 : $part / $whole;
-}
-
-/**
- * The value most runs gave; a tie decides nothing.
- *
- * @param list<string> $values
- */
-function modeOf(array $values): ?string
-{
-    $counts = array_count_values($values);
-    $top = array_keys($counts, max($counts), true);
-
-    return 1 === count($top) ? (string) $top[0] : null;
-}
-
-/**
- * Whether the skill's levels and releases agree enough with a maintainer's blind sheet to be trusted.
- *
- * @param array<int, array{level: ?string, release: ?string}> $sheet
- * @param list<array<int, array{calibration: string, line: string, flip: ?bool}>> $runs
- */
-function calibrationMetrics(array $sheet, array $runs): array
-{
-    $rated = $blank = $rejected = $missing = $agree = $releaseRated = $releaseAgree = $stableRated = $stable = $flips = $flipRated = 0;
-    $gaps = [];
-    foreach ($sheet as $issue => $row) {
-        $mine = array_values(array_filter(array_map(static fn (array $run) => $run[$issue] ?? null, $runs)));
-        if (null === $row['level']) {
-            ++$blank;
-            continue;
-        }
-        ++$rated;
-        $missing += count($mine) < count($runs) ? 1 : 0;
-        $levels = array_column($mine, 'calibration');
-        $rejected += in_array('rejected', $levels, true) ? 1 : 0;
-        $agree += [] !== $levels && modeOf($levels) === $row['level'] ? 1 : 0;
-        if (null !== $row['release']) {
-            ++$releaseRated;
-            $releaseAgree += [] !== $mine && modeOf(array_column($mine, 'line')) === $row['release'] ? 1 : 0;
-        }
-        $lead = severityRank($row['level']);
-        foreach ($levels as $level) {
-            $skill = severityRank($level);
-            if (null !== $lead && null !== $skill && abs($lead - $skill) >= 2) {
-                $gaps[] = $issue;
-                break;
-            }
-        }
-        if (count($runs) >= 2) {
-            ++$stableRated;
-            $stable += count($mine) === count($runs) && 1 === count(array_unique(array_map(static fn (array $x) => $x['calibration'] . '|' . $x['line'], $mine))) ? 1 : 0;
-        }
-        $challenged = array_filter(array_column($mine, 'flip'), 'is_bool');
-        $flipRated += count($challenged);
-        $flips += count(array_filter($challenged));
-    }
-    $m = [
-        'runs' => count($runs), 'rated' => $rated, 'blank' => $blank, 'rejected' => $rejected, 'missing' => $missing,
-        'agreement' => ratio($agree, $rated), 'release_agreement' => ratio($releaseAgree, $releaseRated),
-        'two_level_gaps' => $gaps, 'stability' => ratio($stable, $stableRated), 'flip_rate' => ratio($flips, $flipRated),
-    ];
-    $m['trusted'] = $rated > 0 && 0 === $rejected && 0 === $missing && [] === $gaps
-        && [] === array_filter(TRUST, static fn (float $min, string $key): bool => $m[$key] < $min, ARRAY_FILTER_USE_BOTH);
-
-    return $m;
-}
-
-/** Lines of a file on the ref ratings are checked against, null when the file is not there; a git failure stops the run. */
-function gitLineCount(string $path, string $ref = EVIDENCE_REF): ?int
-{
-    static $tracked = [], $cache = [];
-    $tracked[$ref] ??= array_flip(explode("\0", run(['git', '-C', repoRoot(), 'ls-tree', '-r', '-z', '--name-only', $ref])));
-    if (!isset($tracked[$ref][$path])) {
+    static $tracked = null, $cache = [];
+    $tracked ??= array_flip(explode("\0", run(['git', '-C', repoRoot(), 'ls-tree', '-r', '-z', '--name-only', EVIDENCE_REF])));
+    if (!isset($tracked[$path])) {
         return null;
     }
-    if (!isset($cache[$ref][$path])) {
-        $blob = run(['git', '-C', repoRoot(), 'cat-file', 'blob', "{$ref}:{$path}"]);
-        $cache[$ref][$path] = substr_count($blob, "\n") + (str_ends_with($blob, "\n") || '' === $blob ? 0 : 1);
+    if (!isset($cache[$path])) {
+        $blob = run(['git', '-C', repoRoot(), 'cat-file', 'blob', EVIDENCE_REF . ':' . $path]);
+        $cache[$path] = substr_count($blob, "\n") + (str_ends_with($blob, "\n") || '' === $blob ? 0 : 1);
     }
 
-    return $cache[$ref][$path];
+    return $cache[$path];
 }
 
 /** Where the rater and the challenger save their ratings: one file per issue and role. */
@@ -648,7 +505,7 @@ function cmdFetch(array $args): int
 
 function cmdScore(array $args): int
 {
-    $tag = option($args, '--last-tag');
+    $tag = null;
     $comparison = loadRatings($args[0] ?? throw new InvalidArgumentException('score <dir> <issue>'), issueNumber($args[1] ?? null), $tag);
     echo json(['status' => $comparison['status'], 'rater' => summary($comparison['rater'], $tag), 'challenger' => summary($comparison['challenger'], $tag)]);
 
@@ -690,8 +547,8 @@ function reportRow(int $n, array $comparison, array $labels, array $payload, ?st
     $severity = match ($comparison['status']) {
         'disputed' => 'disputed: rater ' . side($comparison['rater']) . ', challenger ' . side($comparison['challenger']),
         'unverified' => 'unverified: the challenger verified none of the factors behind this label',
-        'unchallenged' => "unchallenged, no label: rater {$a['calibration']}",
-        default => null !== $a['level'] ? "{$a['level']} ({$a['points']} points" . (null === $a['label'] ? ', no label: claim or confidence' : '') . ')' : $a['calibration'],
+        'unchallenged' => "unchallenged, no label: rater {$a['outcome']}",
+        default => null !== $a['level'] ? "{$a['level']} ({$a['points']} points" . (null === $a['label'] ? ', no label: claim or confidence' : '') . ')' : $a['outcome'],
     };
     $release = $value(static function (array $x) use ($tag): string {
         $r = release($x['rating'], $tag);
@@ -848,61 +705,13 @@ function applyIssue(int $n, array $comparison, array $payload, bool $apply, stri
     return $out;
 }
 
-/** @return array{dir: string, n: int, pick: ?string, apply: bool, comment: bool} */
-function applyArgs(array $args): array
-{
-    return [
-        'dir' => $args[0] ?? throw new InvalidArgumentException('apply <dir> <issue>'),
-        'n' => issueNumber($args[1] ?? null),
-        'pick' => option($args, '--pick'),
-        'apply' => in_array('--apply', $args, true),
-        'comment' => in_array('--comment', $args, true),
-    ];
-}
-
 function cmdApply(array $args): int
 {
-    ['dir' => $dir, 'n' => $n, 'pick' => $pick, 'apply' => $apply, 'comment' => $comment] = applyArgs($args);
-    [$comparison, , , $payload] = issueContext($dir, $n, $pick, $comment);
+    $dir = $args[0] ?? throw new InvalidArgumentException('apply <dir> <issue>');
+    $n = issueNumber($args[1] ?? null);
+    $apply = in_array('--apply', $args, true);
+    [$comparison, , , $payload] = issueContext($dir, $n, option($args, '--pick'), in_array('--comment', $args, true));
     echo applyIssue($n, $comparison, $payload, $apply, repo(), $apply ? repoLabels() : [], 'run');
-
-    return 0;
-}
-
-/** One rated issue of one run as calibration counts it; a rating that is not settled agrees with nothing. */
-function runEntry(array $comparison, ?string $tag): array
-{
-    $unsettled = in_array($comparison['status'], ['disputed', 'unverified', 'unchallenged'], true);
-    $flip = null === $comparison['challenger'] ? null : $comparison['rater']['calibration'] !== $comparison['challenger']['calibration'];
-
-    return [
-        'calibration' => $unsettled ? $comparison['status'] : shown($comparison)['calibration'],
-        'line' => $unsettled ? $comparison['status'] : release(shown($comparison)['rating'], $tag)['line'],
-        'flip' => $flip,
-    ];
-}
-
-function cmdCalibrate(array $args): int
-{
-    $sheet = parseSheet((string) file_get_contents($args[0] ?? throw new InvalidArgumentException('calibrate <sheet> <dir>...')));
-    $runs = [];
-    foreach (array_slice($args, 1) as $dir) {
-        $run = [];
-        if ([] === ratedIssues($dir)) {
-            throw new RuntimeException("{$dir} is missing or holds no rating: every run folder counts");
-        }
-        foreach (ratedIssues($dir) as $n) {
-            try {
-                $run[$n] = runEntry(loadRatings($dir, $n, null), null);
-            } catch (RejectedRating $e) {
-                fwrite(STDERR, "{$e->getMessage()}\n");
-                $run[$n] = ['calibration' => 'rejected', 'line' => 'rejected', 'flip' => null];
-            }
-        }
-        $runs[] = $run;
-    }
-    $metrics = calibrationMetrics($sheet, $runs);
-    echo json($metrics), count($runs) < 2 ? "one run: stability needs two runs or more, so the result is never trusted\n" : '', 'trusted: ', $metrics['trusted'] ? 'yes' : 'no', "\n";
 
     return 0;
 }
@@ -931,7 +740,6 @@ function main(array $args): int
             'score' => cmdScore(array_slice($args, 1)),
             'report' => cmdReport(array_slice($args, 1)),
             'apply' => cmdApply(array_slice($args, 1)),
-            'calibrate' => cmdCalibrate(array_slice($args, 1)),
             default => usage(),
         };
     } catch (Throwable $e) {

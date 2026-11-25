@@ -1,8 +1,7 @@
 # Public surfaces
 
 A change is breaking when a merchant, a theme or another module must react to it. These are the places where that
-happens. `release.php surfaces` prints this table as JSON, and `release.php surfaces --check` proves that every symbol
-is still found under its path. The script reads the table: keep its columns as they are.
+happens.
 
 | Surface | Path | Symbols |
 |---|---|---|

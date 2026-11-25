@@ -78,14 +78,6 @@ an improvement or a feature to the next minor, a breaking change to the next min
 milestone, plus core's `BC break` label when breaking, or its removal when the change no longer breaks. With `--apply`,
 after the maintainer's yes, it writes them in one call. It creates no milestone and no label: a missing one stops it.
 
-## Calibration
-
-`T calibrate <sheet> <dir1> <dir2> <dir3>` compares three runs with a maintainer's blind sheet (a Markdown table with
-an issue number, a level column holding a level, `not a bug` or `insufficient detail`, and a release column holding
-`patch`, `minor`, `major` or `none`; any other cell stops it with the row named). Every run folder must hold ratings, and an issue missing from a run counts against the result. The skill is trusted
-when exact agreement and release agreement reach 80 %, no issue is two levels apart, and 90 % of issues get the same result on every run. It also prints how
-often the challenger changed the rater's level.
-
 ## Common mistakes
 
 | Mistake | Instead |
