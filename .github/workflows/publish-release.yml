@@ -211,7 +211,7 @@ jobs:
             exit 1
           fi
 
-          # Files written for contributors' AI tools never ship to merchants.
+          # Contributors' AI-tool files at the module root never ship to merchants.
           if zipinfo -1 "${ZIP}" | grep -E "^${MODULE}/(AGENTS\.md$|\.agents/|\.claude/)"; then
             echo "Agent files must not ship in the module zip." >&2
             exit 1
