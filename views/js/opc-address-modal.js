@@ -703,6 +703,9 @@ function refreshModalFields($modal, countryId, addressValues) {
   return $.post(addressModalUrl, {
     id_country: String(countryId),
     address_type: getAddressTypeForModal($modal),
+    // Only the initial edit refresh needs the saved address. Later country
+    // changes preserve the user's in-progress values on the client.
+    id_address: addressValues ? String(addressValues.id_address || addressValues.id || '') : '',
   }).done((response) => {
     if (isStale()) {
       return;
@@ -732,7 +735,11 @@ function refreshModalFields($modal, countryId, addressValues) {
     // in-flight window are preserved (not overwritten by a snapshot taken before the request).
     const preservedFields = preserveAddressesSectionFields($container);
     $container.html(response.fields_html);
-    restoreAddressesSectionFields($container, preservedFields);
+    if (!addressValues) {
+      restoreAddressesSectionFields($container, preservedFields);
+    }
+    // The initial edit render already contains server-side Extra Properties;
+    // do not replace those with the modal's previously empty field values.
     applyAddressValuesToContainer($container, addressValues);
     setModalFieldsDisabled($modal, false);
     updateModalSaveState($modal);

@@ -47,6 +47,24 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
      */
     private array $fieldGroups = [];
 
+    /** @var int */
+    private $deliveryAddressId = 0;
+
+    /** @var int */
+    private $invoiceAddressId = 0;
+
+    /**
+     * Set the address context before additional address fields are built.
+     * Both IDs are exposed because a single formatter builds both forms.
+     */
+    public function setAddressContext(?\Address $delivery, ?\Address $invoice = null): self
+    {
+        $this->deliveryAddressId = $delivery ? (int) $delivery->id : 0;
+        $this->invoiceAddressId = $invoice ? (int) $invoice->id : 0;
+
+        return $this;
+    }
+
     /**
      * Separate country for the billing (invoice) address section.
      * Null means billing uses the same country as delivery.
@@ -183,7 +201,7 @@ class OnePageCheckoutFormatter implements \FormFormatterInterface
             $this->addMaxLength($format)
         );
 
-        $additionalAddressFormFields = \Hook::exec('additionalCustomerAddressFields', ['fields' => &$format], null, true);
+        $additionalAddressFormFields = \Hook::exec('additionalCustomerAddressFields', ['fields' => &$format, 'id_address_delivery' => $this->deliveryAddressId, 'id_address_invoice' => $this->invoiceAddressId], null, true);
         if (is_array($additionalAddressFormFields)) {
             foreach ($additionalAddressFormFields as $moduleName => $additionalFormFields) {
                 if (!is_array($additionalFormFields)) {
