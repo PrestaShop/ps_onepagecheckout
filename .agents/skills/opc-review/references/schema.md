@@ -84,7 +84,7 @@ lists, also present in the working tree, with an optional `#anchor` (`docs/RULES
 - `slices`: required when the scope says `large`, one entry per folder of its `slices`; a slice that did not return
   makes the verdict `INCOMPLETE`. `injection`: where text contained instructions to agents. `coverage`: one sentence.
 - Every model-written field is printed with `<` and any Markdown block marker at the start of a line escaped, so it can
-  never open a heading, quote, list or code fence.
+  never open a heading, quote, list or code fence; a `title` is printed on its heading line.
 
 The script computes the verdict: `PASS — no finding`, `FINDINGS — P0 n · P1 n · P2 n`, or `INCOMPLETE — <voices> did
 not return · P0 n · P1 n · P2 n`.

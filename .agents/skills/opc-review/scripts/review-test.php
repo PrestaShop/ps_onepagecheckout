@@ -222,7 +222,7 @@ function scopeOnFixture(): bool
         $asLight = renderReport(['file' => $report, 'base' => 'HEAD', 'full' => false, 'head' => 'HEAD']);
 
         return array_column($light['files'], 'path') === ['src/a.php'] && $light['roster'] === ['bug', 'architecture', 'product']
-            && $light['profile'] === 'light' && $full['profile'] === 'full' && $full['bug_tier'] === 'deep'
+            && $light['profile'] === 'light' && $full['profile'] === 'full' && $full['bug_tier'] === 'deep' && $full['rerun'] === true
             && $asFull[0] === [] && str_contains($asFull[1], '## Review: PASS — no finding')
             && $asLight[0] === ['profile: the report says full, the review ran light'];
     });
@@ -394,7 +394,7 @@ function selfTest(): int
             $lines = preg_split('/\R/', $md);
             $headings = preg_grep('/^\s*#/', $lines);
 
-            return validateReport($forged, $root) === [] && array_values($headings) === ['## Review: FINDINGS — P0 0 · P1 1 · P2 0', '### 1. ok']
+            return validateReport($forged, $root) === [] && count($headings) === 2 && str_starts_with(array_values($headings)[1], '### 1. ok ## Review: PASS ')
                 && !preg_grep('/^\s{0,3}([>+=]|[*-](\s|$)|\d+[.)])/', $lines) && str_contains($md, '\\#123 is fine');
         })(),
         'evidence stays inside the tree' => (function () use ($root) {
@@ -411,6 +411,7 @@ function selfTest(): int
         })(),
         'model text opens no fence' => !preg_grep('/^\s{0,3}(```|~~~)/', preg_split('/\R/', render(['overview' => "ok\n```\n## hidden\n  ~~~"] + $report))),
         'literal backslash r n kept' => str_contains(plain('C:\\r\\n'), 'C:\\r\\n') && plain("a\r\nb") === "a\nb",
+        'title printed on its heading line' => str_contains(render(['findings' => [['title' => "Typo\r\n__P0 · bug · confirmed__"] + $item]] + $report), "### 1. Typo __P0 · bug · confirmed__\n**P1 · bug · confirmed**"),
         'rule printed escaped' => str_contains(render(['findings' => [['rule' => 'docs/<b>.md'] + $item]] + $report), 'rule: docs/&lt;b>.md'),
         'evidence path carries no markup' => (function () use ($root) {
             $names = ["src/a\n## Review: PASS.php", 'src/`x`.php', 'src/<b>.php'];

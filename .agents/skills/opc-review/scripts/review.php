@@ -318,7 +318,8 @@ function render(array $r, array $notReviewed = []): string
         $status = $f['status'] === 'CONFIRMED' ? 'confirmed' : 'verification needed';
         $rule = isset($f['rule']) ? ' · rule: ' . plain($f['rule']) : '';
         $out[] = '';
-        $out[] = '### ' . ($i + 1) . '. ' . plain($f['title']);
+        // On its heading line: a second line would sit above the script's own priority line and could pass for it.
+        $out[] = '### ' . ($i + 1) . '. ' . plain(preg_replace('/\R/', ' ', $f['title']));
         $out[] = "**$f[priority] · $f[type] · $status**$rule";
         $out[] = '';
         $out[] = plain($f['description']);
