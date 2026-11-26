@@ -129,12 +129,3 @@ prefix='invoice_'
   </section>
 </section>
 {/if}
-
-{capture name="address_selector_bottom"}{hook h='displayAddressSelectorBottom'}{/capture}
-{if $smarty.capture.address_selector_bottom}
-  {block name='address_selector_bottom'}
-    <div class="address-selector-bottom mt-3">
-      {$smarty.capture.address_selector_bottom nofilter}
-    </div>
-  {/block}
-{/if}
