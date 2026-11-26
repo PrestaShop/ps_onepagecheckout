@@ -94,6 +94,7 @@ class OpcTempAddress
 
         if ($tempAddressId > 0) {
             $this->context->cart->id_address_delivery = $originalAddressId;
+            $this->moveDeliveryOptionOntoAddress($tempAddressId, $originalAddressId);
         }
 
         if ($this->tempInvoiceAddressId > 0) {
@@ -110,6 +111,25 @@ class OpcTempAddress
             $this->tempInvoiceAddressId = 0;
             $this->originalInvoiceAddressId = 0;
         }
+    }
+
+    /**
+     * A carrier chosen while the temp address was on the cart is stored under the temp address id.
+     * Cart::getDeliveryOption() drops the whole delivery_option map when one of its keys is not a
+     * current package address, so the entry follows the cart back onto the restored address.
+     * Assigned directly: Cart::setDeliveryOption() re-validates through the Calculator, which needs
+     * the Symfony container, for an option the caller already validated.
+     */
+    private function moveDeliveryOptionOntoAddress(int $tempAddressId, int $addressId): void
+    {
+        $deliveryOption = json_decode((string) $this->context->cart->delivery_option, true);
+        if (!is_array($deliveryOption) || !isset($deliveryOption[$tempAddressId])) {
+            return;
+        }
+
+        $deliveryOption[$addressId] = $deliveryOption[$tempAddressId];
+        unset($deliveryOption[$tempAddressId]);
+        $this->context->cart->delivery_option = json_encode($deliveryOption);
     }
 
     private function insert(int $idCountry, int $idState, string $postcode, string $city): int

@@ -209,6 +209,72 @@ class OpcTempAddressIntegrationTest extends TestCase
         self::assertSame((int) $originalInvoice->id, (int) $freshCart->id_address_invoice);
     }
 
+    public function testCleanupMovesTheCarrierChosenOnTheTempAddressOntoTheRestoredAddress(): void
+    {
+        [$context, $originalDelivery] = $this->createCartOnSavedDeliveryAddress();
+
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'id_country' => (string) \Country::getByIso('FR'),
+            'postcode' => '75009',
+            'city' => 'Paris',
+        ]);
+        self::assertGreaterThan(0, $tempDeliveryId);
+        $context->cart->delivery_option = json_encode([$tempDeliveryId => '1,']);
+
+        $tempAddress->cleanup($tempDeliveryId, (int) $originalDelivery->id);
+
+        $freshCart = new \Cart((int) $context->cart->id);
+        self::assertSame(
+            [(int) $originalDelivery->id => '1,'],
+            json_decode((string) $freshCart->delivery_option, true)
+        );
+    }
+
+    public function testCleanupLeavesADeliveryOptionNotKeyedByTheTempAddressUnchanged(): void
+    {
+        [$context, $originalDelivery] = $this->createCartOnSavedDeliveryAddress();
+        $deliveryOption = json_encode([(int) $originalDelivery->id => '2,']);
+        $context->cart->delivery_option = $deliveryOption;
+
+        $tempAddress = new OpcTempAddress($context);
+        $tempDeliveryId = $tempAddress->createFromRequest([
+            'id_country' => (string) \Country::getByIso('FR'),
+            'postcode' => '75009',
+            'city' => 'Paris',
+        ]);
+        self::assertGreaterThan(0, $tempDeliveryId);
+
+        $tempAddress->cleanup($tempDeliveryId, (int) $originalDelivery->id);
+
+        $freshCart = new \Cart((int) $context->cart->id);
+        self::assertSame($deliveryOption, (string) $freshCart->delivery_option);
+    }
+
+    /**
+     * @return array{0: \Context, 1: \Address}
+     */
+    private function createCartOnSavedDeliveryAddress(): array
+    {
+        $context = self::getContext();
+        $customer = $this->createCustomer();
+        $context->customer = $customer;
+        $originalDelivery = $this->createAddress($customer, 'Original delivery', 'FR', '75001', 'Paris');
+
+        $cart = new \Cart();
+        $cart->id_currency = (int) \Configuration::get('PS_CURRENCY_DEFAULT');
+        $cart->id_lang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        $cart->id_shop_group = 1;
+        $cart->id_shop = 1;
+        $cart->id_customer = (int) $customer->id;
+        $cart->id_address_delivery = (int) $originalDelivery->id;
+        $cart->id_address_invoice = (int) $originalDelivery->id;
+        self::assertTrue($cart->add());
+        $context->cart = $cart;
+
+        return [$context, $originalDelivery];
+    }
+
     private function createCustomer(): \Customer
     {
         $customer = new \Customer();
