@@ -663,6 +663,8 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
   window.location.href = response.checkout_url || window.prestashop.urls.pages.order;
 }
 
+  // Rejects when the checkout is not saved, so a payment module awaiting it aborts in its catch; a call
+  // made while another one is in flight returns early, as documented.
   async function submitBeforePayment(form) {
     if (isFinalSubmitInFlight) {
       return;
@@ -670,12 +672,12 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
 
     const paymentSelection = ensureSubmitPreconditions(form);
     if (!paymentSelection.isValid) {
-      return;
+      throw new Error('OPC checkout preconditions are not met.');
     }
 
     const submitUrl = getOpcSubmitUrl();
     if (!submitUrl) {
-      return;
+      throw new Error('OPC submit URL is not configured.');
     }
 
     const payButton = getPayButton();
@@ -686,8 +688,9 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
       payButton.disabled = true;
     }
 
+    let response;
     try {
-      const response = await fetchOpcSubmitResponse(submitUrl, payload);
+      response = await fetchOpcSubmitResponse(submitUrl, payload);
 
       if (!response || response.success !== true) {
         handleOpcSubmitFailure(response);
@@ -698,8 +701,17 @@ async function continueSuccessfulSubmit(response, paymentRadio) {
         resp: {},
       });
       prestashop.emit(OPC_EVENTS.opcSubmitFailed, {error});
+
+      throw error;
     } finally {
       releaseFinalSubmitLock();
+    }
+
+    if (!response || response.success !== true) {
+      const error = new Error('OPC checkout could not be saved.');
+      error.response = response;
+
+      throw error;
     }
   }
 
