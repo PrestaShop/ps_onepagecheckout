@@ -3,8 +3,6 @@
  * LICENSE.md file that was distributed with this source code.
  *}
 
-{hook h='displayPersonalInformationTop' customer=$customer}
-
 {$isGuestCheckoutEnabled = $configuration.is_guest_checkout_enabled}
 
 {if !$customer.is_logged}

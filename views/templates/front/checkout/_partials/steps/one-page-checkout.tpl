@@ -7,6 +7,9 @@
  * One Page Checkout - Layout
  *}
 
+{* Module hooks that may print their own <form> are rendered outside #opc-form: a nested form would close it early. *}
+{hook h='displayPersonalInformationTop' customer=$customer}
+
 <form id="opc-form" class="one-page-checkout" method="POST" action="{$urls.pages.order}" data-ps-action="form-validation">
   {include file='_partials/form-errors.tpl' errors=$errors['']}
   {include file='_partials/form-errors.tpl' errors=$validation_error_messages|default:[]}
@@ -35,6 +38,15 @@
   {/if}
 
 </form>
+
+{capture name="address_selector_bottom"}{hook h='displayAddressSelectorBottom'}{/capture}
+{if $smarty.capture.address_selector_bottom}
+  {block name='address_selector_bottom'}
+    <div class="address-selector-bottom mt-3">
+      {$smarty.capture.address_selector_bottom nofilter}
+    </div>
+  {/block}
+{/if}
 
 {* Payment section is rendered outside the main form to avoid nested payment forms. *}
 {include file='module:ps_onepagecheckout/views/templates/front/checkout/_partials/one-page-checkout/payment-section.tpl'
