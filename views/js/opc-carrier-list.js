@@ -13,6 +13,7 @@ import {
 } from './runtime/opc-runtime';
 import {
   collectVisibleAddressContext,
+  DELIVERY_ADDRESS_CONTEXT_FIELDS,
   getPersistedInlineAddressId,
   getSelectedAddressId,
   getUseSameAddressValue,
@@ -50,6 +51,10 @@ let activeFetchCarriersRequest = null;
 // fetch is single-flight: triggers during flight coalesce into ONE trailing refetch that rebuilds
 // its URL from the freshest state once the in-flight request completes.
 let pendingCarriersRefetch = false;
+// Address context (country, state, postcode, city, billing) the displayed list was fetched for.
+// An autosave that persists a different context must refetch even when the list is AVAILABLE:
+// a state or postcode can move the address to another zone.
+let fetchedCarriersContext = '';
 // Inline delivery COUNTRY change: hold the carrier list on a loader until the new country is persisted
 // onto the cart, then fetch against the persisted cart (so third-party carrier/payment modules read the
 // fresh delivery country server-side). Driven by opcDeliveryCountryChanging -> opcAddressPersisted.
@@ -181,24 +186,33 @@ function buildCarriersUrl(baseUrl) {
     url.searchParams.set('id_address_delivery', selectedSavedDeliveryAddressId);
   }
 
-  const postcode = getFormValue(form, 'postcode');
-  const idState = getFormValue(form, 'id_state');
-  const city = getFormValue(form, 'city');
-
-  if (postcode) {
-    url.searchParams.set('postcode', postcode);
-  }
-  if (idState) {
-    url.searchParams.set('id_state', idState);
-  }
-  if (city) {
-    url.searchParams.set('city', city);
-  }
+  // Read from the inline delivery fields only: the hidden address modal renders the same field names
+  // earlier in the form, and its empty values would otherwise be sent.
+  const deliveryContext = collectVisibleAddressContext(
+    form,
+    OPC_SELECTORS.opc.deliveryFields,
+    DELIVERY_ADDRESS_CONTEXT_FIELDS.filter((field) => field !== 'id_country')
+  );
+  Object.entries(deliveryContext).forEach(([field, value]) => {
+    url.searchParams.set(field, value);
+  });
 
   // Let the server honour the "use same address" choice when syncing the invoice address.
   url.searchParams.set('use_same_address', useSameAddress);
 
   return url.toString();
+}
+
+function getCarriersContext(carriersUrl) {
+  if (!carriersUrl) {
+    return '';
+  }
+
+  const url = new URL(carriersUrl);
+  url.searchParams.delete('id_address_delivery');
+  url.searchParams.delete('id_address_invoice');
+
+  return url.search;
 }
 
 function syncSelectedDeliveryAddressContext() {
@@ -364,6 +378,7 @@ function fetchCarriers() {
   setCarrierOptionsState(OPC_OPTION_LIST_STATE.LOADING);
   prestashop.emit(OPC_EVENTS.opcCarriersLoading, {});
 
+  fetchedCarriersContext = getCarriersContext(carriersUrl);
   const request = $.ajax({url: carriersUrl, timeout: CARRIERS_REQUEST_TIMEOUT_MS});
   activeFetchCarriersRequest = request;
 
@@ -585,6 +600,16 @@ prestashop.on(OPC_EVENTS.opcAddressPersisted, (response) => {
   // intermediate autosave stays awaiting so a later valid persist reveals via refreshReadiness below.
   if (pendingCountryChangeRefresh) {
     resolvePendingCountryChangeAfterPersist(response);
+    return;
+  }
+
+  if (
+    response
+    && response.address_persisted
+    && fetchedCarriersContext !== ''
+    && getCarriersContext(buildCarriersUrl(getConfiguredOpcUrl(URL_KEY))) !== fetchedCarriersContext
+  ) {
+    fetchCarriers();
     return;
   }
 
