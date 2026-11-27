@@ -618,8 +618,9 @@ function getAddressTypeForModal($modal) {
  * Apply a saved address (flat name => value map) onto the freshly rendered modal fields.
  * Used in edit mode, where the address country may differ from the page-rendered modal.
  * The country select is skipped so the server-selected country (and its state list) wins.
+ * Fields in `editedFieldNames` keep what the customer typed while the fields were loading.
  */
-function applyAddressValuesToContainer($scope, address) {
+function applyAddressValuesToContainer($scope, address, editedFieldNames = new Set()) {
   if (!address) {
     return;
   }
@@ -630,12 +631,31 @@ function applyAddressValuesToContainer($scope, address) {
     }
 
     const $field = $scope.find(`[name="${name}"], [name$="${name}"]`).first();
-    if (!$field.length) {
+    if (!$field.length || editedFieldNames.has(String($field.prop('name') || ''))) {
       return;
     }
 
     restoreFieldValue($field, address[name]);
   });
+}
+
+/**
+ * Names of the fields whose value changed between two snapshots of preserveAddressesSectionFields.
+ */
+function getEditedFieldNames(valuesBefore, valuesAfter) {
+  const editedFieldNames = new Set();
+
+  if (!valuesBefore) {
+    return editedFieldNames;
+  }
+
+  Object.keys(valuesAfter).forEach((name) => {
+    if (JSON.stringify(valuesAfter[name]) !== JSON.stringify(valuesBefore[name])) {
+      editedFieldNames.add(name);
+    }
+  });
+
+  return editedFieldNames;
 }
 
 /**
@@ -677,7 +697,8 @@ function ensureModalFieldsContainer($modal) {
  * In-progress values are preserved across the swap using the shared preserve/restore
  * helpers (so grouped checkbox/radio hook fields keep their values). When `addressValues`
  * is provided (edit mode), the saved address is applied on top once the new country's
- * fields - including its state list - exist.
+ * fields - including its state list - exist, except on the fields the customer changed
+ * while the request was in flight.
  *
  * While the request is in flight the modal is marked pending so Save stays disabled, and a
  * per-modal refresh generation guards against out-of-order responses: a slower earlier
@@ -693,6 +714,9 @@ function refreshModalFields($modal, countryId, addressValues) {
     return $.Deferred().resolve().promise();
   }
 
+  // Edit mode: snapshot the saved address as rendered, so the response can tell which fields the
+  // customer changed while the request was in flight.
+  const valuesBeforeRequest = addressValues ? preserveAddressesSectionFields($container) : null;
   const generation = (Number($modal.data('opcRefreshGeneration')) || 0) + 1;
   $modal.data('opcRefreshGeneration', generation);
   $modal.data('opcRefreshPending', true);
@@ -733,7 +757,7 @@ function refreshModalFields($modal, countryId, addressValues) {
     const preservedFields = preserveAddressesSectionFields($container);
     $container.html(response.fields_html);
     restoreAddressesSectionFields($container, preservedFields);
-    applyAddressValuesToContainer($container, addressValues);
+    applyAddressValuesToContainer($container, addressValues, getEditedFieldNames(valuesBeforeRequest, preservedFields));
     setModalFieldsDisabled($modal, false);
     updateModalSaveState($modal);
   }).fail((jqXHR) => {

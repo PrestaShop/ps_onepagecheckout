@@ -82,6 +82,11 @@ class OpcAddressModalSpe54ContractTest extends TestCase
         // while the request was in flight are not overwritten by a pre-request snapshot.
         self::assertStringContainsString('const preservedFields = preserveAddressesSectionFields($container);', $script);
 
+        // In edit mode the saved address is applied after the swap, except on the fields the customer
+        // changed while the request was in flight, found by comparing with a pre-request snapshot.
+        self::assertStringContainsString('const valuesBeforeRequest = addressValues ? preserveAddressesSectionFields($container) : null;', $script);
+        self::assertStringContainsString('applyAddressValuesToContainer($container, addressValues, getEditedFieldNames(valuesBeforeRequest, preservedFields));', $script);
+
         // A theme that overrides the legacy modal markup (no wrapper) is migrated rather than no-oped.
         self::assertStringContainsString('function ensureModalFieldsContainer(', $script);
     }
